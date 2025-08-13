@@ -14,9 +14,7 @@
 </details>
 
 ## Project Overview
-We-Roster is a comprehensive roster management system developed as part of COMP30022. The system aims to streamline scheduling, staff management, and roster coordination for organizations. This web-based application provides an intuitive interface for managers to create, modify, and distribute work schedules while allowing employees to view their assignments, request changes, and manage their availability.
-
-The project focuses on creating a user-friendly solution that addresses common challenges in workforce scheduling, including shift conflicts, availability tracking, and communication between management and staff members.
+We-Roster is a
 
 ## Github Repo Structure
 
