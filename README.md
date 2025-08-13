@@ -69,17 +69,17 @@ We-Roster is a
 
 | Name          | Email                               | Role          |
 | ------------- | ----------------------------------- | ------------- |
-| Katherine Xin    | [email1@student.unimelb.edu.au]     | Product owner |
+| Katherine Xin    | kaxin@student.unimelb.edu.au     | Product owner |
 | Haoyu Hu    | haoyu.hu.2@student.unimelb.edu.au     | Scrum master  |
-| Yichen Pan    | [email3@student.unimelb.edu.au]     | Developer     |
-| Quan yu    | [email4@student.unimelb.edu.au]     | Developer     |
-| Yuting Yin    | [email5@student.unimelb.edu.au]     | Developer     |
+| Yichen Pan    | yichenp2@student.unimelb.edu.au     | Developer     |
+| Quan yu    | quyu@student.unimelb.edu.au     | Developer     |
+| Yuting Yin    | yuting.yin@student.unimelb.edu.au     | Developer     |
 
 ## Change Logs
 ### Sprint 1
 | Date | Description | Commit Log |
 | ---- | ----------- | --- |
-| [Date] | Initial project setup and repository structure | [commit-hash] |
+| 13-Aug-2025 | Initial project setup and repository structure | [b820e99](https://github.com/Yuting-Yin/We-Roster/commit/b820e9900d06e60ff03cbf4abef6afd986f3fa55) |
 
 ### Sprint 2
 | Date | Description | Commit Log |
@@ -92,6 +92,6 @@ We-Roster is a
 | [Date] | [Description] | [commit-hash] |
 
 Project Link:
-[Repository URL to be added]
+[https://github.com/Yuting-Yin/We-Roster](https://github.com/Yuting-Yin/We-Roster)
 
 <p align="right">(<a href="#We-Roster">back to top</a>)</p>
