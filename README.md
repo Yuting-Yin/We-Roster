@@ -25,6 +25,7 @@ We-Roster is a
 │   │   └── RiskManagement.md      # Risk management documentation
 │   ├── sprint 1/                  # Sprint 1 documentation and deliverables
 │   │   └── RiskMonitoring.md      # Risk monitoring documentation
+│   │   └── ProjectInitiation.md   # Initial project planning, objectives, and scope for Sprint 1
 │   ├── sprint 2/                  # Sprint 2 documentation and deliverables
 │   └── sprint 3/                  # Sprint 3 documentation and deliverables
 ├── tests/                         # User/system tests
