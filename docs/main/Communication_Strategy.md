@@ -68,7 +68,6 @@ This section is not typically documented in Scrum teams for real-time projects, 
 ### Scrum Master: Haoyu Hu
 - **Primary Responsibilities:**
   - Facilitate weekly stand-up meetings
-  - Coordinate weekly tutorials with supervisor
   - Manage sprint retrospectives
   - Oversee Slack channels, Confluence, and Jira communication
   - Handle team communication escalations
