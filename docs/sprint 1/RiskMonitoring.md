@@ -5,7 +5,6 @@
 | Scrum Ceremony      | Risk Monitoring Strategy |
 |---------------------|--------------------------|
 | **Sprint Planning** | Identify high-priority risks and create risk stories if needed. |
-| **Daily Stand-Ups** | Discuss if any risks have materialized and assess ongoing mitigation efforts. |
 | **Sprint Reviews**  | Evaluate whether risks impacted sprint deliverables and document lessons learned. |
 | **Sprint Retrospective** | Reflect on risk-handling effectiveness and improve future mitigation strategies. |
 
