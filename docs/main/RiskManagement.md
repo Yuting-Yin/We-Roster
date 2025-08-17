@@ -1,3 +1,7 @@
+## 🏆 **Risk Assessment Framework**  
+
+Each identified risk includes the following details:  
+
 - **Risk Statement:** Description of the risk, structured as:  
   **Action → Consequence → Impact**  
 - **Probability:** Likelihood of occurrence (0-99.9%). It it sufficient for teams to assess the Probability of the risk in multiples of 10 for each risk identified for brevity. (Ex: 10%, 20% etc)  
