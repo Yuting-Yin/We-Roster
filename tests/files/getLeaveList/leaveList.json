@@ -1,0 +1,20 @@
+[
+  {
+    "id": 0,
+    "tumbleId": 0,
+    "userId": 0,
+    "startDate": "2025-08-21",
+    "endDate": "2025-08-21",
+    "status": "string",
+    "title": "string",
+    "description": "string",
+    "comment": "string",
+    "leaveTypeId": 0,
+    "creditCost": 0,
+    "round": 0,
+    "managerOverride": true,
+    "submittedBy": 0,
+    "createdAt": "2025-08-21T03:46:15.599Z",
+    "updatedAt": "2025-08-21T03:46:15.599Z"
+  }
+]
