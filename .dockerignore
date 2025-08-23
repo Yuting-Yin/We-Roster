@@ -1,0 +1,5 @@
+.git
+frontend
+.idea
+*.iml
+.DS_Store
