@@ -1,22 +1,39 @@
-import { useState } from 'react';
-import { View, TextInput, Text, Pressable, Alert } from 'react-native';
-import { s } from '../styles';
+import React, { useState } from 'react';
+import { View, TextInput, Button, Alert } from 'react-native';
+import { login } from '../api/login';
+import { healthCheck } from '../api/health';
 
-export default function Login(){
-  const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [loading,setLoading]=useState(false);
-  async function onLogin(){
-    try{
-      setLoading(true);
-      if(!email || !password) throw new Error('请输入邮箱和密码');
-      Alert.alert('Logged in', `Welcome ${email}!`);
-    }catch(e:any){ Alert.alert('Login failed', e.message ?? 'Unknown error'); }
-    finally{ setLoading(false); }
+export default function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  async function onTestHealth() {
+    try {
+      const data = await healthCheck();
+      Alert.alert('Health', JSON.stringify(data)); // Expect: {"status":"UP"}
+    } catch (e: any) {
+      Alert.alert('Health Error', e?.message ?? 'Unknown');
+    }
   }
-  return (<View style={s.center}>
-    <TextInput style={s.input} placeholder="Email" autoCapitalize="none" value={email} onChangeText={setEmail}/>
-    <TextInput style={s.input} placeholder="Password" secureTextEntry value={password} onChangeText={setPassword}/>
-    <Pressable disabled={loading} style={s.btn} onPress={onLogin}>
-      <Text style={s.btnText}>{loading?'Signing in…':'Log in'}</Text>
-    </Pressable>
-  </View>);
+
+  async function onLogin() {
+    try {
+      const data = await login(email, password);
+      Alert.alert('Login Success', JSON.stringify(data)); // Expect: token / User Info
+    } catch (e: any) {
+      Alert.alert('Login Failed', e?.message ?? 'Unknown');
+    }
+  }
+
+  return (
+    <View style={{ padding: 16 }}>
+      <TextInput placeholder="Email" value={email} onChangeText={setEmail} />
+      <TextInput placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
+      <View style={{ height: 8 }} />
+      <Button title="Test Backend (health)" onPress={onTestHealth} />
+      <View style={{ height: 8 }} />
+      <Button title="Log in" onPress={onLogin} />
+    </View>
+  );
 }
+
