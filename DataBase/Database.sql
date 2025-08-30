@@ -131,3 +131,21 @@ CREATE TABLE roster_template (
   note TEXT
 ) ENGINE=InnoDB;
 
+CREATE TABLE leave_request(
+    ID BIGINT AUTO_INCREMENT PRIMARY KEY,
+    start_time DATETIME,
+    end_time DATETIME
+) ENGINE = InnoDB;
+
+CREATE TABLE shift_swap(
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    from_time DATETIME NOT NULL,
+    to_time DATETIME NOT NULL,
+    date_made DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE = InnoDB;
+
+CREATE TABLE open_shift(
+    shift_id BIGINT PRIMARY KEY,
+    date_made DATETIME NOT NULL
+)
+
