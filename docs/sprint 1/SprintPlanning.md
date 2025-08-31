@@ -57,7 +57,7 @@ Not applicable for Sprint 1, as the main objective is foundational documentation
 
 ## Risks & Dependencies
 
-Refer to [**risk management.md**](https://github.com/Yuting-Yin/We-Roster/blob/main/docs/sprint%201/RiskMonitoring.md) for identified risks and mitigation strategies.
+Refer to [**RiskManagement.md**](https://github.com/Yuting-Yin/We-Roster/blob/main/docs/main/RiskManagement.md) for identified risks and mitigation strategies.
 
 ---
 
