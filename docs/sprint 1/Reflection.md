@@ -31,7 +31,8 @@
 ---
 
 ## 4. Next Steps
-- Clarify remaining undefined requirements with the client.  
+- Clarify remaining undefined requirements (e.g. dashboard) with the client.  
 - Improve level of detail in diagrams and supporting artefacts.  
 - Apply story point estimation consistently from Sprint 2 onwards.  
 - Continue refining backlog processes in Jira.  
+- Begin MyRoster and Profile parts development.
