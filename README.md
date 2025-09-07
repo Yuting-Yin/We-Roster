@@ -14,7 +14,7 @@
 </details>
 
 ## Project Overview
-We-Roster is a
+WeRoster is an employee rostering system used by organisations with shift-based workforces (e.g., hospitals, hospitality, retail). The platform’s primary purpose is to streamline shift scheduling, improve communication between managers and staff, and reduce inefficiencies in current processes. It currently operates as a mobile app for staff and a web interface for managers, but has gaps in functionality, performance, and integration.
 
 ## Github Repo Structure
 
