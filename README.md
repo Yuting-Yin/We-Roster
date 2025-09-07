@@ -85,7 +85,7 @@ We-Roster is a
 ### Sprint 2
 | Date | Description | Commit Log |
 | ---- | ----------- | --- |
-| [Date] | [Description] | [commit-hash] |
+| 7-Sep-2025 | Modify repository structure and create sprint 1 release | [a771c4e](https://github.com/Yuting-Yin/We-Roster/commit/862beb77090b7c3282d16bf2122bca3faa1d97d1) |
 
 ### Sprint 3
 | Date | Description | Commit Log |
