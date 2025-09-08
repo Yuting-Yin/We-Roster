@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button, Alert } from 'react-native';
-import { login } from '../api/login';
-import { healthCheck } from '../api/health';
+import { login } from '../../api/login';
+import { healthCheck } from '../../api/health';
 
 export default function Login() {
   const [email, setEmail] = useState('');
