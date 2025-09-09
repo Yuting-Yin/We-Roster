@@ -9,3 +9,8 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+security:
+  jwt:
+    secret: "change-me-super-long-random-string-at-least-32-chars"
+    issuer: "we-roster"
+    access-token-minutes: 15
