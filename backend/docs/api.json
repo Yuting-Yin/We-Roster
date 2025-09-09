@@ -1,0 +1,379 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "We Roster",
+    "version": "1.0.0",
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    { "url": "https://api.we-roster.dev/api/v1" }
+  ],
+  "security": [
+    { "bearerAuth": [] }
+  ],
+  "paths": {
+    "/departments": {
+      "get": {
+        "operationId": "listDepartments",
+        "summary": "List of departments",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "type": "object" } },
+                "example": [
+                  {
+                    "id": 6,
+                    "hospitalId": 6,
+                    "parentId": null,
+                    "name": "Intensive Care Unit",
+                    "code": "ICU",
+                    "note": null
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+          }
+        }
+      }
+    },
+    "/hospitals": {
+      "get": {
+        "operationId": "listHospitals",
+        "summary": "List of hospitals",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "type": "object" } },
+                "example": [
+                  {
+                    "id": 6,
+                    "name": "Royal Melbourne Children's Hospital",
+                    "code": "RMCH",
+                    "address": "50 Flemington Rd, Parkville VIC 3052",
+                    "note": null
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+          }
+        }
+      }
+    },
+    "/locations": {
+      "get": {
+        "operationId": "listLocations",
+        "summary": "List of locations",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "type": "object" } },
+                "example": [
+                  {
+                    "id": 7,
+                    "hospitalId": 1,
+                    "parentId": null,
+                    "name": "ICU Bay A",
+                    "code": "ICU-A",
+                    "type": "Ward",
+                    "note": null
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+          }
+        }
+      }
+    },
+    "/designations": {
+      "get": {
+        "operationId": "listDesignations",
+        "summary": "List of designations",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "type": "object" } },
+                "example": [
+                  {
+                    "id": 1,
+                    "name": "Registered Doctor",
+                    "code": "RD",
+                    "matrix": "RD-1",
+                    "type": "Doctoring",
+                    "status": "ACTIVE",
+                    "statusTime": "2025-08-28T12:34:56Z",
+                    "accreditation": "AHPRA",
+                    "note": null,
+                    "createdTime": "2025-03-10T09:00:00Z"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+          }
+        }
+      }
+    },
+    "/staff": {
+      "get": {
+        "operationId": "listStaff",
+        "summary": "List of staff",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "type": "object" } },
+                "example": [
+                  {
+                    "id": 6,
+                    "hospitalId": 3,
+                    "designationId": 12,
+                    "firstName": "Sairus",
+                    "lastName": "Pan",
+                    "gender": "M",
+                    "dateOfBirth": "2004-11-24",
+                    "hireDate": "2025-06-06",
+                    "leaveDate": null,
+                    "email": "sairus.pan@example.com",
+                    "phone": "+61 466 948 111",
+                    "isManager": true,
+                    "type": "PartTime",
+                    "matrix": "RN-4",
+                    "status": "ACTIVE",
+                    "statusTime": "2025-08-28T12:34:56Z",
+                    "note": null,
+                    "createdTime": "2025-03-10T09:00:00Z",
+                    "departments": [
+                      { "deptId": 2, "isPrimary": false, "assignedAt": "2025-05-14T09:00:00Z" }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+          }
+        }
+      }
+    },
+    "/roster-templates": {
+      "get": {
+        "operationId": "listRosterTemplates",
+        "summary": "List of roster templates",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "type": "object" } },
+                "example": [
+                  {
+                    "id": 6,
+                    "status": "ACTIVE",
+                    "name": "Template_1",
+                    "code": "lkashd",
+                    "createdTime": "2024-03-10T09:00:00Z",
+                    "note": null
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+          }
+        }
+      }
+    },
+    "/leave-requests": {
+      "get": {
+        "operationId": "listLeaveRequests",
+        "summary": "List of leave requests",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "type": "object" } },
+                "example": [
+                  {
+                    "id": 666,
+                    "startTime": "2025-10-02T00:00:00Z",
+                    "endTime": "2025-10-08T00:00:00Z"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+          }
+        }
+      }
+    },
+    "/shift-swaps": {
+      "get": {
+        "operationId": "listShiftSwaps",
+        "summary": "List of shift swaps",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "type": "object" } },
+                "example": [
+                  {
+                    "id": 666,
+                    "fromTime": "2025-09-05T08:00:00Z",
+                    "toTime": "2025-09-05T16:00:00Z",
+                    "dateMade": "2025-09-04T10:00:00Z"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "operationId": "listUsers",
+        "summary": "List of users",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "type": "object" } },
+                "example": [
+                  {
+                    "id": 42,
+                    "role": "ADMIN",
+                    "email": "administrator@example.com",
+                    "status": "ACTIVE",
+                    "createdTime": "2025-04-01T09:00:00Z",
+                    "statusTime": "2025-05-28T12:34:56Z",
+                    "lastLoginTime": "2025-09-02T08:00:00Z",
+                    "loginAttempts": 0
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+          }
+        }
+      }
+    },
+    "/open-shifts": {
+      "get": {
+        "operationId": "listOpenShifts",
+        "summary": "List of open shifts",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "type": "object" } },
+                "example": [
+                  {
+                    "shiftId": 601,
+                    "dateMade": "2025-09-05T12:00:00Z"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+          }
+        }
+      }
+    },
+    "/shifts": {
+      "get": {
+        "operationId": "listShifts",
+        "summary": "List of shifts",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "type": "object" } },
+                "example": [
+                  {
+                    "id": 601,
+                    "startTs": "2025-09-17T08:00:00Z",
+                    "endTs": "2025-09-17T16:00:00Z",
+                    "deptId": 6,
+                    "locationId": 8,
+                    "code": "DAY-8H",
+                    "note": "Day shift"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+          }
+        }
+      }
+    }
+  },
+
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "details": { "type": "object", "additionalProperties": true }
+        }
+      }
+    }
+  }
+}
