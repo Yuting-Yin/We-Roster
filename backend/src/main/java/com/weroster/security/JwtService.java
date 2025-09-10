@@ -32,7 +32,8 @@ public class JwtService {
     public Claims parseBody(String jwt) {
         return Jwts.parser()
                 .setSigningKey(secret.getBytes(StandardCharsets.UTF_8))
-                .parseClaimsJws(jwt)
+                .requireIssuer(issuer)             // ensure the token is really yours
+                .parseClaimsJws(jwt)               // verifies signature & exp; throws on failure
                 .getBody();
     }
 }

@@ -1,5 +1,5 @@
 // com/weroster/health/HealthController.java
-package com.weroster.health;
+package com.weroster.controller;
 
 import org.springframework.web.bind.annotation.*;
 

@@ -1,5 +1,5 @@
 // src/main/java/com/weroster/auth/AuthException.java
-package com.weroster.auth;
+package com.weroster.Login;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;

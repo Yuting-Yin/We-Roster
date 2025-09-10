@@ -1,5 +1,5 @@
 // src/main/java/com/weroster/auth/LoginResponse.java
-package com.weroster.auth;
+package com.weroster.Login;
 
 public class LoginResponse {
     private String tokenType;

@@ -1,4 +1,3 @@
-// src/main/java/com/weroster/config/SecurityConfig.java
 package com.weroster.config;
 
 import com.weroster.security.JwtAuthFilter;
@@ -12,21 +11,22 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-  @Autowired private JwtAuthFilter jwtAuthFilter;
+    @Autowired private JwtAuthFilter jwtAuthFilter;
 
-  @Override
-  protected void configure(HttpSecurity http) throws Exception {
-    http.csrf().disable()
-            .cors().and()
-            .authorizeRequests()
-            .antMatchers(            "/api/v1/health",
-                    "/api/v1/auth/login",
-                    "/swagger-ui.html",
-                    "/swagger-ui/**",
-                    "/v3/api-docs/**",
-                    "/webjars/**").permitAll()
-            .anyRequest().authenticated()
-            .and()
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-  }
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.csrf().disable()
+                .cors().and()
+                .authorizeRequests()
+                .antMatchers(            "/api/v1/health",
+                        "/api/v1/auth/login",
+                        "/swagger-ui.html",
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/webjars/**").permitAll().antMatchers(org.springframework.http.HttpMethod.GET,
+                        "/api/v1/leave-requests","/api/v1/shift-swaps"
+                    ).authenticated().anyRequest().authenticated();
+
+                //.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+    }
 }

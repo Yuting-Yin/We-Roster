@@ -1,6 +1,7 @@
-// src/main/java/com/weroster/auth/AuthService.java
-package com.weroster.auth;
+package com.weroster.service;
 
+import com.weroster.Login.AuthException;
+import com.weroster.Login.LoginResponse;
 import com.weroster.security.JwtService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
