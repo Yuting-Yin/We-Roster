@@ -1,0 +1,16 @@
+server:
+  port: 8080
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3308/weroster?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+security:
+  jwt:
+    secret: "change-me-super-long-random-string-at-least-32-chars"
+    issuer: "we-roster"
+    access-token-minutes: 15

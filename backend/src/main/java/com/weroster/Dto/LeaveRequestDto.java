@@ -1,7 +1,7 @@
 package com.weroster.Dto;
 
 import java.time.Instant;
-
+// Comment can be removed
 public class LeaveRequestDto {
     private final Long id;
     private final Instant startTime;
