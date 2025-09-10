@@ -18,7 +18,7 @@ public class AuthService {
     public AuthService(JdbcTemplate jdbc, JwtService jwt) { this.jdbc = jdbc; this.jwt = jwt; }
 
     public LoginResponse login(String email, String password) {
-        String sql = "SELECT id, email, password_hash, role, status, salt FROM users WHERE email = ?";
+        String sql = "SELECT id, email, password_hash, role, status, salt FROM Users WHERE email = ?";
         UserRow user = jdbc.query(sql, rs -> {
             if (!rs.next()) return null;
             UserRow u = new UserRow();
