@@ -50,6 +50,7 @@ public class LeaveAndSwapController {
     ) {
         return openShiftService.list(Math.max(1, Math.min(100, limit)), Math.max(0, offset));
     }
+    // Comment to be deleted
     @GetMapping("/open-shifts/compare")
     @PreAuthorize("isAuthenticated()")
     public OpenShiftCompareDto compareOpenShifts(
