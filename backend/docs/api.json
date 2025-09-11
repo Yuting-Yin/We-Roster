@@ -357,8 +357,102 @@
           }
         }
       }
+    },
+    "/my-team": {
+      "get": {
+        "operationId": "listMyTeam",
+        "summary": "List of team members visible to the caller",
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer", "default": 0, "minimum": 0 } },
+          { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "Search by name/email (contains)" },
+          { "name": "deptId", "in": "query", "schema": { "type": "integer" }, "description": "Filter by department id" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/TeamMember" } },
+                "example": [
+                  {
+                    "id": 3,
+                    "firstName": "Admin",
+                    "lastName": "User",
+                    "email": "admin@weroster.local",
+                    "phone": "+610000000",
+                    "isManager": true,
+                    "status": "ACTIVE",
+                    "designationName": "Registered Nurse",
+                    "designationCode": "RN1",
+                    "designationMatrix": "RN-4",
+                    "departments": [
+                      { "deptId": 4, "name": "Intensive Care Unit", "isPrimary": true }
+                    ],
+                    "nextShift": null
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "code": "UNAUTHORIZED", "message": "Missing or invalid token" }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "code": "FORBIDDEN", "message": "Not allowed" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/open-shifts/compare": {
+      "get": {
+        "operationId": "compareOpenShifts",
+        "summary": "Compare open shifts between two windows",
+        "parameters": [
+          { "name": "fromA", "in": "query", "required": true, "schema": { "type": "string", "format": "date-time" } },
+          { "name": "toA",   "in": "query", "required": true, "schema": { "type": "string", "format": "date-time" } },
+          { "name": "fromB", "in": "query", "required": true, "schema": { "type": "string", "format": "date-time" } },
+          { "name": "toB",   "in": "query", "required": true, "schema": { "type": "string", "format": "date-time" } },
+          { "name": "deptId","in": "query", "required": false, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OpenShiftCompareResult" }
+              }
+            }
+          },
+          "400": { "description": "Bad Request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
     }
   },
+
 
   "components": {
     "securitySchemes": {
@@ -373,7 +467,82 @@
           "message": { "type": "string" },
           "details": { "type": "object", "additionalProperties": true }
         }
+      },
+      "TeamMember": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" },
+          "email": { "type": "string" },
+          "phone": { "type": "string", "nullable": true },
+          "isManager": { "type": "boolean" },
+          "status": { "type": "string", "description": "ACTIVE/INACTIVE/etc." },
+          "designationName": { "type": "string", "nullable": true },
+          "designationCode": { "type": "string", "nullable": true },
+          "designationMatrix": { "type": "string", "nullable": true },
+          "departments": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DeptRef" }
+          },
+          "nextShift": { "$ref": "#/components/schemas/ShiftPreview" }
+        },
+        "required": ["id", "firstName", "lastName", "email", "isManager", "status", "departments"]
+      },
+      "DeptRef": {
+        "type": "object",
+        "properties": {
+          "deptId": { "type": "integer" },
+          "name": { "type": "string" },
+          "isPrimary": { "type": "boolean" }
+        },
+        "required": ["deptId", "name", "isPrimary"]
+      },
+      "ShiftPreview": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "id": { "type": "integer" },
+          "startTs": { "type": "string", "format": "date-time" },
+          "endTs": { "type": "string", "format": "date-time" },
+          "locationId": { "type": "integer", "nullable": true },
+          "locationName": { "type": "string", "nullable": true }
+        },
+        "required": ["id", "startTs", "endTs"]
+      },
+      "TeamSummary": {
+        "type": "object",
+        "properties": {
+          "total": { "type": "integer" },
+          "active": { "type": "integer" },
+          "managers": { "type": "integer" }
+        },
+        "required": ["total", "active", "managers"]
+      },
+      "OpenShiftDetail": {
+        "type": "object",
+        "properties": {
+          "shiftId": { "type": "integer" },
+          "startTs": { "type": "string", "format": "date-time" },
+          "endTs": { "type": "string", "format": "date-time" },
+          "deptId": { "type": "integer" },
+          "locationId": { "type": "integer" },
+          "code": { "type": "string" },
+          "dateMade": { "type": "string", "format": "date-time" }
+        },
+        "required": ["shiftId", "startTs", "endTs"]
+      },
+      "OpenShiftCompareResult": {
+        "type": "object",
+        "properties": {
+          "newShifts":       { "type": "array", "items": { "$ref": "#/components/schemas/OpenShiftDetail" } },
+          "removedShifts":   { "type": "array", "items": { "$ref": "#/components/schemas/OpenShiftDetail" } },
+          "unchangedShifts": { "type": "array", "items": { "$ref": "#/components/schemas/OpenShiftDetail" } }
+        },
+        "required": ["newShifts", "removedShifts", "unchangedShifts"]
       }
+
     }
+
   }
 }
