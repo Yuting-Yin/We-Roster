@@ -1,16 +1,14 @@
 package main.com.weroster.controller;
 
-import main.com.weroster.Dto.LeaveRequestDto;
-import main.com.weroster.Dto.OpenShiftCompareDto;
-import main.com.weroster.Dto.OpenShiftDto;
+import main.com.weroster.Dto.*;
 import main.com.weroster.service.LeaveRequestService;
-import main.com.weroster.Dto.ShiftSwapDto;
 import main.com.weroster.service.OpenShiftService;
 import main.com.weroster.service.ShiftSwapService;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.List;
 
 @RestController
@@ -42,7 +40,7 @@ public class LeaveAndSwapController {
     }
 
     // GET /open-shifts (default view)
-    @GetMapping("/open-shifts")
+    //@GetMapping("/open-shifts")
     @PreAuthorize("isAuthenticated()")
     public List<OpenShiftDto> listOpenShifts(
             @RequestParam(defaultValue = "20") int limit,
@@ -51,20 +49,20 @@ public class LeaveAndSwapController {
         return openShiftService.list(Math.max(1, Math.min(100, limit)), Math.max(0, offset));
     }
     // Comment to be deleted
-    @GetMapping("/open-shifts/compare")
+    //@GetMapping("/open-shifts/compare")
     @PreAuthorize("isAuthenticated()")
-    public OpenShiftCompareDto compareOpenShifts(
+    public OpenShiftCompareResult compareOpenShifts(
             @RequestParam String fromA,
             @RequestParam String toA,
             @RequestParam String fromB,
             @RequestParam String toB,
             @RequestParam(required = false) Long deptId
     ) {
-        java.time.Instant aFrom = java.time.Instant.parse(fromA);
-        java.time.Instant aTo = java.time.Instant.parse(toA);
-        java.time.Instant bFrom = java.time.Instant.parse(fromB);
+        String aFrom = String.valueOf(Instant.parse(fromA));
+        String aTo = String.valueOf(Instant.parse(toA));
+        String bFrom = String.valueOf(Instant.parse(fromB));
         java.time.Instant bTo = java.time.Instant.parse(toB);
-        return openShiftService.compare(aFrom, aTo, bFrom, bTo, deptId);
+        return openShiftService.compare(aFrom, aTo, bFrom, String.valueOf(bTo), deptId);
 
     }
 }

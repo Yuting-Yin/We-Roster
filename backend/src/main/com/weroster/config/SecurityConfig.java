@@ -31,7 +31,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         "/api/v1/my-team",
                         "/api/v1/my-team/summary",
                         "api/v1/leave-requests",
-                        "api/v1/open-shifts/compare").authenticated().anyRequest().authenticated()
+                        "api/v1/open-shifts/compare",
+                        "/api/v1/open-shifts/**").authenticated().anyRequest().authenticated()
                 .and().addFilterBefore(jwtAuthFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
     }
 }

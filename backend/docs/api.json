@@ -303,6 +303,19 @@
     },
     "/open-shifts": {
       "get": {
+        "parameters": [
+          { "name": "dateFrom", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "dateTo", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "session", "in": "query", "schema": { "type": "string", "enum": ["AM","PM","AH","ON_CALL"] } },
+          { "name": "locationId", "in": "query", "schema": { "type": "integer" } },
+          { "name": "deptId", "in": "query", "schema": { "type": "integer" } },
+          { "name": "roleLike", "in": "query", "schema": { "type": "string" }, "description": "matches shift.code / dept name" },
+          { "name": "urgentOnly", "in": "query", "schema": { "type": "boolean", "default": false } },
+          { "name": "minExtraPay", "in": "query", "schema": { "type": "integer" }, "description": "cents" },
+          { "name": "compareWithMyRoster", "in": "query", "schema": { "type": "boolean", "default": false } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer", "default": 0, "minimum": 0 } }
+        ],
         "operationId": "listOpenShifts",
         "summary": "List of open shifts",
         "responses": {
