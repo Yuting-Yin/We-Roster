@@ -1,14 +1,14 @@
 package main.com.weroster.service;
 
-import main.com.weroster.Dto.DeptRefDto;
-import main.com.weroster.Dto.ShiftPreviewDto;
-import main.com.weroster.Dto.TeamMemberDto;
-import main.com.weroster.Dto.TeamSummaryDto;
+import main.com.weroster.Dto.*;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -181,5 +181,126 @@ public class MyTeamService {
                         rs.getInt("total"),
                         rs.getInt("active"),
                         rs.getInt("managers")));
+    }
+    public TeamAboutDto about(String callerEmail, Long memberId) {
+        Objects.requireNonNull(callerEmail, "callerEmail");
+        Objects.requireNonNull(memberId, "memberId");
+
+        String sql = """
+          WITH me AS (
+            SELECT s.id AS me_id FROM staff s WHERE LOWER(s.email)=LOWER(?)
+          ),
+          allowed AS (
+            SELECT 1
+            FROM staff_department ms
+            JOIN staff_department ts ON ts.dept_id = ms.dept_id
+            JOIN me ON me.me_id = ms.staff_id
+            WHERE ts.staff_id = ?
+            LIMIT 1
+          )
+          SELECT s.id, s.first_name, s.last_name, s.phone, s.email,
+                 dsg.name AS role_title, dsg.accreditation AS accreditation
+          FROM staff s
+          JOIN allowed a ON 1=1
+          LEFT JOIN designation dsg ON dsg.id = s.designation_id
+          WHERE s.id = ?
+        """;
+
+        List<TeamAboutDto> rows = jdbc.query(sql, new Object[]{ callerEmail, memberId, memberId },
+                (rs, rn) -> mapAbout(rs));
+        if (rows.isEmpty()) throw new AccessDeniedException("Not allowed");
+        return rows.get(0);
+    }
+
+    private TeamAboutDto mapAbout(ResultSet rs) throws SQLException {
+        TeamAboutDto d = new TeamAboutDto();
+        d.id = rs.getLong("id");
+        d.firstName = rs.getString("first_name");
+        d.lastName = rs.getString("last_name");
+        d.phone = rs.getString("phone");
+        d.email = rs.getString("email");
+        d.roleTitle = rs.getString("role_title");
+        d.accreditation = rs.getString("accreditation");
+
+        String f = (d.firstName == null || d.firstName.isEmpty()) ? "" : d.firstName.substring(0,1);
+        String l = (d.lastName  == null || d.lastName.isEmpty())  ? "" : d.lastName.substring(0,1);
+        d.avatarInitials = (f + l).toUpperCase(Locale.ROOT);
+        return d;
+    }
+
+    /** Returns a calendar-style schedule for a member in [from,to] (inclusive), grouped by day. */
+    public TeamScheduleDto schedule(String callerEmail, Long memberId, LocalDate from, LocalDate to) {
+        Objects.requireNonNull(callerEmail, "callerEmail");
+        Objects.requireNonNull(memberId, "memberId");
+
+        if (from == null || to == null || to.isBefore(from)) {
+            // Default to the current month if bad/missing range
+            LocalDate today = LocalDate.now();
+            from = today.withDayOfMonth(1);
+            to   = today.withDayOfMonth(today.lengthOfMonth());
+        }
+
+        // Check access first
+        String guard = """
+          WITH me AS (
+            SELECT s.id AS me_id FROM staff s WHERE LOWER(s.email)=LOWER(?)
+          )
+          SELECT EXISTS(
+            SELECT 1
+            FROM staff_department ms
+            JOIN staff_department ts ON ts.dept_id = ms.dept_id
+            JOIN me ON me.me_id = ms.staff_id
+            WHERE ts.staff_id = ?
+          )
+        """;
+        Boolean allowed = jdbc.queryForObject(guard, new Object[]{ callerEmail, memberId }, Boolean.class);
+        if (allowed == null || !allowed) throw new AccessDeniedException("Not allowed");
+
+        // Fetch shifts in range and group by day
+        String sql = """
+          SELECT sh.id, sh.start_ts, sh.end_ts, sh.location_id, loc.name AS location_name
+          FROM shift_assignment sa
+          JOIN shift sh ON sh.id = sa.shift_id
+          LEFT JOIN location loc ON loc.id = sh.location_id
+          WHERE sa.staff_id = ?
+            AND sh.start_ts >= ?
+            AND sh.start_ts <  ?
+          ORDER BY sh.start_ts ASC
+        """;
+        // end boundary is exclusive -> plus 1 day
+        LocalDateTime fromTs = from.atStartOfDay();
+        LocalDateTime toExclusive = to.plusDays(1).atStartOfDay();
+
+        List<ShiftPreviewDto> flat = jdbc.query(sql, new Object[]{ memberId, fromTs, toExclusive }, (rs, rn) ->
+                new ShiftPreviewDto(
+                        rs.getLong("id"),
+                        rs.getTimestamp("start_ts").toLocalDateTime(),
+                        rs.getTimestamp("end_ts").toLocalDateTime(),
+                        (Long) rs.getObject("location_id"),
+                        rs.getString("location_name")
+                )
+        );
+
+        Map<LocalDate, List<ShiftPreviewDto>> byDay = new LinkedHashMap<>();
+        // initialize all days in range so the calendar can paint empty dates
+        for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
+            byDay.put(d, new ArrayList<>());
+        }
+        for (ShiftPreviewDto s : flat) {
+            LocalDate d = s.startTs.toLocalDate();
+            byDay.computeIfAbsent(d, k -> new ArrayList<>()).add(s);
+        }
+
+        List<TeamScheduleDayDto> days = new ArrayList<>();
+        for (Map.Entry<LocalDate, List<ShiftPreviewDto>> e : byDay.entrySet()) {
+            days.add(new TeamScheduleDayDto(e.getKey(), e.getValue()));
+        }
+
+        TeamScheduleDto out = new TeamScheduleDto();
+        out.memberId = memberId;
+        out.fromDate = from;
+        out.toDate = to;
+        out.days = days;
+        return out;
     }
 }

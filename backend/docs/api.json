@@ -463,6 +463,73 @@
           "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
+    },
+    "/my-team/{id}/about": {
+      "get": {
+        "operationId": "getTeamMemberAbout",
+        "summary": "Team member “About” info",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TeamAbout" },
+                "example": {
+                  "id": 3,
+                  "firstName": "Amy",
+                  "lastName": "T.",
+                  "roleTitle": "Anaes Coordinator",
+                  "avatarInitials": "AT",
+                  "phone": "(+61) 123-456-789",
+                  "email": "amy@austinana.au",
+                  "accreditation": "AHPRA"
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "UNAUTHORIZED", "message": "Missing or invalid token" } } } },
+          "403": { "description": "Forbidden",   "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "FORBIDDEN", "message": "Not allowed" } } } }
+        }
+      }
+    },
+    "/my-team/{id}/schedule": {
+      "get": {
+        "operationId": "getTeamMemberSchedule",
+        "summary": "Team member schedule (calendar)",
+        "parameters": [
+          { "name": "id",   "in": "path",  "required": true, "schema": { "type": "integer" } },
+          { "name": "from", "in": "query", "required": false, "description": "Start date (YYYY-MM-DD). Defaults to first day of current month.", "schema": { "type": "string", "format": "date" } },
+          { "name": "to",   "in": "query", "required": false, "description": "End date inclusive (YYYY-MM-DD). Defaults to last day of current month.",  "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TeamSchedule" },
+                "example": {
+                  "memberId": 3,
+                  "fromDate": "2025-05-01",
+                  "toDate": "2025-05-31",
+                  "days": [
+                    { "date": "2025-05-14", "shiftCount": 1, "shifts": [
+                      { "id": 601, "startTs": "2025-05-14T08:00:00Z", "endTs": "2025-05-14T16:00:00Z", "locationId": 8, "locationName": "Theatre 1" }
+                    ]},
+                    { "date": "2025-05-15", "shiftCount": 1, "shifts": [
+                      { "id": 602, "startTs": "2025-05-15T08:00:00Z", "endTs": "2025-05-15T12:00:00Z", "locationId": 8, "locationName": "Theatre 1" }
+                    ]}
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "UNAUTHORIZED", "message": "Missing or invalid token" } } } },
+          "403": { "description": "Forbidden",   "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "FORBIDDEN", "message": "Not allowed" } } } }
+        }
+      }
     }
   },
 
@@ -553,6 +620,52 @@
           "unchangedShifts": { "type": "array", "items": { "$ref": "#/components/schemas/OpenShiftDetail" } }
         },
         "required": ["newShifts", "removedShifts", "unchangedShifts"]
+      },
+      "TeamAbout": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" },
+          "roleTitle": { "type": "string", "nullable": true },
+          "avatarInitials": { "type": "string" },
+          "phone": { "type": "string", "nullable": true },
+          "email": { "type": "string" },
+          "accreditation": { "type": "string", "nullable": true }
+        }
+      },
+      "TeamSchedule": {
+        "type": "object",
+        "properties": {
+          "memberId": { "type": "integer" },
+          "fromDate": { "type": "string", "format": "date" },
+          "toDate": { "type": "string", "format": "date" },
+          "days": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TeamScheduleDay" }
+          }
+        }
+      },
+      "TeamScheduleDay": {
+        "type": "object",
+        "properties": {
+          "date": { "type": "string", "format": "date" },
+          "shiftCount": { "type": "integer" },
+          "shifts": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ShiftPreview" }
+          }
+        }
+      },
+      "ShiftPreview": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "startTs": { "type": "string", "format": "date-time" },
+          "endTs": { "type": "string", "format": "date-time" },
+          "locationId": { "type": "integer", "nullable": true },
+          "locationName": { "type": "string", "nullable": true }
+        }
       }
 
     }
