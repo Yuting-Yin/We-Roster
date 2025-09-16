@@ -1,7 +1,8 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
-import Dashboard from "@/screens/dashboard";
+import Dashboard from "@/screens/Dashboard";
+import RosterScreen from "@/screens/Roster";
 import { View, Text, Dimensions } from "react-native";
 
 const { width: W } = Dimensions.get("window");
@@ -61,7 +62,7 @@ export default function AppTabs() {
         })}
     >
     <Tab.Screen name="Dashboard" component={Dashboard} />
-    <Tab.Screen name="Roster" component={Roster} />
+    <Tab.Screen name="Roster" component={RosterScreen} />
     <Tab.Screen name="My Request" component={MyRequest} />
     <Tab.Screen name="My Team" component={MyTeam} />
     </Tab.Navigator>

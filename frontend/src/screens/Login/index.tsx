@@ -53,6 +53,10 @@ export default function Login() {
     }
   }
 
+  async function dummyLogin(){
+    navigation.replace("AppTabs"); 
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Logo */}
@@ -88,7 +92,8 @@ export default function Login() {
 
       {/* Login */}
       <TouchableOpacity
-        onPress={onLogin}
+        // TODO: replace with real login logic
+        onPress={dummyLogin}
         activeOpacity={0.85}
         style={{
           marginTop: sy(140),

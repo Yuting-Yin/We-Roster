@@ -23,6 +23,9 @@ const sy = (y: number) => (y / HI_FI_HEIGHT) * H;
 const CARD_W = sx(280);
 const CARD_GAP = sx(16);
 
+const INITIALS_SIZE_WIDTH = sx(68);
+const INITIALS_SIZE_HEIGHT = sx(74);
+
 const COLOR = {
   brand: "#0078D4",
   ink: "#212121",
@@ -524,14 +527,24 @@ const styles = StyleSheet.create({
     backgroundColor: COLOR.bg,
   },
   cardTopRow: { flexDirection: "row", marginBottom: sy(8), marginHorizontal: sx(16) },
+  // styles
   initials: {
+    width: INITIALS_SIZE_WIDTH,
+    height: INITIALS_SIZE_HEIGHT,
     backgroundColor: COLOR.brand,
-    borderRadius: sx(8),
-    paddingVertical: sy(28),
-    paddingHorizontal: sx(27),
+    borderRadius: sx(8),          // 想要圆形就用 INITIALS_SIZE/2
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: sx(16),
+    marginTop: sx(6)
   },
-  initialsText: { color: "#fff", fontSize: sx(20), fontWeight: "600" },
+
+  initialsText: {
+    color: "#fff",
+    fontSize: sx(20),
+    fontWeight: "600",
+    lineHeight: sx(20),            // 保证垂直视觉居中（Android 更稳定）
+  },
   cardName: { color: COLOR.text, fontSize: sx(16), marginBottom: sy(2), fontWeight: "600" },
   cardDivider: { height: 1, backgroundColor: COLOR.brand, marginHorizontal: sx(16), marginBottom: sy(8) },
   cardBottomRow: { flexDirection: "row", justifyContent: "space-between", marginHorizontal: sx(16) },
