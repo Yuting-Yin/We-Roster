@@ -24,7 +24,12 @@
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "type": "object" } },
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
                 "example": [
                   {
                     "id": 6,
@@ -40,7 +45,17 @@
           },
           "400": {
             "description": "Bad Request",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "BAD_REQUEST",
+                  "message": "Invalid query parameter."
+                }
+              }
+            }
           }
         }
       }
@@ -54,7 +69,12 @@
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "type": "object" } },
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
                 "example": [
                   {
                     "id": 6,
@@ -69,7 +89,17 @@
           },
           "400": {
             "description": "Bad Request",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "BAD_REQUEST",
+                  "message": "Invalid query parameter."
+                }
+              }
+            }
           }
         }
       }
@@ -83,7 +113,12 @@
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "type": "object" } },
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
                 "example": [
                   {
                     "id": 7,
@@ -100,7 +135,17 @@
           },
           "400": {
             "description": "Bad Request",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "BAD_REQUEST",
+                  "message": "Invalid query parameter."
+                }
+              }
+            }
           }
         }
       }
@@ -114,7 +159,12 @@
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "type": "object" } },
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
                 "example": [
                   {
                     "id": 1,
@@ -134,7 +184,17 @@
           },
           "400": {
             "description": "Bad Request",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "BAD_REQUEST",
+                  "message": "Invalid query parameter."
+                }
+              }
+            }
           }
         }
       }
@@ -148,7 +208,12 @@
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "type": "object" } },
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
                 "example": [
                   {
                     "id": 6,
@@ -170,7 +235,11 @@
                     "note": null,
                     "createdTime": "2025-03-10T09:00:00Z",
                     "departments": [
-                      { "deptId": 2, "isPrimary": false, "assignedAt": "2025-05-14T09:00:00Z" }
+                      {
+                        "deptId": 2,
+                        "isPrimary": false,
+                        "assignedAt": "2025-05-14T09:00:00Z"
+                      }
                     ]
                   }
                 ]
@@ -179,7 +248,17 @@
           },
           "400": {
             "description": "Bad Request",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "BAD_REQUEST",
+                  "message": "Invalid query parameter."
+                }
+              }
+            }
           }
         }
       }
@@ -193,7 +272,12 @@
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "type": "object" } },
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
                 "example": [
                   {
                     "id": 6,
@@ -209,7 +293,17 @@
           },
           "400": {
             "description": "Bad Request",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "BAD_REQUEST",
+                  "message": "Invalid query parameter."
+                }
+              }
+            }
           }
         }
       }
@@ -223,7 +317,12 @@
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "type": "object" } },
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
                 "example": [
                   {
                     "id": 666,
@@ -236,7 +335,17 @@
           },
           "400": {
             "description": "Bad Request",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "BAD_REQUEST",
+                  "message": "Invalid query parameter."
+                }
+              }
+            }
           }
         }
       }
@@ -250,7 +359,12 @@
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "type": "object" } },
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
                 "example": [
                   {
                     "id": 666,
@@ -264,7 +378,17 @@
           },
           "400": {
             "description": "Bad Request",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "BAD_REQUEST",
+                  "message": "Invalid query parameter."
+                }
+              }
+            }
           }
         }
       }
@@ -278,7 +402,12 @@
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "type": "object" } },
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
                 "example": [
                   {
                     "id": 42,
@@ -296,124 +425,63 @@
           },
           "400": {
             "description": "Bad Request",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "BAD_REQUEST",
+                  "message": "Invalid query parameter."
+                }
+              }
+            }
           }
         }
       }
     },
-    "/open-shifts": {
+    "/api/v1/calendar/range": {
       "get": {
-        "parameters": [
-          { "name": "dateFrom", "in": "query", "schema": { "type": "string", "format": "date-time" } },
-          { "name": "dateTo", "in": "query", "schema": { "type": "string", "format": "date-time" } },
-          { "name": "session", "in": "query", "schema": { "type": "string", "enum": ["AM","PM","AH","ON_CALL"] } },
-          { "name": "locationId", "in": "query", "schema": { "type": "integer" } },
-          { "name": "deptId", "in": "query", "schema": { "type": "integer" } },
-          { "name": "roleLike", "in": "query", "schema": { "type": "string" }, "description": "matches shift.code / dept name" },
-          { "name": "urgentOnly", "in": "query", "schema": { "type": "boolean", "default": false } },
-          { "name": "minExtraPay", "in": "query", "schema": { "type": "integer" }, "description": "cents" },
-          { "name": "compareWithMyRoster", "in": "query", "schema": { "type": "boolean", "default": false } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } },
-          { "name": "offset", "in": "query", "schema": { "type": "integer", "default": 0, "minimum": 0 } }
+        "operationId": "calendarRange",
+        "security": [
+          {
+            "BearerAuth": []
+          }
         ],
-        "operationId": "listOpenShifts",
-        "summary": "List of open shifts",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": { "type": "array", "items": { "type": "object" } },
-                "example": [
-                  {
-                    "shiftId": 601,
-                    "dateMade": "2025-09-05T12:00:00Z"
-                  }
-                ]
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
-          }
-        }
-      }
-    },
-    "/shifts": {
-      "get": {
-        "operationId": "listShifts",
-        "summary": "List of shifts",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": { "type": "array", "items": { "type": "object" } },
-                "example": [
-                  {
-                    "id": 601,
-                    "startTs": "2025-09-17T08:00:00Z",
-                    "endTs": "2025-09-17T16:00:00Z",
-                    "deptId": 6,
-                    "locationId": 8,
-                    "code": "DAY-8H",
-                    "note": "Day shift"
-                  }
-                ]
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." } } }
-          }
-        }
-      }
-    },
-    "/my-team": {
-      "get": {
-        "operationId": "listMyTeam",
-        "summary": "List of team members visible to the caller",
         "parameters": [
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } },
-          { "name": "offset", "in": "query", "schema": { "type": "integer", "default": 0, "minimum": 0 } },
-          { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "Search by name/email (contains)" },
-          { "name": "deptId", "in": "query", "schema": { "type": "integer" }, "description": "Filter by department id" }
+          {
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Start date (YYYY-MM-DD)"
+          },
+          {
+            "name": "months",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
+            },
+            "description": "Number of months to include"
+          }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "List of day markers for calendar",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/TeamMember" } },
-                "example": [
-                  {
-                    "id": 3,
-                    "firstName": "Admin",
-                    "lastName": "User",
-                    "email": "admin@weroster.local",
-                    "phone": "+610000000",
-                    "isManager": true,
-                    "status": "ACTIVE",
-                    "designationName": "Registered Nurse",
-                    "designationCode": "RN1",
-                    "designationMatrix": "RN-4",
-                    "departments": [
-                      { "deptId": 4, "name": "Intensive Care Unit", "isPrimary": true }
-                    ],
-                    "nextShift": null
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CalendarDay"
                   }
-                ]
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/Error" },
-                "example": { "code": "BAD_REQUEST", "message": "Invalid query parameter." }
+                }
               }
             }
           },
@@ -421,113 +489,633 @@
             "description": "Unauthorized",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Error" },
-                "example": { "code": "UNAUTHORIZED", "message": "Missing or invalid token" }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/Error" },
-                "example": { "code": "FORBIDDEN", "message": "Not allowed" }
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
               }
             }
           }
         }
       }
     },
-    "/open-shifts/compare": {
+    "/api/v1/myroster/day": {
       "get": {
-        "operationId": "compareOpenShifts",
-        "summary": "Compare open shifts between two windows",
+        "operationId": "myRosterDay",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
-          { "name": "fromA", "in": "query", "required": true, "schema": { "type": "string", "format": "date-time" } },
-          { "name": "toA",   "in": "query", "required": true, "schema": { "type": "string", "format": "date-time" } },
-          { "name": "fromB", "in": "query", "required": true, "schema": { "type": "string", "format": "date-time" } },
-          { "name": "toB",   "in": "query", "required": true, "schema": { "type": "string", "format": "date-time" } },
-          { "name": "deptId","in": "query", "required": false, "schema": { "type": "integer" } }
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "If absent, use today"
+          }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Basic day roster (list of shifts)",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/OpenShiftCompareResult" }
-              }
-            }
-          },
-          "400": { "description": "Bad Request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
-        }
-      }
-    },
-    "/my-team/{id}/about": {
-      "get": {
-        "operationId": "getTeamMemberAbout",
-        "summary": "Team member “About” info",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/TeamAbout" },
-                "example": {
-                  "id": 3,
-                  "firstName": "Amy",
-                  "lastName": "T.",
-                  "roleTitle": "Anaes Coordinator",
-                  "avatarInitials": "AT",
-                  "phone": "(+61) 123-456-789",
-                  "email": "amy@austinana.au",
-                  "accreditation": "AHPRA"
+                "schema": {
+                  "$ref": "#/components/schemas/DayRoster"
                 }
               }
             }
           },
-          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "UNAUTHORIZED", "message": "Missing or invalid token" } } } },
-          "403": { "description": "Forbidden",   "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "FORBIDDEN", "message": "Not allowed" } } } }
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
         }
       }
     },
-    "/my-team/{id}/schedule": {
+    "/api/v1/myroster/dayview": {
       "get": {
-        "operationId": "getTeamMemberSchedule",
-        "summary": "Team member schedule (calendar)",
+        "operationId": "myRosterDayView",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
-          { "name": "id",   "in": "path",  "required": true, "schema": { "type": "integer" } },
-          { "name": "from", "in": "query", "required": false, "description": "Start date (YYYY-MM-DD). Defaults to first day of current month.", "schema": { "type": "string", "format": "date" } },
-          { "name": "to",   "in": "query", "required": false, "description": "End date inclusive (YYYY-MM-DD). Defaults to last day of current month.",  "schema": { "type": "string", "format": "date" } }
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "YYYY-MM-DD"
+          }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Enriched day view (window + allocated/unallocated)",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/TeamSchedule" },
-                "example": {
-                  "memberId": 3,
-                  "fromDate": "2025-05-01",
-                  "toDate": "2025-05-31",
-                  "days": [
-                    { "date": "2025-05-14", "shiftCount": 1, "shifts": [
-                      { "id": 601, "startTs": "2025-05-14T08:00:00Z", "endTs": "2025-05-14T16:00:00Z", "locationId": 8, "locationName": "Theatre 1" }
-                    ]},
-                    { "date": "2025-05-15", "shiftCount": 1, "shifts": [
-                      { "id": 602, "startTs": "2025-05-15T08:00:00Z", "endTs": "2025-05-15T12:00:00Z", "locationId": 8, "locationName": "Theatre 1" }
-                    ]}
-                  ]
+                "schema": {
+                  "$ref": "#/components/schemas/DayView"
                 }
               }
             }
           },
-          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "UNAUTHORIZED", "message": "Missing or invalid token" } } } },
-          "403": { "description": "Forbidden",   "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "code": "FORBIDDEN", "message": "Not allowed" } } } }
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/myroster/shift/{shiftId}": {
+      "get": {
+        "summary": "Get shift details for the current user",
+        "operationId": "getShiftDetails",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "shiftId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shift details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShiftDetailsDto"
+                },
+                "examples": {
+                  "example": {
+                    "value": {
+                      "date": "2025-05-12",
+                      "shiftId": 99003,
+                      "startTime": "19:00",
+                      "endTime": "22:00",
+                      "durationMinutes": 180,
+                      "location": {
+                        "campus": "PMCC",
+                        "address": null,
+                        "room": null
+                      },
+                      "designation": "Anaes Coordinator",
+                      "coworkers": [
+                        {
+                          "staffId": 2,
+                          "staffName": "Alice Brown",
+                          "staffInitials": "AB"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Shift not found or not assigned to user",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/myroster/leave-request": {
+      "post": {
+        "summary": "Create or update a leave request for the current user",
+        "description": "当前登录用户为指定班次创建或更新请假申请（年假/病假/等）。",
+        "tags": [
+          "LeaveRequest"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "shiftId": {
+                    "type": "integer",
+                    "example": 99003
+                  },
+                  "leaveType": {
+                    "type": "string",
+                    "enum": [
+                      "Annual",
+                      "Sick",
+                      "Casual",
+                      "Unpaid",
+                      "Other"
+                    ],
+                    "example": "Annual"
+                  },
+                  "allDay": {
+                    "type": "boolean",
+                    "example": false
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2025-05-12"
+                  },
+                  "startTime": {
+                    "type": "string",
+                    "format": "time",
+                    "example": "09:00"
+                  },
+                  "endTime": {
+                    "type": "string",
+                    "format": "time",
+                    "example": "17:00"
+                  }
+                },
+                "required": [
+                  "shiftId",
+                  "leaveType",
+                  "allDay",
+                  "date"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Leave request successfully created or updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaveRequestDto"
+                },
+                "example": {
+                  "shiftId": 99003,
+                  "leaveType": "Annual",
+                  "allDay": false,
+                  "date": "2025-05-12",
+                  "startTime": "09:00",
+                  "endTime": "17:00"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/myroster/shift/{shiftId}/swap": {
+      "get": {
+        "summary": "Get data for Swap Shift page",
+        "description": "返回当前登录用户在指定班次的基本信息（mine）以及可互换候选人列表（search）。",
+        "tags": [
+          "SwapShift"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "shiftId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example": 99003
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "可选：按候选人姓名/工号关键字搜索",
+            "schema": {
+              "type": "string"
+            },
+            "example": "alice"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "分页页码（从1开始）",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "description": "分页大小",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Swap Shift 页面数据",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwapShiftResponse"
+                },
+                "example": {
+                  "mine": {
+                    "shiftId": 99003,
+                    "initials": "AP",
+                    "date": "2025-05-12",
+                    "startTime": "19:00",
+                    "endTime": "22:00",
+                    "campus": "Emergency Department",
+                    "location": "Ward A"
+                  },
+                  "search": {
+                    "total": 2,
+                    "items": [
+                      {
+                        "staffId": 10021,
+                        "staffName": "Alice Park",
+                        "initials": "AP",
+                        "startTime": "19:00",
+                        "endTime": "22:00",
+                        "campus": "Emergency Department",
+                        "location": "Ward A"
+                      },
+                      {
+                        "staffId": 10034,
+                        "staffName": "Bob Chen",
+                        "initials": "BC",
+                        "startTime": "18:30",
+                        "endTime": "22:30",
+                        "campus": "Emergency Department",
+                        "location": "Ward A"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Shift not found or not assigned to current user"
+          }
+        }
+      }
+    }, "/api/v1/myroster/shift/{shiftId}/leave-request/submit": {
+      "post": {
+        "summary": "Submit a leave request for the given shift",
+        "tags": ["Leave"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "shiftId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" },
+            "example": 99003
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateLeaveRequestCommand" },
+              "examples": {
+                "allDay": {
+                  "summary": "All-day annual leave",
+                  "value": {
+                    "leaveType": "Annual",
+                    "allDay": true,
+                    "date": "2025-09-20"
+                  }
+                },
+                "partialDay": {
+                  "summary": "Partial sick leave",
+                  "value": {
+                    "leaveType": "Sick",
+                    "allDay": false,
+                    "date": "2025-09-20",
+                    "startTime": "13:00",
+                    "endTime": "17:00"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Submission result",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SubmissionResponse" },
+                "examples": {
+                  "success": {
+                    "summary": "Submission successful → pending",
+                    "value": {
+                      "result": "success",
+                      "code": "PENDING",
+                      "message": "Submission accepted and pending approval.",
+                      "data": { "shiftId": 99003, "leaveType": "Annual" }
+                    }
+                  },
+                  "duplicate": {
+                    "summary": "Submission unsuccessful → duplicated request",
+                    "value": {
+                      "result": "error",
+                      "code": "DUPLICATE_REQUEST",
+                      "message": "You already have an open leave request for this shift."
+                    }
+                  },
+                  "validation": {
+                    "summary": "Submission unsuccessful → validation problem",
+                    "value": {
+                      "result": "error",
+                      "code": "VALIDATION_ERROR",
+                      "message": "Missing required fields: shiftId/leaveType/date."
+                    }
+                  },
+                  "session": {
+                    "summary": "Submission unsuccessful → session expired",
+                    "value": {
+                      "result": "error",
+                      "code": "SESSION_EXPIRED",
+                      "message": "Login required."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/myroster/shift/{shiftId}/swap/submit": {
+      "post": {
+        "summary": "Submit a swap request for the given shift",
+        "tags": [
+          "Swap"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "shiftId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example": 99003
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwapSubmitCommand"
+              },
+              "example": {
+                "targetStaffId": 3,
+                "targetShiftId": 99005
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Submission result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Submission successful → pending",
+                    "value": {
+                      "result": "success",
+                      "code": "PENDING",
+                      "message": "Submission accepted and pending approval.",
+                      "data": {
+                        "requesterShiftId": 99003,
+                        "targetStaffId": 3,
+                        "targetShiftId": 99005
+                      }
+                    }
+                  },
+                  "duplicate": {
+                    "summary": "Submission unsuccessful → duplicated request",
+                    "value": {
+                      "result": "error",
+                      "code": "DUPLICATE_REQUEST",
+                      "message": "A pending swap request already exists for these shifts."
+                    }
+                  },
+                  "validation": {
+                    "summary": "Submission unsuccessful → validation problem",
+                    "value": {
+                      "result": "error",
+                      "code": "VALIDATION_ERROR",
+                      "message": "Target staff is not assigned to the target shift."
+                    }
+                  },
+                  "session": {
+                    "summary": "Submission unsuccessful → session expired",
+                    "value": {
+                      "result": "error",
+                      "code": "SESSION_EXPIRED",
+                      "message": "Login required."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/myroster/shift/{shiftId}/request/submit": {
+      "post": {
+        "summary": "Submit a request for an unallocated shift",
+        "tags": ["ShiftRequest"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "shiftId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" },
+            "example": 99006
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShiftRequestSubmitCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Submission result",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SubmissionResponse" },
+                "examples": {
+                  "success": {
+                    "summary": "Submission successful → pending",
+                    "value": {
+                      "result": "success",
+                      "code": "PENDING",
+                      "message": "Submission accepted and pending approval.",
+                      "data": { "shiftId": 99006 }
+                    }
+                  },
+                  "duplicate": {
+                    "summary": "Duplicate request",
+                    "value": {
+                      "result": "error",
+                      "code": "DUPLICATE_REQUEST",
+                      "message": "You already have a pending request for this shift."
+                    }
+                  },
+                  "validation": {
+                    "summary": "Validation problem",
+                    "value": {
+                      "result": "error",
+                      "code": "VALIDATION_ERROR",
+                      "message": "Shift is not unallocated."
+                    }
+                  },
+                  "session": {
+                    "summary": "Session expired",
+                    "value": {
+                      "result": "error",
+                      "code": "SESSION_EXPIRED",
+                      "message": "Login required."
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -548,127 +1136,286 @@
           "details": { "type": "object", "additionalProperties": true }
         }
       },
-      "TeamMember": {
+      "CalendarDay": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
-          "firstName": { "type": "string" },
-          "lastName": { "type": "string" },
-          "email": { "type": "string" },
-          "phone": { "type": "string", "nullable": true },
-          "isManager": { "type": "boolean" },
-          "status": { "type": "string", "description": "ACTIVE/INACTIVE/etc." },
-          "designationName": { "type": "string", "nullable": true },
-          "designationCode": { "type": "string", "nullable": true },
-          "designationMatrix": { "type": "string", "nullable": true },
-          "departments": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/DeptRef" }
-          },
-          "nextShift": { "$ref": "#/components/schemas/ShiftPreview" }
-        },
-        "required": ["id", "firstName", "lastName", "email", "isManager", "status", "departments"]
-      },
-      "DeptRef": {
-        "type": "object",
-        "properties": {
-          "deptId": { "type": "integer" },
-          "name": { "type": "string" },
-          "isPrimary": { "type": "boolean" }
-        },
-        "required": ["deptId", "name", "isPrimary"]
-      },
-      "ShiftPreview": {
-        "type": "object",
-        "nullable": true,
-        "properties": {
-          "id": { "type": "integer" },
-          "startTs": { "type": "string", "format": "date-time" },
-          "endTs": { "type": "string", "format": "date-time" },
-          "locationId": { "type": "integer", "nullable": true },
-          "locationName": { "type": "string", "nullable": true }
-        },
-        "required": ["id", "startTs", "endTs"]
-      },
-      "TeamSummary": {
-        "type": "object",
-        "properties": {
-          "total": { "type": "integer" },
-          "active": { "type": "integer" },
-          "managers": { "type": "integer" }
-        },
-        "required": ["total", "active", "managers"]
-      },
-      "OpenShiftDetail": {
-        "type": "object",
-        "properties": {
-          "shiftId": { "type": "integer" },
-          "startTs": { "type": "string", "format": "date-time" },
-          "endTs": { "type": "string", "format": "date-time" },
-          "deptId": { "type": "integer" },
-          "locationId": { "type": "integer" },
-          "code": { "type": "string" },
-          "dateMade": { "type": "string", "format": "date-time" }
-        },
-        "required": ["shiftId", "startTs", "endTs"]
-      },
-      "OpenShiftCompareResult": {
-        "type": "object",
-        "properties": {
-          "newShifts":       { "type": "array", "items": { "$ref": "#/components/schemas/OpenShiftDetail" } },
-          "removedShifts":   { "type": "array", "items": { "$ref": "#/components/schemas/OpenShiftDetail" } },
-          "unchangedShifts": { "type": "array", "items": { "$ref": "#/components/schemas/OpenShiftDetail" } }
-        },
-        "required": ["newShifts", "removedShifts", "unchangedShifts"]
-      },
-      "TeamAbout": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer" },
-          "firstName": { "type": "string" },
-          "lastName": { "type": "string" },
-          "roleTitle": { "type": "string", "nullable": true },
-          "avatarInitials": { "type": "string" },
-          "phone": { "type": "string", "nullable": true },
-          "email": { "type": "string" },
-          "accreditation": { "type": "string", "nullable": true }
+          "date": { "type": "string", "format": "date", "example": "2025-05-12" },
+          "assignedAM": { "type": "boolean", "example": true },
+          "assignedPM": { "type": "boolean", "example": false },
+          "isToday": { "type": "boolean", "example": false }
         }
       },
-      "TeamSchedule": {
+
+      "ShiftItem": {
         "type": "object",
         "properties": {
-          "memberId": { "type": "integer" },
-          "fromDate": { "type": "string", "format": "date" },
-          "toDate": { "type": "string", "format": "date" },
-          "days": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/TeamScheduleDay" }
-          }
+          "id": { "type": "integer", "format": "int64", "example": 99003 },
+          "startTs": { "type": "string", "description": "ISO local datetime", "example": "2025-05-12T19:00" },
+          "endTs": { "type": "string", "description": "ISO local datetime", "example": "2025-05-12T22:00" },
+          "dept": { "type": "string", "nullable": true },
+          "location": { "type": "string", "nullable": true },
+          "code": { "type": "string", "example": "AM-DEMO" },
+          "coworkers": { "type": "integer", "example": 0 },
+          "lead": { "type": "boolean", "example": false }
         }
       },
-      "TeamScheduleDay": {
+
+      "DayRoster": {
         "type": "object",
         "properties": {
           "date": { "type": "string", "format": "date" },
-          "shiftCount": { "type": "integer" },
           "shifts": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/ShiftPreview" }
+            "items": { "$ref": "#/components/schemas/ShiftItem" }
           }
         }
       },
-      "ShiftPreview": {
+
+      "DayWindow": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
-          "startTs": { "type": "string", "format": "date-time" },
-          "endTs": { "type": "string", "format": "date-time" },
-          "locationId": { "type": "integer", "nullable": true },
-          "locationName": { "type": "string", "nullable": true }
+          "startTime": { "type": "string", "example": "08:00" },
+          "endTime": { "type": "string", "example": "23:59" }
+        }
+      },
+      "Campus": {
+        "type": "object",
+        "properties": {
+          "campusId": { "type": "string", "example": "camp_1" },
+          "name": { "type": "string", "example": "Main Campus" }
+        }
+      },
+      "LocationObj": {
+        "type": "object",
+        "properties": {
+          "campus": { "$ref": "#/components/schemas/Campus" },
+          "address": { "type": "string", "nullable": true, "example": null }
+        }
+      },
+      "AllocatedItem": {
+        "type": "object",
+        "properties": {
+          "shiftId": { "type": "string", "example": "sh_99003" },
+          "startTime": { "type": "string", "example": "19:00" },
+          "endTime": { "type": "string", "example": "22:00" },
+          "durationMinutes": { "type": "integer", "example": 180 },
+          "location": { "$ref": "#/components/schemas/LocationObj" },
+          "designation": { "type": "string", "nullable": true, "example": "Anaes Coordinator" },
+          "coworkerCount": { "type": "integer", "example": 0 }
+        }
+      },
+      "UnallocatedItem": {
+        "type": "object",
+        "properties": {
+          "startTime": { "type": "string", "example": "08:00" },
+          "endTime": { "type": "string", "example": "19:00" },
+          "label": { "type": "string", "example": "Unallocated" }
+        }
+      },
+      "DayView": {
+        "type": "object",
+        "properties": {
+          "date": { "type": "string", "format": "date" },
+          "dayWindow": { "$ref": "#/components/schemas/DayWindow" },
+          "allocated": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/AllocatedItem" }
+          },
+          "unallocated": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/UnallocatedItem" }
+          }
+        }
+      },
+      "ShiftDetailsDto": {
+        "type": "object",
+        "required": ["date", "shiftId", "startTime", "endTime", "durationMinutes", "location", "coworkers"],
+        "properties": {
+          "date": { "type": "string", "format": "date", "example": "2025-05-12" },
+          "shiftId": { "type": "integer", "format": "int64", "example": 99003 },
+          "startTime": { "type": "string", "pattern": "^[0-2][0-9]:[0-5][0-9]$", "example": "13:00" },
+          "endTime": { "type": "string", "pattern": "^[0-2][0-9]:[0-5][0-9]$", "example": "18:00" },
+          "durationMinutes": { "type": "integer", "minimum": 0, "example": 300 },
+          "location": { "$ref": "#/components/schemas/LocationDto" },
+          "designation": { "type": "string", "nullable": true, "example": "Anaes Coordinator" },
+          "coworkers": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CoworkerDto" }
+          }
+        }
+      },
+      "LocationDto": {
+        "type": "object",
+        "required": ["campus"],
+        "properties": {
+          "campus": { "type": "string", "nullable": true, "example": "PMCC" },
+          "address": { "type": "string", "nullable": true, "example": null },
+          "room": { "type": "string", "nullable": true, "example": null }
+        }
+      },
+      "CoworkerDto": {
+        "type": "object",
+        "required": ["staffId", "staffName", "staffInitials"],
+        "properties": {
+          "staffId": { "type": "integer", "format": "int64", "example": 2 },
+          "staffName": { "type": "string", "example": "Alice Brown" },
+          "staffInitials": { "type": "string", "example": "AB" }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "format": "uri" },
+          "title": { "type": "string" },
+          "status": { "type": "integer" },
+          "detail": { "type": "string" },
+          "instance": { "type": "string" }
+        },
+        "additionalProperties": true
+      },
+      "LeaveRequestDto": {
+        "type": "object",
+        "properties": {
+          "shiftId": { "type": "integer" },
+          "leaveType": { "type": "string" },
+          "allDay": { "type": "boolean" },
+          "date": { "type": "string", "format": "date" },
+          "startTime": { "type": "string", "format": "time" },
+          "endTime": { "type": "string", "format": "time" }
+        }
+      },
+      "SwapShiftResponse": {
+        "type": "object",
+        "properties": {
+          "mine": { "$ref": "#/components/schemas/SwapShiftMineDto" },
+          "search": { "$ref": "#/components/schemas/SwapShiftSearchSection" }
+        },
+        "required": ["mine", "search"]
+      },
+      "SwapShiftMineDto": {
+        "type": "object",
+        "properties": {
+          "shiftId": { "type": "integer" },
+          "initials": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "startTime": { "type": "string", "format": "time" },
+          "endTime": { "type": "string", "format": "time" },
+          "campus": { "type": "string" },
+          "location": { "type": "string" }
+        },
+        "required": ["shiftId", "initials", "date", "startTime", "endTime"]
+      },
+      "SwapShiftSearchSection": {
+        "type": "object",
+        "properties": {
+          "total": { "type": "integer" },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/SwapCandidateItem" }
+          }
+        },
+        "required": ["total", "items"]
+      },
+      "SwapCandidateItem": {
+        "type": "object",
+        "properties": {
+          "staffId": { "type": "integer" },
+          "staffName": { "type": "string" },
+          "initials": { "type": "string" },
+          "startTime": { "type": "string", "format": "time" },
+          "endTime": { "type": "string", "format": "time" },
+          "campus": { "type": "string" },
+          "location": { "type": "string" }
+        },
+        "required": ["staffId", "staffName", "initials", "startTime", "endTime"]
+      },
+      "CreateLeaveRequestCommand": {
+        "type": "object",
+        "required": ["leaveType", "allDay", "date"],
+        "properties": {
+          "leaveType": {
+            "type": "string",
+            "description": "Annual | Sick | Casual | Unpaid | Other",
+            "example": "Annual"
+          },
+          "allDay": { "type": "boolean", "example": true },
+          "date": { "type": "string", "format": "date", "example": "2025-09-20" },
+          "startTime": { "type": "string", "format": "time", "example": "09:00" },
+          "endTime": { "type": "string", "format": "time", "example": "17:00" }
+        }
+      },
+      "SwapSubmitCommand": {
+        "type": "object",
+        "required": ["targetStaffId", "targetShiftId"],
+        "properties": {
+          "targetStaffId": { "type": "integer", "example": 3 },
+          "targetShiftId": { "type": "integer", "example": 99005 }
+        }
+      },
+      "SubmissionResponse": {
+        "type": "object",
+        "properties": {
+          "result": { "type": "string", "enum": ["success", "error"] },
+          "code": {
+            "type": "string",
+            "enum": ["PENDING", "DUPLICATE_REQUEST", "VALIDATION_ERROR", "SESSION_EXPIRED"]
+          },
+          "message": { "type": "string" },
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          }
+        },
+        "example": {
+          "result": "success",
+          "code": "PENDING",
+          "message": "Submission accepted and pending approval.",
+          "data": { "shiftId": 99003, "leaveType": "Annual" }
+        }
+      },
+      "ShiftRequestSubmitCommand": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 500,
+            "example": "I can take this unallocated shift."
+          }
         }
       }
+    },
 
+
+    "responses": {
+      "UnauthorizedError": {
+        "description": "Unauthorized",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      }
+    },
+
+    "parameters": {
+      "DateParam": {
+        "name": "date",
+        "in": "query",
+        "required": true,
+        "schema": { "type": "string", "format": "date" },
+        "description": "YYYY-MM-DD"
+      },
+      "StartParam": {
+        "name": "start",
+        "in": "query",
+        "required": true,
+        "schema": { "type": "string", "format": "date" },
+        "description": "Start date (YYYY-MM-DD)"
+      },
+      "MonthsParam": {
+        "name": "months",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "integer", "default": 1, "minimum": 1 },
+        "description": "Number of months to include"
+      }
     }
-
   }
 }

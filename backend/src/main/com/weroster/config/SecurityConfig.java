@@ -23,16 +23,17 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         "/swagger-ui.html",
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
-                        "/webjars/**").permitAll().antMatchers(org.springframework.http.HttpMethod.GET,
-                        "/api/v1/leave-requests","/api/v1/shift-swaps"
+                        "/webjars/**", "/__whoami", "api/v1/calendar/range2-test").permitAll().antMatchers(org.springframework.http.HttpMethod.GET,
+                        "/api/v1/leave-requests","/api/v1/shift-swaps", "/api/v1/calendar/range2"
                     ).permitAll().antMatchers(HttpMethod.GET,
                         "/api/v1/leave-requests",
                         "/api/v1/shift-swaps",
                         "/api/v1/my-team",
+                        "/api/v1/my-requests",
                         "/api/v1/my-team/summary",
                         "api/v1/leave-requests",
                         "api/v1/open-shifts/compare",
-                        "/api/v1/open-shifts/**").authenticated().anyRequest().authenticated()
+                        "/api/v1/open-shifts/**","api/v1/myroster/day").authenticated().anyRequest().authenticated()
                 .and().addFilterBefore(jwtAuthFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
     }
 }

@@ -32,6 +32,9 @@ public class AuthService {
             return u;
         }, email);
 
+        assert user != null;
+        ensureStaffLink(user.id, user.email);
+
         if (user == null) throw new AuthException("INVALID_CREDENTIALS");
         if (!"ACTIVE".equalsIgnoreCase(user.status)) throw new AuthException("USER_INACTIVE");
 
@@ -60,5 +63,31 @@ public class AuthService {
 
     private static class UserRow {
         Long id; String email; String passwordHash; String role; String status; String salt;
+    }
+    private void ensureStaffLink(Long userId, String userEmail) {
+        // 1) find existing staff by email
+        Long staffId = jdbc.query(
+                "SELECT id FROM staff WHERE LOWER(email)=LOWER(?) LIMIT 1",
+                ps -> ps.setString(1, userEmail),
+                rs -> rs.next() ? rs.getLong(1) : null
+        );
+
+        // 2) create staff if not found (use any valid hospital_id; pick first)
+        if (staffId == null) {
+            Long hospitalId = jdbc.query("SELECT id FROM Hospital ORDER BY id ASC LIMIT 1",
+                    rs -> rs.next() ? rs.getLong(1) : 1L); // fallback to 1
+            jdbc.update(
+                    "INSERT INTO staff(hospital_id, first_name, last_name, email, status) VALUES (?,?,?,?, 'Active')",
+                    hospitalId, "User", "Account", userEmail
+            );
+            staffId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        }
+
+        // 3) upsert link
+        jdbc.update(
+                "INSERT INTO user_staff(user_id, staff_id) VALUES (?, ?) " +
+                        "ON DUPLICATE KEY UPDATE staff_id=VALUES(staff_id)",
+                userId, staffId
+        );
     }
 }
