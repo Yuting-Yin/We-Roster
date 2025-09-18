@@ -1,11 +1,13 @@
 import { ShiftType, EventItem } from "@/types/roster";
 import { dayKey } from "./date";
 
+// two type of slots for shifts
 export const SLOTS = [
   { id: "am", title: "AM shift", start: "08:00", end: "13:00" },
   { id: "pm", title: "PM shift", start: "13:00", end: "18:00" },
 ] as const;
 
+// dummy data for my roster page (all shifts for current user within 2 month)
 export function makeDemoShiftMap(): Record<string, ShiftType> {
   const keyOf = (y: number, m0: number, d: number) =>
     new Date(y, m0, d).toISOString().slice(0, 10);
@@ -29,6 +31,7 @@ export function makeDemoShiftMap(): Record<string, ShiftType> {
   };
 }
 
+// function that export dummy data for each shift
 export function buildEventsFor(date: Date, shiftMap: Record<string, ShiftType>): EventItem[] {
   const t = shiftMap[dayKey(date)] ?? "unallocated";
   const isScheduled = (slotId: "am" | "pm") =>

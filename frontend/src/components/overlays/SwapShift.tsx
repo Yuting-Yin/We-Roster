@@ -14,33 +14,30 @@ type SwapShiftProps = {
   onSubmitted: (payload?: { message: string; targetUserId?: string }) => void;
   date: Date;
   slot?: { start: string; end: string };
-  allUsers: User[];
-  busyUserIds?: string[];
+  availableUsers: User[];
+  loading?: boolean;                  // optional
+  error?: string | null;              // optional
 };
 
 export default function SwapShift({
   visible, onCancel, onSubmitted, date, slot,
-  allUsers, busyUserIds = [],
+  availableUsers, loading, error,
 }: SwapShiftProps) {
-  // ---- hooks（必须在顶层 & 顺序固定）----
+  // ---- hooks (Must be at the top level & fixed in order) ----
   const [message, setMessage] = React.useState("");
   const [query, setQuery] = React.useState("");
   const [selected, setSelected] = React.useState<string | undefined>();
 
-  // 只显示该时段“空闲”的员工
-  const candidates = React.useMemo(
-    () => allUsers.filter(u => !busyUserIds.includes(u.id)),
-    [allUsers, busyUserIds]
-  );
+  // candidates = all avaliable users for swap
+  const candidates = availableUsers;
 
-  // 搜索（忽略大小写）
+  // searching users (case insensitive)
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return candidates;
     return candidates.filter(u => u.name.toLowerCase().includes(q));
   }, [candidates, query]);
 
-  // ---- 现在再根据 visible 决定是否渲染 ----
   if (!visible) return null;
 
   const submit = () => onSubmitted({ message, targetUserId: selected });
@@ -87,7 +84,7 @@ export default function SwapShift({
           </View>
         </View>
 
-        {/* Swap with（搜索 + 仅空闲人员） */}
+        {/* Swap with (searching + avaliable users) */}
         <View style={{ marginHorizontal: sx(16), marginTop: sy(16) }}>
           <Text style={styles.secTitle}>Swap with</Text>
 
@@ -105,37 +102,51 @@ export default function SwapShift({
             />
           </View>
 
-          {/* 候选列表 */}
-          {filtered.length === 0 ? (
+          {/* Placeholders & Errors */}
+          {loading && (
             <Text style={{ color: COLOR.label, fontSize: sx(12), marginTop: sy(10) }}>
-              No available staff found for this time slot.
+              Loading available staff...
             </Text>
-          ) : (
-            filtered.map((p) => {
-              const active = selected === p.id;
-              return (
-                <Pressable
-                  key={p.id}
-                  onPress={() => setSelected(p.id)}
-                  style={[styles.card, active && { backgroundColor: "#EEF5FF", borderColor: COLOR.brand }]}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Ionicons
-                      name={active ? "radio-button-on" : "radio-button-off"}
-                      size={sx(18)}
-                      color={active ? COLOR.brand : COLOR.label}
-                    />
-                    <Avatar initials={p.initials} />
-                    <View style={{ marginLeft: sx(10) }}>
-                      <Text style={{ color: COLOR.ink, fontSize: sx(14), fontWeight: "600" }}>{p.name}</Text>
-                      <Text style={{ color: COLOR.brandAlt, fontSize: sx(12) }}>
-                        {fmt(date, { weekday: "short" })}, {fmt(date, { day: "2-digit", month: "short", year: "numeric" })}
-                      </Text>
+          )}
+          {!!error && !loading && (
+            <Text style={{ color: "#C00", fontSize: sx(12), marginTop: sy(10) }}>
+              {error}
+            </Text>
+          )}
+
+          {/* Candidate List */}
+          {!loading && !error && (
+            filtered.length === 0 ? (
+              <Text style={{ color: COLOR.label, fontSize: sx(12), marginTop: sy(10) }}>
+                No available staff found for this time slot.
+              </Text>
+            ) : (
+              filtered.map((p) => {
+                const active = selected === p.id;
+                return (
+                  <Pressable
+                    key={p.id}
+                    onPress={() => setSelected(p.id)}
+                    style={[styles.card, active && { backgroundColor: "#EEF5FF", borderColor: COLOR.brand }]}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <Ionicons
+                        name={active ? "radio-button-on" : "radio-button-off"}
+                        size={sx(18)}
+                        color={active ? COLOR.brand : COLOR.label}
+                      />
+                      <Avatar initials={p.initials} />
+                      <View style={{ marginLeft: sx(10) }}>
+                        <Text style={{ color: COLOR.ink, fontSize: sx(14), fontWeight: "600" }}>{p.name}</Text>
+                        <Text style={{ color: COLOR.brandAlt, fontSize: sx(12) }}>
+                          {fmt(date, { weekday: "short" })}, {fmt(date, { day: "2-digit", month: "short", year: "numeric" })}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                </Pressable>
-              );
-            })
+                  </Pressable>
+                );
+              })
+            )
           )}
         </View>
       </ScrollView>

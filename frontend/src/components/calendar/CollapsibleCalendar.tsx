@@ -19,17 +19,17 @@ const dayKey = (d: Date) => d.toISOString().slice(0, 10);
 const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const endOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
 
-/** 周一开头的一周起始 */
+/* Weeks beginning on Monday */
 function startOfWeekMon(d: Date) {
   const r = new Date(d);
   const day = r.getDay(); // 0 Sun .. 6 Sat
-  const diff = (day + 6) % 7; // 以 Mon=0 偏移
+  const diff = (day + 6) % 7; // Offset with Mon=0
   r.setDate(r.getDate() - diff);
   r.setHours(0, 0, 0, 0);
   return r;
 }
 
-/** 由选中日期推导本周 7 天（周一开头） */
+/* Derive the 7 days of this week (starting with Monday) from the selected date */
 function getWeekDays(value: Date): Date[] {
   const start = startOfWeekMon(value);
   return Array.from({ length: 7 }, (_, i) => {
@@ -47,17 +47,17 @@ function buildMonths(anchor: Date, count = 2) {
     const firstWeekdayMon0 = (first.getDay() + 6) % 7; // 0..6 => Mon..Sun
 
     const days: Date[] = [];
-    // 前置
+    // pre
     for (let i = 0; i < firstWeekdayMon0; i++) {
       const d = new Date(first);
       d.setDate(first.getDate() - (firstWeekdayMon0 - i));
       days.push(d);
     }
-    // 当月
+    // current month
     for (let d = 1; d <= last.getDate(); d++) {
       days.push(new Date(first.getFullYear(), first.getMonth(), d));
     }
-    // 尾部补齐到 6 行（42 格）
+    // Pad to 6 lines (42 spaces)
     while (days.length % 7 !== 0) {
       const tail = new Date(days[days.length - 1]);
       tail.setDate(tail.getDate() + 1);
@@ -86,14 +86,14 @@ type DateType = ShiftType;
 type Action = { icon: "menu" | "refresh"; onPress: () => void };
 
 type Props = {
-  value: Date;                         // 当前选中日期（受控）
-  onChange: (d: Date) => void;         // 选中变化回调
-  shiftMap?: Record<string, ShiftType>; // YYYY-MM-DD -> 类型
-  /** 放在头部中间的标题（不传则显示默认“Mon, May 12, 2025”） */
+  value: Date;                         // Currently selected date (controlled)
+  onChange: (d: Date) => void;         // Selection change callback
+  shiftMap?: Record<string, ShiftType>; // YYYY-MM-DD -> type
+  /** The title placed in the center of the header (default display will be "Mon, May 12, 2025") */
   title?: string;
-  /** 头部左侧图标按钮（常用：menu） */
+  /** Icon button on the left side of the head (menu) */
   leftAction?: Action;
-  /** 头部右侧图标按钮（常用：refresh） */
+  /** Icon button on the right side of the head (refresh) */
   rightAction?: Action;
 };
 
@@ -101,7 +101,7 @@ type Props = {
 // day:   ☀️ + ● ○
 // night: 🌙 + ○ ●
 /* both:  ⛅ + ● ●
-   none:  无 icon + ○ ○ */
+   none:  null + ○ ○ */
 const dotStyles = StyleSheet.create({
   filled: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, backgroundColor: "#000" },
   hollow: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, borderWidth: 1.5, borderColor: "#BDBDBD", backgroundColor: "transparent" },
@@ -114,7 +114,7 @@ function visualOf(type: DateType) {
   return { icon: null, dots: ["hollow", "hollow"] as const };
 }
 
-/** 内置演示：无 shiftMap 时的默认类型规则 */
+/** Built-in demo: default type rules when there is no shiftMap */
 function getTypeForDate(d: Date): DateType {
   const weekdayMon0 = (d.getDay() + 6) % 7; // 0..6 = Mon..Sun
   if (weekdayMon0 === 0) return "night-shift";    // Mon
@@ -124,7 +124,7 @@ function getTypeForDate(d: Date): DateType {
   return "night-shift";                            // Sun
 }
 
-/** 优先使用外部 shiftMap，否则走默认规则 */
+/** Use external shiftMap first, otherwise use default rules */
 function getTypeFromMapOrFallback(d: Date, shiftMap?: Props["shiftMap"]): DateType {
   const key = dayKey(d);
   const t = shiftMap?.[key];
@@ -145,19 +145,20 @@ export default function CollapsibleCalendar({
   const selectedDate = value;
   const [expanded, setExpanded] = useState(false);
 
-  // ✅ 锁定展开窗口的起始月（第一次展开时设定）
+  // Lock the start month of the expansion window (set when expanding for the first time)
   const [expandBase, setExpandBase] = useState<Date | null>(null);
 
   const rotate = useRef(new Animated.Value(0)).current;
   const heightAnim = useRef(new Animated.Value(0)).current;
 
-  // ✅ 以 expandBase（若存在）作为两个月窗口的基准；否则暂用 selectedDate 的当月
+  // Use expandBase (if present) as the base for the two-month window; 
+  // otherwise, use the current month of selectedDate.
   const months = useMemo(() => {
     const base = expandBase ?? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
     return buildMonths(base, 2);
   }, [selectedDate, expandBase]);
 
-  // 周条数据（优先读 shiftMap）
+  // Week cell data (read shiftMap first)
   const weekCells = useMemo(() => {
     const days = getWeekDays(selectedDate);
     return days.map((d) => ({
@@ -177,7 +178,7 @@ export default function CollapsibleCalendar({
       Animated.timing(heightAnim, { toValue: next ? 1 : 0, duration: 200, useNativeDriver: false }),
     ]).start();
     setExpanded(next);
-    // 想在收起时重置窗口，可打开：
+    // To reset the window when it is collapsed, turn on:
     // if (!next) setExpandBase(null);
   };
 
@@ -188,7 +189,7 @@ export default function CollapsibleCalendar({
 
   return (
     <View style={styles.container}>
-      {/* Header（集成 title / leftAction / rightAction） */}
+      {/* Header (title / leftAction / rightAction) */}
       <View style={styles.header}>
         <View style={styles.headerSide}>
           {leftAction ? (
@@ -211,7 +212,7 @@ export default function CollapsibleCalendar({
         </View>
       </View>
 
-      {/* 收起态 */}
+      {/* Closed */}
       {!expanded && (
         <View style={styles.calendarContent}>
           {/* Day labels */}
@@ -223,7 +224,7 @@ export default function CollapsibleCalendar({
             ))}
           </View>
 
-          {/* Week strip + 悬浮展开箭头（箭头半露） */}
+          {/* Week strip + down open arrow */}
           <View style={styles.weekCard}>
             <View style={styles.weekWrapper}>
               <View style={styles.weekRow}>
@@ -245,7 +246,7 @@ export default function CollapsibleCalendar({
               </View>
             </View>
 
-            {/* 悬浮小圆箭头：定位在外层 */}
+            {/* Floating round arrow: positioned on the outer layer */}
             <View style={styles.weekFooter}>
               <Pressable onPress={toggle} style={styles.inlineCaret} hitSlop={10}>
                 <Animated.View style={{ transform: [{ rotate: iconRotate }] }}>
@@ -257,7 +258,7 @@ export default function CollapsibleCalendar({
         </View>
       )}
 
-      {/* 展开态：固定两个月；顶部放收起箭头 */}
+      {/* Expanded state: fixed for two months; with a collapse arrow on top */}
       <Animated.View style={[styles.expandedContainer, { height: expandedH, overflow: "hidden" }]}>
         {expanded && (
           <>
@@ -287,7 +288,7 @@ export default function CollapsibleCalendar({
                           style={[styles.gridCell, selected && styles.gridCellSelected]}
                           onPress={() => {
                             onChange?.(d);
-                            toggle(); // 选日后收起；expandBase 不变 → 下次仍显示同两个月
+                            toggle(); // Collapse after selecting a date; expandBase remains unchanged → the same two months will be displayed next time
                           }}
                         >
                           <View style={{ alignItems: "center", gap: sx(2) }}>
@@ -317,7 +318,7 @@ export default function CollapsibleCalendar({
   );
 }
 
-/* 小组件：两颗点 */
+/* small two dots for day cell */
 const TwoDots = ({ left, right }: { left: "filled" | "hollow"; right: "filled" | "hollow" }) => (
   <View style={{ height: sx(6), flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
     <View style={left === "filled" ? dotStyles.filled : dotStyles.hollow} />
@@ -361,7 +362,7 @@ const styles = StyleSheet.create({
   dayLabel: { color: COLOR.ink, fontSize: sx(12) },
   weekend: { color: COLOR.brand },
 
-  // 外层定位容器（不裁剪）
+  // Outer positioning container (not clipped)
   weekCard: { position: "relative", overflow: "visible" },
 
   weekWrapper: {
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
 
   dateContainer: {
     width: sx(40),
-    height: sx(48), // 给 icon + 两颗点留空间
+    height: sx(48), // Leave space for the icon + two dots
     borderRadius: sx(8),
     justifyContent: "center",
     alignItems: "center",
@@ -392,7 +393,7 @@ const styles = StyleSheet.create({
   },
   dateText: { fontSize: sx(12), color: COLOR.ink },
 
-  // 悬浮箭头：定位在 weekCard 上
+  // Floating arrow: positioned on weekCard
   weekFooter: {
     position: "absolute",
     left: "50%",
@@ -422,7 +423,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  /* 展开态 */
+  /* open status */
   expandedContainer: { backgroundColor: "#FFF", paddingHorizontal: sx(16), paddingTop: sx(8) },
   expandCaretTop: { alignItems: "center", marginBottom: sx(8) },
   caretTopBtn: {
@@ -440,7 +441,7 @@ const styles = StyleSheet.create({
 
   gridWrap: { flexDirection: "row", flexWrap: "wrap" },
   gridCell: {
-    width: "14.28%", // 7 列
+    width: "14.28%", // 7 colums
     height: sx(64),
     borderRadius: sx(6),
     justifyContent: "center",

@@ -23,13 +23,13 @@ export default function TinyMenu({
   const MENU_W = sx(180);
   const { width: W } = Dimensions.get("window");
 
-  const top = Math.max(sy(4), anchor.y); // 轻微下移防抖
+  const top = Math.max(sy(4), anchor.y); // Slight downward movement stabilization
   const left = Math.min(Math.max(sx(8), anchor.x - sx(8)), W - MENU_W - sx(8));
 
   return (
-    // 绝对铺满，层级最高，穿透点击到子菜单
+    // Absolutely full, highest level, penetrate click to submenu
     <View style={styles.overlay} pointerEvents="box-none">
-      {/* 点击外部关闭 */}
+      {/* Click outside to close */}
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
 
       <View style={[styles.wrap, { top, left, width: MENU_W }]}>
@@ -50,8 +50,8 @@ export default function TinyMenu({
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 40,       // ⬅️ 高于 ShiftDetails(30)
-    elevation: 12,    // Android 也要抬层
+    zIndex: 40,       // higher than ShiftDetails(30)
+    elevation: 12,    // Android version
     backgroundColor: "transparent",
   },
   wrap: {
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     borderRadius: sx(12),
     paddingVertical: sy(6),
-    // 阴影
+    // shadow
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,

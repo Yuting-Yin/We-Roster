@@ -1,3 +1,5 @@
+// day view for My roster page
+
 import React from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";

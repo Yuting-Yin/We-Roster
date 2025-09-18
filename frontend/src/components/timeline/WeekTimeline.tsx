@@ -1,3 +1,5 @@
+// week view for My Roster page
+
 import React from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,12 +18,12 @@ const overlap = (aS: string, aE: string, bS: string, bE: string) =>
 
 const dayAt = (d0: Date, i: number) => { const d = new Date(d0); d.setDate(d0.getDate() + i); return d; };
 
-// 宽松读取 fakeData 字段（有则用，没有走默认）
+// Read fakeData field leniently (use if available, default if not)
 function extractInfo(ev?: EventItem) {
   const e: any = ev ?? {};
   const site = e.site ?? e.hospital ?? e.facility ?? e.campus ?? e.location ?? (ev ? "PMCC" : "Unallocated");
   const role = e.role ?? e.position ?? e.job ?? (ev ? "Anaes Coordinator" : "—");
-  // coworkers: 既兼容数字也兼容数组
+  // coworkers: Compatible with both numbers and arrays
   const coworkersCount =
     typeof e.coworkers === "number" ? e.coworkers :
     Array.isArray(e.coworkers) ? e.coworkers.length :
@@ -71,7 +73,7 @@ export default function WeekTimeline({
                   onPress={() => (has ? onOpenDetails(ev!) : onOpenRequest(day, slot))}
                   style={[styles.row, has ? styles.rowOn : styles.rowOff]}
                 >
-                  {/* 左侧 AM/PM 徽标 */}
+                  {/* left AM/PM icons */}
                   <View style={styles.badge}>
                     <Ionicons
                       name={idx === 0 ? "sunny-outline" : "moon-outline"}
@@ -80,26 +82,26 @@ export default function WeekTimeline({
                     <Text style={styles.badgeTxt}>{idx === 0 ? "AM" : "PM"}</Text>
                   </View>
 
-                  {/* 中部信息 */}
+                  {/* middle info */}
                   <View style={{ flex: 1 }}>
-                    {/* 时间（有排班用真实 start/end，未排班用 AM/PM 预设） */}
+                    {/* Time (use real start/end for scheduled shifts, use AM/PM preset for unscheduled shifts) */}
                     <View style={styles.line}>
                       <Ionicons name="time-outline" size={sx(14)} color={COLOR.ink} style={styles.ic} />
                       <Text style={styles.mainText}>
                         {has ? `${ev!.start} - ${ev!.end}` : `${slot.start} - ${slot.end}`}
                       </Text>
                     </View>
-                    {/* 地点 */}
+                    {/* location */}
                     <View style={styles.line}>
                       <Ionicons name="business-outline" size={sx(14)} color={COLOR.ink} style={styles.ic} />
                       <Text style={styles.subText}>{site}</Text>
                     </View>
-                    {/* 岗位 */}
+                    {/* designation */}
                     <View style={styles.line}>
                       <Ionicons name="medkit-outline" size={sx(14)} color={COLOR.ink} style={styles.ic} />
                       <Text style={styles.subText}>{role}</Text>
                     </View>
-                    {/* 同事 */}
+                    {/* working with */}
                     <View style={styles.line}>
                       <Ionicons name="people-outline" size={sx(14)} color={COLOR.ink} style={styles.ic} />
                       <Text style={styles.subText}>
@@ -107,11 +109,11 @@ export default function WeekTimeline({
                       </Text>
                     </View>
 
-                    {/* AM/PM 之间的分隔线（模仿 hifi） */}
+                    {/* AM/PM divider (hifi-like) */}
                     {idx === 0 && <View style={styles.sep} />}
                   </View>
 
-                  {/* 右侧动作 */}
+                  {/* right bottom */}
                   <Ionicons
                     name={has ? "arrow-forward-circle" : "add-circle"}
                     size={sx(24)}

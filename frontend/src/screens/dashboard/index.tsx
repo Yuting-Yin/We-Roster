@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
     width: INITIALS_SIZE_WIDTH,
     height: INITIALS_SIZE_HEIGHT,
     backgroundColor: COLOR.brand,
-    borderRadius: sx(8),          // 想要圆形就用 INITIALS_SIZE/2
+    borderRadius: sx(8),          // round shape: INITIALS_SIZE/2
     alignItems: "center",
     justifyContent: "center",
     marginRight: sx(16),
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: sx(20),
     fontWeight: "600",
-    lineHeight: sx(20),            // 保证垂直视觉居中（Android 更稳定）
+    lineHeight: sx(20),            // Ensure vertical visual centering (more stable on Android)
   },
   cardName: { color: COLOR.text, fontSize: sx(16), marginBottom: sy(2), fontWeight: "600" },
   cardDivider: { height: 1, backgroundColor: COLOR.brand, marginHorizontal: sx(16), marginBottom: sy(8) },
