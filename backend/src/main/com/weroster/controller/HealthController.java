@@ -10,5 +10,6 @@ import java.util.Map;
 @RequestMapping("/api/v1")
 public class HealthController {
     @GetMapping("/health")
+    //Random comment
     public Map<String,String> health() { return Collections.singletonMap("status", "UP"); }
 }
