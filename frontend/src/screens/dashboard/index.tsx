@@ -1,43 +1,32 @@
+// src/screens/Dashboard/index.tsx
 import React, { memo, useCallback } from "react";
 import {
   SafeAreaView,
   View,
   Text,
   StyleSheet,
-  Dimensions,
   FlatList,
   Pressable,
   ScrollView,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { MaterialCommunityIcons as MCI } from "@expo/vector-icons";
 import type { ViewToken } from "react-native";
+import { useNavigation, CommonActions } from "@react-navigation/native";
 
-/** ======= size & color ======= */
-const HI_FI_WIDTH = 412;
-const HI_FI_HEIGHT = 917;
-const { width: W, height: H } = Dimensions.get("window");
-const sx = (x: number) => (x / HI_FI_WIDTH) * W;
-const sy = (y: number) => (y / HI_FI_HEIGHT) * H;
+import { COLOR } from "@/theme/colors";
+import { sx, sy } from "@/theme/metrics";
+import ProfileSideMenu from "@/components/overlays/ProfileSideMenu"; // ← 左侧抽屉 Overlay
 
-const CARD_W = sx(280);
-const CARD_GAP = sx(16);
+const IS_WEB = Platform.OS === "web";
 
-const INITIALS_SIZE_WIDTH = sx(68);
-const INITIALS_SIZE_HEIGHT = sx(74);
-
-const COLOR = {
-  brand: "#0078D4",
-  ink: "#212121",
-  text: "#000",
-  bg: "#fff",
-  line: "#E6E6E6",
-  subtleBlue: "#DEECF9",
-  warnBg: "#FFF2C8",
-  warn: "#DCAB00",
-  redBg: "#FFEBEB",
-  red: "#BB2424"
-};
+/** ======= 尺寸常量（全部整数，避免 Web 断言问题） ======= */
+const CARD_W = Math.round(sx(280));
+const CARD_GAP = Math.round(sx(16));
+const LEFT_PAD = Math.round(sx(16));
+const SNAP = CARD_W + CARD_GAP;
+const INITIALS_SIZE = Math.round(sx(70));
 
 /** ======= data types ======= */
 type DutyItem = {
@@ -59,7 +48,7 @@ type ShiftItem = {
   site: string;
   dept: string;
   teammates?: string;
-  bonus?: string; // "+$500"
+  bonus?: string;
   urgent?: boolean;
 };
 
@@ -71,77 +60,21 @@ type LeaveItem = {
   state: "Approved" | "Awaiting" | "Declined";
 };
 
-/** ======= pesudo data (need to docking with API) ======= */
+/** ======= demo data ======= */
 const dutyData: DutyItem[] = [
-  {
-    id: "d1",
-    initials: "TV",
-    name: "Thu Vo",
-    role: "Anaes Coordinator",
-    theatre: "Theatre 1",
-    site: "PMCC",
-    time: "08:00 - 13:00",
-    date: "Tue. 12 May",
-  },
-  {
-    id: "d2",
-    initials: "MJ",
-    name: "Min Ji",
-    role: "Anaes Coordinator",
-    theatre: "—",
-    site: "PMCC",
-    time: "—",
-    date: "Tue. 12 May",
-    urgent: true,
-  },
+  { id: "d1", initials: "TV", name: "Thu Vo", role: "Anaes Coordinator", theatre: "Theatre 1", site: "PMCC", time: "08:00 - 13:00", date: "Tue. 12 May" },
+  { id: "d2", initials: "MJ", name: "Min Ji", role: "Anaes Coordinator", theatre: "—", site: "PMCC", time: "—", date: "Tue. 12 May", urgent: true },
 ];
 
 const myShifts: ShiftItem[] = [
-  {
-    id: "s1",
-    date: "Wed, 14 May",
-    time: "13:00 - 18:00",
-    site: "PMCC",
-    dept: "Anaes Coordinator",
-    teammates: "Working with 3 others",
-  },
-  {
-    id: "s2",
-    date: "Thu, 15 May",
-    time: "08:00 - 12:00",
-    site: "PMCC",
-    dept: "Anaes Coordinator",
-    teammates: "Working with 3 others",
-  },
+  { id: "s1", date: "Wed, 14 May", time: "13:00 - 18:00", site: "PMCC", dept: "Anaes Coordinator", teammates: "Working with 3 others" },
+  { id: "s2", date: "Thu, 15 May", time: "08:00 - 12:00", site: "PMCC", dept: "Anaes Coordinator", teammates: "Working with 3 others" },
 ];
 
 const openShifts: ShiftItem[] = [
-  {
-    id: "o1",
-    date: "Fri, 16 May",
-    time: "8:00 - 12:00",
-    site: "PMCC",
-    dept: "Neurosurgery",
-    bonus: "+$500",
-    urgent: true,
-  },
-  {
-    id: "o2",
-    date: "Fri, 16 May",
-    time: "8:00 - 12:00",
-    site: "PMCC",
-    dept: "Neurosurgery",
-    bonus: "+$500",
-  },
-    {
-    id: "o3",
-    date: "Fri, 16 May",
-    time: "8:00 - 12:00",
-    site: "PMCC",
-    dept: "Neurosurgery",
-    bonus: "+$500",
-    urgent: true
-  },
+  { id: "o1", date: "Fri, 16 May", time: "8:00 - 12:00", site: "PMCC", dept: "Neurosurgery", bonus: "+$500", urgent: true },
+  { id: "o2", date: "Fri, 16 May", time: "8:00 - 12:00", site: "PMCC", dept: "Neurosurgery", bonus: "+$500" },
+  { id: "o3", date: "Fri, 16 May", time: "8:00 - 12:00", site: "PMCC", dept: "Neurosurgery", bonus: "+$500", urgent: true },
 ];
 
 const myLeaves: LeaveItem[] = [
@@ -159,10 +92,10 @@ function PaginationDots({ count, index }: { count: number; index: number }) {
         <View
           key={i}
           style={{
-            width: sx(8),
-            height: sx(8),
-            borderRadius: sx(4),
-            marginHorizontal: sx(3),
+            width: Math.round(sx(8)),
+            height: Math.round(sx(8)),
+            borderRadius: Math.round(sx(4)),
+            marginHorizontal: Math.round(sx(3)),
             backgroundColor: i === index ? COLOR.brand : "#E0E0E0",
           }}
         />
@@ -173,169 +106,172 @@ function PaginationDots({ count, index }: { count: number; index: number }) {
 
 /** ======= main component ======= */
 export default function Dashboard() {
-  const onPressDuty = useCallback((id: string) => {
-    console.log("duty", id);
-  }, []);
+  const navigation = useNavigation<any>();
 
-  const onPressShift = useCallback((id: string) => {
-    console.log("shift", id);
-  }, []);
-
-  const onPressLeave = useCallback((id: string) => {
-    console.log("leave", id);
-  }, []);
+  const onPressDuty = useCallback((id: string) => console.log("duty", id), []);
+  const onPressShift = useCallback((id: string) => console.log("shift", id), []);
+  const onPressLeave = useCallback((id: string) => console.log("leave", id), []);
 
   const [dutyIdx, setDutyIdx] = React.useState(0);
   const [myShiftIdx, setMyShiftIdx] = React.useState(0);
   const [openShiftIdx, setOpenShiftIdx] = React.useState(0);
   const [leaveIdx, setLeaveIdx] = React.useState(0);
 
+  // 左侧抽屉 Overlay 显示控制
+  const [sideVisible, setSideVisible] = React.useState(false);
+
   const makeViewableHandler =
-  <T,>(setter: (n: number) => void) =>
-  (info: { viewableItems: Array<ViewToken<T>>; changed: Array<ViewToken<T>> }) => {
-    const idx = info.viewableItems[0]?.index;
-    if (typeof idx === "number") setter(idx);
-  };
+    <T,>(setter: (n: number) => void) =>
+    (info: { viewableItems: Array<ViewToken<T>>; changed: Array<ViewToken<T>> }) => {
+      const idx = info.viewableItems[0]?.index;
+      if (typeof idx === "number") setter(idx);
+    };
 
   const viewConfigRef = React.useRef({ viewAreaCoveragePercentThreshold: 50 });
 
+  // 根据平台返回横向列表的“吸附”能力（Web 端关闭）
+  const listSnapProps = <T,>(setter: (n: number) => void) =>
+    !IS_WEB
+      ? ({
+          decelerationRate: "fast" as const,
+          snapToAlignment: "start" as const,
+          snapToInterval: SNAP,
+          onViewableItemsChanged: makeViewableHandler<T>(setter),
+          viewabilityConfig: viewConfigRef.current,
+          getItemLayout: (_: any, index: number) => ({
+            length: SNAP,
+            offset: LEFT_PAD + SNAP * index,
+            index,
+          }),
+        } as const)
+      : ({} as const);
+
   return (
     <SafeAreaView style={styles.container}>
-        <Header name="Thuw" />
-      <ScrollView contentContainerStyle={{ paddingBottom: sy(0) }}>
-        
+      <Header
+        name="Thuw"
+        onHelloPress={() => setSideVisible(true)} // 打开左侧抽屉
+        onBellPress={() => console.log("notifications")}
+      />
+
+      <ScrollView contentContainerStyle={{ paddingBottom: sy(8) }}>
         {/* Who’s on duty */}
         <View style={{ marginTop: sy(16) }}>
-            <SectionTitle
-                title={`Who’s on duty (${dutyData.length})`}
-                actionLabel="View My Team"
-                onAction={() => console.log("view team")}
-            />
-            <FlatList
-                data={dutyData}
-                keyExtractor={(i) => i.id}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: sx(16) }}
-                renderItem={({ item }) => <DutyCard item={item} onPress={() => onPressDuty(item.id)} />}
-                // Key: Adsorption/paging experience
-                decelerationRate="fast"
-                snapToAlignment="start"
-                snapToInterval={CARD_W + CARD_GAP}
-                pagingEnabled={false}               // use snapToInterval
-                // Key: Calculating visible item indexes
-                onViewableItemsChanged={makeViewableHandler<DutyItem>(setDutyIdx)}
-                viewabilityConfig={viewConfigRef.current}
-                // Optional: Improve scrolling performance & index stability
-                getItemLayout={(_, index) => ({
-                    length: CARD_W + CARD_GAP,
-                    offset: (CARD_W + CARD_GAP) * index + sx(16), // + left padding
-                    index,
-                })}
-            />
-            <PaginationDots count={dutyData.length} index={dutyIdx} />
+          <SectionTitle
+            title={`Who’s on duty (${Array.isArray(dutyData) ? dutyData.length : 0})`}
+            actionLabel="View My Team"
+            onAction={() => console.log("view team")}
+          />
+          <FlatList
+            data={Array.isArray(dutyData) ? dutyData : []}
+            keyExtractor={(i) => i.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
+            removeClippedSubviews={!IS_WEB}
+            renderItem={({ item }) => <DutyCard item={item} onPress={() => onPressDuty(item.id)} />}
+            {...listSnapProps<DutyItem>(setDutyIdx)}
+          />
+          <PaginationDots count={Array.isArray(dutyData) ? dutyData.length : 0} index={dutyIdx} />
         </View>
 
         {/* My shifts this week */}
         <View style={{ marginTop: sy(16) }}>
-            <SectionTitle title={`My shifts this week (${myShifts.length})`} />
-                <FlatList
-                data={myShifts}
-                keyExtractor={(i) => i.id}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: sx(16) }}
-                renderItem={({ item }) => (
-                <ShiftCard item={item} onPress={() => onPressShift(item.id)} />
-                )}
-                decelerationRate="fast"
-                snapToAlignment="start"
-                snapToInterval={CARD_W + CARD_GAP}
-                onViewableItemsChanged={makeViewableHandler(setMyShiftIdx)}
-                viewabilityConfig={viewConfigRef.current}
-                getItemLayout={(_, index) => ({
-                length: CARD_W + CARD_GAP,
-                offset: (CARD_W + CARD_GAP) * index + sx(16),
-                index,
-                })}
-            />
-            <PaginationDots count={myShifts.length} index={myShiftIdx} />
+          <SectionTitle title={`My shifts this week (${Array.isArray(myShifts) ? myShifts.length : 0})`} />
+          <FlatList
+            data={Array.isArray(myShifts) ? myShifts : []}
+            keyExtractor={(i) => i.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
+            removeClippedSubviews={!IS_WEB}
+            renderItem={({ item }) => <ShiftCard item={item} onPress={() => onPressShift(item.id)} />}
+            {...listSnapProps<ShiftItem>(setMyShiftIdx)}
+          />
+          <PaginationDots count={Array.isArray(myShifts) ? myShifts.length : 0} index={myShiftIdx} />
         </View>
 
         {/* Open shifts */}
         <View style={{ marginTop: sy(16) }}>
-            <SectionTitle
-            title={`Open shifts this week (${openShifts.length})`}
+          <SectionTitle
+            title={`Open shifts this week (${Array.isArray(openShifts) ? openShifts.length : 0})`}
             actionLabel="View All"
             onAction={() => console.log("view all")}
-            />
-                <FlatList
-                data={openShifts}
-                keyExtractor={(i) => i.id}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: sx(16) }}
-                renderItem={({ item }) => (
-                    <ShiftCard item={item} onPress={() => onPressShift(item.id)} />
-                )}
-                decelerationRate="fast"
-                snapToAlignment="start"
-                snapToInterval={CARD_W + CARD_GAP}
-                onViewableItemsChanged={makeViewableHandler(setOpenShiftIdx)}
-                viewabilityConfig={viewConfigRef.current}
-                getItemLayout={(_, index) => ({
-                    length: CARD_W + CARD_GAP,
-                    offset: (CARD_W + CARD_GAP) * index + sx(16),
-                    index,
-                })}
-            />
-            <PaginationDots count={openShifts.length} index={openShiftIdx} />
+          />
+          <FlatList
+            data={Array.isArray(openShifts) ? openShifts : []}
+            keyExtractor={(i) => i.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
+            removeClippedSubviews={!IS_WEB}
+            renderItem={({ item }) => <ShiftCard item={item} onPress={() => onPressShift(item.id)} />}
+            {...listSnapProps<ShiftItem>(setOpenShiftIdx)}
+          />
+          <PaginationDots count={Array.isArray(openShifts) ? openShifts.length : 0} index={openShiftIdx} />
         </View>
-
 
         {/* My leaves */}
         <View style={{ marginTop: sy(16), marginBottom: sy(32) }}>
-            <SectionTitle title={`My leaves this month (${myLeaves.length})`} />
-                <FlatList
-                data={myLeaves}
-                keyExtractor={(i) => i.id}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: sx(16) }}
-                renderItem={({ item }) => (
-                    <LeaveCard item={item} onPress={() => onPressLeave(item.id)} />
-                )}
-                decelerationRate="fast"
-                snapToAlignment="start"
-                snapToInterval={CARD_W + CARD_GAP}
-                onViewableItemsChanged={makeViewableHandler(setLeaveIdx)}
-                viewabilityConfig={viewConfigRef.current}
-                getItemLayout={(_, index) => ({
-                    length: CARD_W + CARD_GAP,
-                    offset: (CARD_W + CARD_GAP) * index + sx(16),
-                    index,
-                })}
-            />
-            <PaginationDots count={myLeaves.length} index={leaveIdx} />
+          <SectionTitle title={`My leaves this month (${Array.isArray(myLeaves) ? myLeaves.length : 0})`} />
+          <FlatList
+            data={Array.isArray(myLeaves) ? myLeaves : []}
+            keyExtractor={(i) => i.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
+            removeClippedSubviews={!IS_WEB}
+            renderItem={({ item }) => <LeaveCard item={item} onPress={() => onPressLeave(item.id)} />}
+            {...listSnapProps<LeaveItem>(setLeaveIdx)}
+          />
+          <PaginationDots count={Array.isArray(myLeaves) ? myLeaves.length : 0} index={leaveIdx} />
         </View>
-
       </ScrollView>
 
+      {/* 左侧抽屉 Overlay */}
+      <ProfileSideMenu
+        visible={sideVisible}
+        onClose={() => setSideVisible(false)}
+        onPressAvatar={() => {
+          setSideVisible(false);
+          navigation.navigate("Profile");
+        }}
+        onPressSettings={() => {
+          setSideVisible(false);
+          navigation.navigate("Settings"); // 请确保在 RootNavigator 里已注册
+        }}
+        onPressLogout={() => {
+          setSideVisible(false);
+          navigation.dispatch(
+            CommonActions.reset({ index: 0, routes: [{ name: "Login" }] })
+          );
+        }}
+        user={{ initials: "AT", name: "Amy T.", email: "example.email@gmail.com" }}
+      />
     </SafeAreaView>
   );
 }
 
-/** ======= subcomponent ======= */
-
-const Header = memo(function Header({ name }: { name: string }) {
+/** ======= subcomponents ======= */
+const Header = memo(function Header({
+  name,
+  onHelloPress,
+  onBellPress,
+}: {
+  name: string;
+  onHelloPress: () => void;
+  onBellPress?: () => void;
+}) {
   return (
     <View style={styles.header}>
-      <View style={styles.headerLeft}>
+      <Pressable style={styles.headerLeft} onPress={onHelloPress} hitSlop={8}>
         <Ionicons name="person-circle-outline" size={sx(24)} color="#fff" />
         <Text style={styles.headerTitle}>Hello, {name}</Text>
-        <Ionicons name="chevron-down" size={sx(24)} color="#fff" />
-      </View>
-      <Ionicons name="notifications-outline" size={sx(24)} color="#fff" />
+        {/* 不再需要向下箭头 */}
+      </Pressable>
+      <Pressable onPress={onBellPress} hitSlop={8}>
+        <Ionicons name="notifications-outline" size={sx(24)} color="#fff" />
+      </Pressable>
     </View>
   );
 });
@@ -411,9 +347,7 @@ const ShiftCard = memo(function ShiftCard({
       <Row text={item.time} icon={<Ionicons name="time-outline" size={sx(16)} color={COLOR.brand} />} />
       <Row text={item.site} icon={<Ionicons name="location-outline" size={sx(16)} color={COLOR.brand} />} />
       <Row text={item.dept} icon={<MCI name="stethoscope" size={sx(16)} color={COLOR.brand} />} />
-      {item.teammates ? (
-        <Row text={item.teammates} icon={<Ionicons name="people-outline" size={sx(16)} color={COLOR.brand} />} />
-      ) : null}
+      {item.teammates ? <Row text={item.teammates} icon={<Ionicons name="people-outline" size={sx(16)} color={COLOR.brand} />} /> : null}
 
       {item.bonus ? (
         <View style={{ flexDirection: "row", alignItems: "center", marginTop: sy(4) }}>
@@ -425,8 +359,8 @@ const ShiftCard = memo(function ShiftCard({
 
       {item.urgent ? (
         <View style={[styles.urgentBadge, { position: "absolute", top: sy(8), right: sx(8) }]}>
-            <Ionicons name="alert-circle-outline" size={sx(12)} color={COLOR.brand} />
-            <Text style={styles.urgentText}>Urgent</Text>
+          <Ionicons name="alert-circle-outline" size={sx(12)} color={COLOR.brand} />
+          <Text style={styles.urgentText}>Urgent</Text>
         </View>
       ) : null}
     </Pressable>
@@ -444,19 +378,8 @@ const LeaveCard = memo(function LeaveCard({
   const isAwaiting = item.state === "Awaiting";
   const isDeclined = item.state === "Declined";
 
-  const badgeStyle =
-    isApproved ? styles.stateApproved :
-    isAwaiting ? styles.stateAwaiting :
-    styles.stateDeclined;
-
-  const iconName:
-    | "checkmark-circle-outline"
-    | "time-outline"
-    | "close-circle-outline" =
-    isApproved ? "checkmark-circle-outline" :
-    isAwaiting ? "time-outline" :
-    "close-circle-outline";
-
+  const badgeStyle = isApproved ? styles.stateApproved : isAwaiting ? styles.stateAwaiting : styles.stateDeclined;
+  const iconName = isApproved ? "checkmark-circle-outline" : isAwaiting ? "time-outline" : "close-circle-outline";
   const toneColor = isApproved ? COLOR.brand : isAwaiting ? COLOR.warn : COLOR.red;
 
   return (
@@ -466,25 +389,14 @@ const LeaveCard = memo(function LeaveCard({
       <Row text={item.category} icon={<MCI name="calendar-clock-outline" size={sx(16)} color={COLOR.brand} />} />
 
       <View style={[styles.stateBadge, badgeStyle]}>
-        <Ionicons name={iconName} size={sx(12)} color={toneColor} />
-        <Text style={[styles.stateText, { marginLeft: sx(4), color: toneColor }]}>
-          {item.state}
-        </Text>
+        <Ionicons name={iconName as any} size={sx(12)} color={toneColor} />
+        <Text style={[styles.stateText, { marginLeft: sx(4), color: toneColor }]}>{item.state}</Text>
       </View>
     </Pressable>
   );
 });
 
-/** row info: context + icon */
-const Row = ({
-  text,
-  icon,
-  gap = 4,
-}: {
-  text: string;
-  icon: React.ReactNode;
-  gap?: number;
-}) => (
+const Row = ({ text, icon, gap = 4 }: { text: string; icon: React.ReactNode; gap?: number }) => (
   <View style={{ flexDirection: "row", alignItems: "center", marginTop: sy(4) }}>
     <View style={{ marginRight: sx(gap) }}>{icon}</View>
     <Text style={styles.meta12}>{text}</Text>
@@ -501,7 +413,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLOR.brand,
     paddingVertical: sy(16),
     paddingHorizontal: sx(18),
-    marginBottom: sy(0),
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: sx(4) },
   headerTitle: { color: "#fff", fontSize: sx(20), marginHorizontal: sx(4) },
@@ -521,30 +432,25 @@ const styles = StyleSheet.create({
     borderColor: COLOR.brand,
     borderRadius: sx(8),
     paddingVertical: sy(16),
-    paddingHorizontal: sx(0),
-    marginRight: sx(16),
-    width: sx(280),
-    backgroundColor: COLOR.bg,
+    paddingHorizontal: 0,
+    marginRight: CARD_GAP,
+    width: CARD_W,
+    backgroundColor: COLOR.card,
   },
   cardTopRow: { flexDirection: "row", marginBottom: sy(8), marginHorizontal: sx(16) },
-  // styles
+
   initials: {
-    width: INITIALS_SIZE_WIDTH,
-    height: INITIALS_SIZE_HEIGHT,
+    width: INITIALS_SIZE,
+    height: INITIALS_SIZE,
     backgroundColor: COLOR.brand,
-    borderRadius: sx(8),          // round shape: INITIALS_SIZE/2
+    borderRadius: sx(8),
     alignItems: "center",
     justifyContent: "center",
     marginRight: sx(16),
-    marginTop: sx(6)
+    marginTop: sx(6),
   },
+  initialsText: { color: "#fff", fontSize: sx(20), fontWeight: "600", lineHeight: sx(20) },
 
-  initialsText: {
-    color: "#fff",
-    fontSize: sx(20),
-    fontWeight: "600",
-    lineHeight: sx(20),            // Ensure vertical visual centering (more stable on Android)
-  },
   cardName: { color: COLOR.text, fontSize: sx(16), marginBottom: sy(2), fontWeight: "600" },
   cardDivider: { height: 1, backgroundColor: COLOR.brand, marginHorizontal: sx(16), marginBottom: sy(8) },
   cardBottomRow: { flexDirection: "row", justifyContent: "space-between", marginHorizontal: sx(16) },
@@ -554,9 +460,9 @@ const styles = StyleSheet.create({
     borderColor: COLOR.brand,
     borderRadius: sx(8),
     padding: sx(16),
-    marginRight: sx(16),
-    minWidth: sx(280),
-    backgroundColor: COLOR.bg,
+    marginRight: CARD_GAP,
+    minWidth: CARD_W,
+    backgroundColor: COLOR.card,
   },
   shiftDate: { color: COLOR.ink, fontSize: sx(16), marginBottom: sy(4), fontWeight: "600" },
   bonusText: { color: COLOR.ink, fontSize: sx(16), fontWeight: "bold" },
@@ -581,9 +487,9 @@ const styles = StyleSheet.create({
     borderRadius: sx(8),
     paddingVertical: sy(16),
     paddingHorizontal: sx(16),
-    marginRight: sx(16),
-    minWidth: sx(260),
-    backgroundColor: COLOR.bg,
+    marginRight: CARD_GAP,
+    minWidth: Math.round(sx(260)),
+    backgroundColor: COLOR.card,
   },
   leaveDate: { color: COLOR.ink, fontSize: sx(16), marginBottom: sy(8), fontWeight: "600" },
   stateBadge: {
@@ -598,7 +504,7 @@ const styles = StyleSheet.create({
   },
   stateApproved: { backgroundColor: COLOR.subtleBlue, borderColor: COLOR.brand },
   stateAwaiting: { backgroundColor: COLOR.warnBg, borderColor: COLOR.warn },
-  stateDeclined: { backgroundColor: COLOR.redBg, borderColor: COLOR.red},
+  stateDeclined: { backgroundColor: COLOR.redBg, borderColor: COLOR.red },
   stateText: { fontSize: sx(12) },
 
   meta12: { color: COLOR.ink, fontSize: sx(12) },
