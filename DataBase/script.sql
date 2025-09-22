@@ -1,0 +1,1 @@
+delete from leave_request
