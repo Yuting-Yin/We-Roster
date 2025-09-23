@@ -18,7 +18,6 @@ public class RosterApprovalService {
         var start = (java.sql.Timestamp) r.get("start_ts");
         var end   = (java.sql.Timestamp) r.get("end_ts");
 
-        // 删除该员工在该时间段内的所有班次分配（班变为未分配）
         jdbc.update("""
       DELETE sa FROM shift_assignment sa
       JOIN shift s ON s.id=sa.shift_id
@@ -54,7 +53,6 @@ public class RosterApprovalService {
         long sh  = ((Number) r.get("shift_id")).longValue();
         long sid = ((Number) r.get("staff_id")).longValue();
 
-        // 确保该班目前“未分配”
         Integer cnt = jdbc.queryForObject("SELECT COUNT(*) FROM shift_assignment WHERE shift_id=?",
                 Integer.class, sh);
         if (cnt!=null && cnt>0) throw new IllegalStateException("该班已被分配，不能作为开放班次批准");

@@ -4,7 +4,7 @@ package com.weroster.Dto;
 public class LeaveRequestDto {
     public Long   shiftId;     // "shiftId"
     public String leaveType;   // "Annual" / "Casual" / "Sick" / ...
-    public boolean allDay;     // 是否全天
+    public boolean allDay;     //
     public String date;        // yyyy-MM-dd
     public String startTime;   // HH:mm
     public String endTime;     // HH:mm

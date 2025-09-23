@@ -19,7 +19,7 @@ public class SwapShiftController {
 
     private String currentEmail() {
         var a = SecurityContextHolder.getContext().getAuthentication();
-        return a != null ? a.getName() : null; // 你项目里 email 就是 Principal name
+        return a != null ? a.getName() : null;
     }
 
     /**

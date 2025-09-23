@@ -6,7 +6,7 @@ import java.util.Map;
 public class SubmissionResponse {
     public String result;   // "success" | "error"
     public String code;     // "PENDING" | "DUPLICATE_REQUEST" | "VALIDATION_ERROR" | "SESSION_EXPIRED"
-    public String message;  // 用户可读提示
+    public String message;
     public Map<String,Object> data;
 
     public static SubmissionResponse okPending(Map<String,Object> data){

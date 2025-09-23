@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@Primary // 避免注入到旧的 service
+@Primary
 public class MyRosterService {
     private final DateTimeFormatter HM = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -45,9 +45,6 @@ public class MyRosterService {
         return null;
     }
 
-    /**
-     * MyRoster 主界面：给定 date（YYYY-MM-DD），返回当天时间轴上的班次列表
-     */
     public DayRosterDto day(String email, Long uid, java.time.LocalDate date) {
         Long staffId = resolveStaffId(email, uid);
         if (staffId == null) {
@@ -78,7 +75,7 @@ public class MyRosterService {
         """;
 
         List<ShiftItemDto> items = jdbc.query(sql, (rs, i) -> {
-            var tsStart = rs.getTimestamp("startTs"); // 别直接 toLocalDateTime
+            var tsStart = rs.getTimestamp("startTs");
             var tsEnd   = rs.getTimestamp("endTs");
             String startIso = tsStart != null ? tsStart.toLocalDateTime().toString() : null;
             String endIso   = tsEnd   != null ? tsEnd.toLocalDateTime().toString()   : null;
@@ -97,7 +94,6 @@ public class MyRosterService {
     }
     public DayViewDto dayView(String email, Long uid, LocalDate date) {
         Long staffId = resolveStaffId(email, uid);
-        // 日窗：按产品定义，AM 8:00 ~ PM 23:59
         LocalTime WIN_START = LocalTime.of(8, 0);
         LocalTime WIN_END   = LocalTime.of(23, 59);
         var window = new DayWindowDto(WIN_START.toString(), WIN_END.toString());
@@ -163,9 +159,7 @@ public class MyRosterService {
                 java.sql.Timestamp.valueOf(dayEnd),
                 java.sql.Timestamp.valueOf(dayStart));
 
-        // 计算未分配时段：在 [08:00,23:59] 窗口中，用 allocated 的 (start,end) 做差集
         List<UnallocatedItemDto> unallocated = new ArrayList<>();
-        // 把已分配时段裁剪到窗口内，并按开始时间排序
         List<java.time.LocalTime[]> blocks = new ArrayList<>();
         for (var a : allocated) {
             var s = java.time.LocalTime.parse(a.getStartTime());
@@ -197,7 +191,6 @@ public class MyRosterService {
         Long me = resolveStaffId(email, uid);
         if (me == null) throw new RuntimeException("NO_STAFF");
 
-        // 头部信息：日期、起止时间、时长、地点、我的岗位名称
         var headSql = """
             SELECT DATE(s.start_ts)                           AS d,
                    s.id                                       AS sid,
@@ -229,11 +222,10 @@ public class MyRosterService {
                     rs.getString("designation")
             ), me, me, shiftId);
         } catch (EmptyResultDataAccessException e) {
-            // 不属于我的班/不存在
+
             throw new RuntimeException("SHIFT_NOT_FOUND_OR_NOT_OWNED");
         }
 
-        // 同班的同事（不含我）
         var cowSql = """
             SELECT st.id AS staffId,
                    CONCAT(COALESCE(st.first_name,''), ' ', COALESCE(st.last_name,'')) AS staffName,
@@ -260,7 +252,7 @@ public class MyRosterService {
                 h.st().format(HM),
                 h.et().format(HM),
                 h.dur(),
-                new LocationDto(h.campus(), null, null), // 你的表无 address/room → null
+                new LocationDto(h.campus(), null, null),
                 h.designation(),
                 coworkers
         );

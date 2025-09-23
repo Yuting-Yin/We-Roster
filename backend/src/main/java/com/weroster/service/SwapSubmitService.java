@@ -31,8 +31,6 @@ public class SwapSubmitService {
 
         if (cmd.requesterShiftId == null || cmd.targetStaffId == null || cmd.targetShiftId == null)
             return SubmissionResponse.err("VALIDATION_ERROR","Missing required fields.");
-
-        // 校验：我是否在 requesterShiftId
         Integer mineCnt = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM shift_assignment WHERE shift_id=? AND staff_id=?",
                 Integer.class,
@@ -42,7 +40,7 @@ public class SwapSubmitService {
         if (mineCnt == null || mineCnt == 0)
             return SubmissionResponse.err("VALIDATION_ERROR","You are not assigned to the requester shift.");
 
-        // 校验：对方是否在 targetShiftId
+
         Integer hisCnt = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM shift_assignment WHERE shift_id=? AND staff_id=?",
                 Integer.class,
@@ -52,7 +50,7 @@ public class SwapSubmitService {
         if (hisCnt == null || hisCnt == 0)
             return SubmissionResponse.err("VALIDATION_ERROR","Target staff is not assigned to the target shift.");
 
-        // 查是否已有未结 swap
+
         Integer dupCnt = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM swap_request " +
                         "WHERE requester_staff_id=? AND requester_shift_id=? " +
@@ -66,7 +64,7 @@ public class SwapSubmitService {
         if (dupCnt != null && dupCnt > 0)
             return SubmissionResponse.err("DUPLICATE_REQUEST","A pending swap request already exists for these shifts.");
 
-        // 插入
+
         jdbc.update(
                 "INSERT INTO swap_request " +
                         "(requester_staff_id, requester_shift_id, target_staff_id, target_shift_id, status, active) " +

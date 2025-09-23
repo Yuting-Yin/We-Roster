@@ -21,7 +21,6 @@ public class SwapShiftService {
         this.jdbc = jdbc;
     }
 
-    // 你项目里已有“email -> staffId”的解析，这里复用最简单写法
     private Long resolveStaffIdByEmail(String email) {
         if (email == null) return null;
         return jdbc.query(
@@ -34,11 +33,8 @@ public class SwapShiftService {
     public SwapShiftResponse buildSwapData(long shiftId, String currentUserEmail) {
         Long myStaffId = resolveStaffIdByEmail(currentUserEmail);
         if (myStaffId == null) throw new IllegalArgumentException("No staff mapped to current user");
-
-        // 1) 自己这条班次信息（需要确保当前用户确实在该班次）
         var mine = queryMyShift(shiftId, myStaffId);
 
-        // 2) 候选可互换对象：同部门&同地点，时间重叠，且不是自己
         var candidates = queryCandidates(shiftId, myStaffId);
 
         var resp = new SwapShiftResponse();

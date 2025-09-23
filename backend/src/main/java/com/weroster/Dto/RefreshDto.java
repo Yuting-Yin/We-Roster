@@ -4,8 +4,8 @@ import java.util.List;
 
 public class RefreshDto {
     private WeekDto week;
-    private List<CalendarDayDto> days;   // 复用你已有的 CalendarDayDto
-    private DayRosterDto timeline;       // 复用你已有的 DayRosterDto
+    private List<CalendarDayDto> days;
+    private DayRosterDto timeline;
 
     public RefreshDto() {}
     public RefreshDto(WeekDto week, List<CalendarDayDto> days, DayRosterDto timeline) {

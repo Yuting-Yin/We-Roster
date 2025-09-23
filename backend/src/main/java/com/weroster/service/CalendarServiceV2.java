@@ -61,11 +61,10 @@ public class CalendarServiceV2 {
                         rs.getTimestamp(2).toLocalDateTime()
                 ),
                 staffId,
-                start.atStartOfDay(),              // JDBC 4.2 会把 LocalDateTime 正确传入
+                start.atStartOfDay(),
                 end.plusDays(1).atStartOfDay()
         );
 
-        // 用“时间段重叠”判定 AM/PM（AM=08:00–12:59；PM=13:00–23:59）
         for (int i = 0; i < days.size(); i++) {
             CalendarDayDto cur = days.get(i);
             LocalDate d = LocalDate.parse(cur.date());

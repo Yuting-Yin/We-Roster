@@ -15,8 +15,4 @@ public class RosterController {
     private String email() { Authentication a= SecurityContextHolder.getContext().getAuthentication(); return a!=null? a.getName(): null; }
     private Long uid()    { return null; /* plug in JWT uid if available */ }
 
-    //@GetMapping("/day")
-    /*public List<DayRosterItem> day(@RequestParam String date) {
-        return svc.day(email(), uid(), LocalDate.parse(date));
-    }*/
 }

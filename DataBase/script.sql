@@ -1,1 +1,1 @@
-delete from leave_request
+SELECT * from staff

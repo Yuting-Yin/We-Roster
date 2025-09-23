@@ -6,8 +6,8 @@ public class AllocatedItemDto {
     private String endTime;        // "HH:mm"
     private int durationMinutes;   // TIMESTAMPDIFF(MINUTE)
     private LocationDto location;  // campus + address
-    private String designation;    // 员工职称（表里没有就 null）
-    private int coworkerCount;     // 同班同事数（不含自己）
+    private String designation;
+    private int coworkerCount;
 
     public AllocatedItemDto() {}
     public AllocatedItemDto(String shiftId, String startTime, String endTime,

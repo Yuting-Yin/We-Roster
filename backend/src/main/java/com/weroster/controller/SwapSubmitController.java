@@ -29,7 +29,6 @@ public class SwapSubmitController {
             @PathVariable Long shiftId,
             @RequestBody SwapSubmitCommand cmd
     ) {
-        // 用 path 的 shiftId 覆盖请求体里的 requesterShiftId
         cmd.requesterShiftId = shiftId;
         return ResponseEntity.ok(svc.submit(currentEmail(), cmd));
     }

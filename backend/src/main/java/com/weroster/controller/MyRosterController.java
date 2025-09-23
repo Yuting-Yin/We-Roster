@@ -30,7 +30,6 @@ public class MyRosterController {
         this.om = om;
         this.svc = svc;
     }
-    // 放在控制器类里（或文件顶部），仅用于响应序列化
     record DaySummary(String date, boolean assignedAM, boolean assignedPM, boolean isToday) {}
 
     /**
@@ -45,7 +44,7 @@ public class MyRosterController {
                 ? java.time.LocalDate.now()
                 : java.time.LocalDate.parse(date);
         DayRosterDto dto = myRoster.day(email(), uid(), d);
-        String json = om.writeValueAsString(dto); // 手工转 JSON 字符串
+        String json = om.writeValueAsString(dto);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(json);

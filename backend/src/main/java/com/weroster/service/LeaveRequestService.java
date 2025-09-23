@@ -20,7 +20,6 @@ public class LeaveRequestService {
         this.jdbc = jdbc;
     }
 
-    // 复用你们的“用户->职员”解析方式（和 MyRosterService 私有方法同逻辑）
     private Long resolveStaffId(String email, Long uid) {
         if (uid != null) {
             Long sid = jdbc.query(
@@ -40,7 +39,6 @@ public class LeaveRequestService {
         return null;
     }
 
-    // 新建或覆盖当前用户在某班次的请假
     public LeaveRequestDto createOrUpdate(String email, Long uid, CreateLeaveRequestCommand cmd) {
         Long staffId = resolveStaffId(email, uid);
         if (staffId == null) throw new IllegalArgumentException("No staff found for current user");
@@ -51,7 +49,6 @@ public class LeaveRequestService {
         LocalDateTime et = cmd.allDay ? d.atTime(23, 59)
                 : LocalDateTime.of(d, LocalTime.parse(cmd.endTime));
 
-        // 先查是否已存在记录（同一员工+同一班次）
         Long existingId = jdbc.query(
                 "SELECT id FROM leave_request WHERE staff_id=? AND shift_id=? LIMIT 1",
                 ps -> { ps.setLong(1, staffId); ps.setLong(2, cmd.shiftId); },
@@ -96,7 +93,6 @@ public class LeaveRequestService {
         );
     }
 
-    // 回显：取当前用户在某班次的请假数据
     public LeaveRequestDto getMine(String email, Long uid, long shiftId) {
         Long staffId = resolveStaffId(email, uid);
         if (staffId == null) return null;

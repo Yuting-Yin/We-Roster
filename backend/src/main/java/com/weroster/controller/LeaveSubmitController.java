@@ -18,7 +18,7 @@ public class LeaveSubmitController {
 
     private String currentEmail() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth != null ? auth.getName() : null; // 你项目里 name=邮箱
+        return auth != null ? auth.getName() : null;
     }
 
     @PostMapping(
@@ -30,7 +30,7 @@ public class LeaveSubmitController {
             @PathVariable Long shiftId,
             @RequestBody CreateLeaveRequestCommand cmd
     ) {
-        // 以路径为准，覆盖请求体
+
         cmd.shiftId = shiftId;
         return ResponseEntity.ok(svc.submit(currentEmail(), cmd));
     }

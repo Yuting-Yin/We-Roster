@@ -21,9 +21,8 @@ public class LeaveRequestController {
         var a = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         return a != null ? a.getName() : null;
     }
-    private Long uid() { return null; } // 你要用 userId 的话，照你现有代码取
+    private Long uid() { return null; }
 
-    /** 创建/更新 请假 */
     @PostMapping(value = "/leave-request", consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<LeaveRequestDto> create(@RequestBody CreateLeaveRequestCommand cmd) {
@@ -31,7 +30,6 @@ public class LeaveRequestController {
         return ResponseEntity.ok(resp);
     }
 
-    /** 回显：我在某个班次的请假 */
     @GetMapping(value = "/shift/{shiftId}/leave-request", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> mine(@PathVariable long shiftId) {
         var resp = svc.getMine(email(), uid(), shiftId);
