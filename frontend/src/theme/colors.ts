@@ -24,4 +24,7 @@ export const COLOR = {
   card: "#F7FAFF",
   divider: "#E6E6E6",
   line: "#F0F0F0",
+
+  //
+  skeleton: "#ebe8e8ff",
 };

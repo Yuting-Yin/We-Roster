@@ -1,0 +1,107 @@
+// src/hooks/useDashboard.ts
+import { useEffect, useMemo, useRef, useState } from "react";
+import { fetchJson } from "@/lib/api";
+import type { DashboardPayload, DutyItem, ShiftItem, LeaveItem } from "@/types/dashboard";
+import { dashboardFixtures, amplifyFixtures } from "@/fixtures/dashboard";
+
+type Options = {
+  /** 显式启用本地 Mock；不传则读取环境变量 EXPO_PUBLIC_MOCK_DASHBOARD */
+  mock?: boolean;
+  /** 模拟加载延迟（毫秒），便于观察骨架屏 */
+  delayMs?: number;
+  /** 放大量级，便于检查横向滚动与断点（默认 1） */
+  amplifyTimes?: number;
+};
+
+export function useDashboardData(opts: Options = {}) {
+  const envMock = process.env.EXPO_PUBLIC_MOCK_DASHBOARD === "1";
+  const useMock = opts.mock ?? envMock;
+  const delayMs = opts.delayMs ?? 400;
+  const amplifyTimes = Math.max(1, opts.amplifyTimes ?? 1);
+
+  const [duty, setDuty] = useState<DutyItem[]>([]);
+  const [myShifts, setMyShifts] = useState<ShiftItem[]>([]);
+  const [openShifts, setOpenShifts] = useState<ShiftItem[]>([]);
+  const [leaves, setLeaves] = useState<LeaveItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const abortRef = useRef<AbortController | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const load = async () => {
+    // Mock 模式：直接用本地数据 + 人造延迟
+    if (useMock) {
+      setLoading(true);
+      setError(null);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        const fx = amplifyFixtures(amplifyTimes);
+        setDuty([...fx.duty]);
+        setMyShifts([...fx.myShifts]);
+        setOpenShifts([...fx.openShifts]);
+        setLeaves([...fx.leaves]);
+        setLoading(false);
+      }, delayMs);
+      return;
+    }
+
+    // 实网模式
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // 优先聚合接口
+      const data = await fetchJson<DashboardPayload>("/api/dashboard", {
+        signal: controller.signal,
+      });
+      setDuty(safeArray<DutyItem>(data.duty));
+      setMyShifts(safeArray<ShiftItem>(data.myShifts));
+      setOpenShifts(safeArray<ShiftItem>(data.openShifts));
+      setLeaves(safeArray<LeaveItem>(data.leaves));
+    } catch {
+      try {
+        const [d, ms, os, ls] = await Promise.all([
+          fetchJson<DutyItem[]>("/api/duty", { signal: controller.signal }),
+          fetchJson<ShiftItem[]>("/api/my-shifts", { signal: controller.signal }),
+          fetchJson<ShiftItem[]>("/api/open-shifts", { signal: controller.signal }),
+          fetchJson<LeaveItem[]>("/api/leaves", { signal: controller.signal }),
+        ]);
+        setDuty(safeArray<DutyItem>(d));
+        setMyShifts(safeArray<ShiftItem>(ms));
+        setOpenShifts(safeArray<ShiftItem>(os));
+        setLeaves(safeArray<LeaveItem>(ls));
+      } catch (e2: any) {
+        setError(e2?.message ?? "Failed to load dashboard data");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    return () => {
+      abortRef.current?.abort();
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useMock, amplifyTimes, delayMs]);
+
+  const refresh = async () => {
+    await load();
+  };
+
+  return useMemo(
+    () => ({ duty, myShifts, openShifts, leaves, loading, error, refresh }),
+    [duty, myShifts, openShifts, leaves, loading, error]
+  );
+}
+
+function safeArray<T>(v: unknown): T[] {
+  return Array.isArray(v) ? (v as T[]) : [];
+}
