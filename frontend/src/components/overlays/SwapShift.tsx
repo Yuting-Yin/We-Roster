@@ -1,12 +1,16 @@
 import React from "react";
-import { View, Text, ScrollView, StyleSheet, TextInput, Pressable } from "react-native";
+import { View, Text, ScrollView, StyleSheet, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import Avatar from "@/components/common/Avatar";
 import { fmt } from "@/lib/date";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import type { EventItem } from "@/types/roster";
+import { getMockShiftForUser } from "@/lib/fakeData";
+import { createSwapRequest } from "@/api/swap";
 
-type User = { id: string; name: string; initials: string };
+type User = { id: string; name: string; initials: string; title?: string };
 
 type SwapShiftProps = {
   visible: boolean;
@@ -14,21 +18,27 @@ type SwapShiftProps = {
   onSubmitted: (payload?: { message: string; targetUserId?: string }) => void;
   date: Date;
   slot?: { start: string; end: string };
+  currentEvent?: EventItem;           // details of YOUR current shift (for campus/room)
   availableUsers: User[];
   loading?: boolean;                  // optional
   error?: string | null;              // optional
+  getShiftForUser?: (userId: string, date: Date, slot?: { start: string; end: string }) => EventItem | null | undefined;
 };
 
 export default function SwapShift({
   visible, onCancel, onSubmitted, date, slot,
+  currentEvent,
   availableUsers, loading, error,
+  getShiftForUser,
 }: SwapShiftProps) {
-  // ---- hooks (Must be at the top level & fixed in order) ----
+  const { displayName, initials, designation } = useCurrentUser({ mock: true });
+
   const [message, setMessage] = React.useState("");
   const [query, setQuery] = React.useState("");
   const [selected, setSelected] = React.useState<string | undefined>();
+  const [submitting, setSubmitting] = React.useState(false);
 
-  // candidates = all avaliable users for swap
+  // candidates = all available users for swap
   const candidates = availableUsers;
 
   // searching users (case insensitive)
@@ -40,7 +50,38 @@ export default function SwapShift({
 
   if (!visible) return null;
 
-  const submit = () => onSubmitted({ message, targetUserId: selected });
+  const submit = async () => {
+    if (!selected || submitting) return;
+    try {
+      setSubmitting(true);
+      const requesterId = (useCurrentUser({ mock: true }) as any)?.user?.id ?? "u_mock";
+      const payload = {
+        requesterId,
+        targetUserId: selected,
+        shiftId: currentEvent?.id,
+        date: fmt(date, { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-"),
+        start: slot?.start ?? "08:00",
+        end: slot?.end ?? "13:00",
+        message: message?.trim() || undefined,
+        createdAt: new Date().toISOString(),
+      } as const;
+      await createSwapRequest(payload as any);
+      onSubmitted?.({ message, targetUserId: selected });
+    } catch (e) {
+      onSubmitted?.({ message, targetUserId: selected });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const timeLabel = slot ? `${slot.start}-${slot.end}` : "08:00-13:00";
+
+  // Helpers to format campus/room with Unallocated fallback
+  const campusOf = (ev?: EventItem | null) => (ev?.campus ?? "Unallocated");
+  const roomOf = (ev?: EventItem | null) => (ev?.room ?? "Unallocated");
+
+  const myCampus = campusOf(currentEvent);
+  const myRoom = roomOf(currentEvent);
 
   return (
     <View style={styles.wrap}>
@@ -48,8 +89,12 @@ export default function SwapShift({
       <View style={styles.header}>
         <Pressable onPress={onCancel}><Text style={styles.hLeft}>Cancel</Text></Pressable>
         <Text style={styles.hTitle}>SWAP SHIFT</Text>
-        <Pressable onPress={submit} disabled={!selected}>
-          <Text style={[styles.hRight, !selected && { opacity: 0.4 }]}>Submit</Text>
+        <Pressable onPress={submit} disabled={!selected || submitting}>
+          {submitting ? (
+            <ActivityIndicator size="small" color={COLOR.brand} />
+          ) : (
+            <Text style={[styles.hRight, (!selected || submitting) && { opacity: 0.4 }]}>Submit</Text>
+          )}
         </Pressable>
       </View>
       <View style={styles.divider} />
@@ -57,6 +102,7 @@ export default function SwapShift({
       <ScrollView contentContainerStyle={{ paddingBottom: sy(24) }}>
         {/* Message */}
         <View style={{ marginHorizontal: sx(16), marginTop: sy(12) }}>
+          <Text style={styles.sectionLabel}>Message</Text>
           <View style={[styles.noteBox, { borderColor: COLOR.divider }]}>
             <TextInput
               placeholder="Note content"
@@ -68,25 +114,32 @@ export default function SwapShift({
         </View>
 
         {/* Requested by */}
-        <View style={{ marginHorizontal: sx(16), marginTop: sy(16) }}>
-          <Text style={styles.secTitle}>Requested by</Text>
-          <View style={{ flexDirection: "row" }}>
-            <Avatar initials="TV" />
+        <View style={{ marginHorizontal: sx(16), marginTop: sy(18) }}>
+          <Text style={styles.sectionLabel}>Requested by</Text>
+          <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+            <Avatar initials={initials} />
             <View style={{ marginLeft: sx(10), flex: 1 }}>
-              <Text style={{ color: COLOR.ink, fontSize: sx(14), fontWeight: "700" }}>Thu Vo (You)</Text>
+              <Text style={{ color: COLOR.ink, fontSize: sx(14), fontWeight: "700" }}>{displayName} (You)</Text>
               <Text style={{ color: COLOR.ink, fontSize: sx(12), marginTop: sy(2) }}>
                 {fmt(date, { weekday: "short" })}, {fmt(date, { day: "2-digit", month: "short", year: "numeric" })}{"  "}
-                {slot ? `${slot.start}-${slot.end}` : "08:00-13:00"}
+                {timeLabel}
               </Text>
-              <Text style={styles.dim}>Department/Campus</Text>
-              <Text style={styles.dim}>Location</Text>
+              {!!designation && <Text style={styles.dim}>{designation}</Text>}
+              {currentEvent ? (
+                <>
+                  <Text style={styles.dimStrong}>{myCampus}</Text>
+                  <Text style={styles.dim}>{myRoom}</Text>
+                </>
+              ) : (
+                <Text style={styles.dimStrong}>Unallocated</Text>
+              )}
             </View>
           </View>
         </View>
 
-        {/* Swap with (searching + avaliable users) */}
-        <View style={{ marginHorizontal: sx(16), marginTop: sy(16) }}>
-          <Text style={styles.secTitle}>Swap with</Text>
+        {/* Swap with (searching + available users) */}
+        <View style={{ marginHorizontal: sx(16), marginTop: sy(18) }}>
+          <Text style={styles.sectionLabel}>Swap with</Text>
 
           {/* Search */}
           <View style={styles.searchBox}>
@@ -123,24 +176,40 @@ export default function SwapShift({
             ) : (
               filtered.map((p) => {
                 const active = selected === p.id;
+                const resolver = getShiftForUser ?? getMockShiftForUser;
+                const otherShift = resolver(p.id, date, slot);
+                const campus = campusOf(otherShift);
+                const room = roomOf(otherShift);
+                const isUnallocated = !otherShift;
                 return (
                   <Pressable
                     key={p.id}
-                    onPress={() => setSelected(p.id)}
-                    style={[styles.card, active && { backgroundColor: "#EEF5FF", borderColor: COLOR.brand }]}
+                    onPress={() => setSelected((cur) => (cur === p.id ? undefined : p.id))}
+                    style={[styles.card, active && styles.cardActive]}
                   >
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", height: "100%" }}>
                       <Ionicons
                         name={active ? "radio-button-on" : "radio-button-off"}
                         size={sx(18)}
                         color={active ? COLOR.brand : COLOR.label}
+                        style={{ marginRight: sx(10) }}
                       />
                       <Avatar initials={p.initials} />
-                      <View style={{ marginLeft: sx(10) }}>
+                      <View style={{ marginLeft: sx(10), flex: 1, justifyContent: "center" }}>
                         <Text style={{ color: COLOR.ink, fontSize: sx(14), fontWeight: "600" }}>{p.name}</Text>
-                        <Text style={{ color: COLOR.brandAlt, fontSize: sx(12) }}>
-                          {fmt(date, { weekday: "short" })}, {fmt(date, { day: "2-digit", month: "short", year: "numeric" })}
+                        <Text style={{ color: COLOR.brandAlt, fontSize: sx(12), marginTop: sy(2) }}>
+                          {fmt(date, { weekday: "short" })}, {fmt(date, { day: "2-digit", month: "short", year: "numeric" })}{"  "}
+                          {timeLabel}
                         </Text>
+                        {!!p.title && <Text style={styles.dim}>{p.title}</Text>}
+                        {isUnallocated ? (
+                          <Text style={styles.dimStrong}>Unallocated</Text>
+                        ) : (
+                          <>
+                            <Text style={styles.dimStrong}>{campus}</Text>
+                            <Text style={styles.dim}>{room}</Text>
+                          </>
+                        )}
                       </View>
                     </View>
                   </Pressable>
@@ -161,9 +230,11 @@ const styles = StyleSheet.create({
   hTitle: { color: "#000", fontSize: sx(16), fontWeight: "600" },
   hRight: { color: COLOR.brand, fontSize: sx(16), fontWeight: "600" },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: COLOR.divider },
-  noteBox: { borderWidth: 1, borderColor: COLOR.brand, borderRadius: sx(16), paddingHorizontal: sx(12), paddingVertical: sy(8) },
-  secTitle: { color: COLOR.ink, fontSize: sx(14), fontWeight: "700", marginBottom: sy(8) },
+  sectionLabel: { color: COLOR.ink, fontSize: sx(14), fontWeight: "700", marginBottom: sy(8) },
+  noteBox: { borderWidth: 1, borderColor: COLOR.brand, borderRadius: sx(12), paddingHorizontal: sx(12), paddingVertical: sy(10) },
   dim: { color: COLOR.ink, fontSize: sx(12) },
+  dimStrong: { color: COLOR.ink, fontSize: sx(12), fontWeight: "600" },
   searchBox: { borderWidth: 1, borderColor: COLOR.divider, borderRadius: sx(20), paddingVertical: sy(8), paddingHorizontal: sx(12), flexDirection: "row", alignItems: "center" },
-  card: { borderWidth: 1, borderColor: COLOR.divider, borderRadius: sx(10), padding: sx(12), marginTop: sy(12) },
+  card: { borderWidth: 1, borderColor: COLOR.divider, borderRadius: sx(10), paddingHorizontal: sx(12), paddingVertical: sy(10), marginTop: sy(12), height: sy(92) },
+  cardActive: { backgroundColor: "#EEF5FF", borderColor: COLOR.brand },
 });

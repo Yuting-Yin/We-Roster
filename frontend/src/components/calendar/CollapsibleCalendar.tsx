@@ -10,6 +10,7 @@ import { ShiftType } from "@/types/roster";
 const CARET_SIZE = sx(28);
 const CARET_ICON = sx(16);
 const DOT_SIZE = sx(4);
+const COL_W_PCT = 100 / 7; // 每列百分比宽度
 
 /* =================== Helpers =================== */
 const fmt = (d: Date, opt: Intl.DateTimeFormatOptions) =>
@@ -23,7 +24,7 @@ const endOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
 function startOfWeekMon(d: Date) {
   const r = new Date(d);
   const day = r.getDay(); // 0 Sun .. 6 Sat
-  const diff = (day + 6) % 7; // Offset with Mon=0
+  const diff = (day + 6) % 7; // Mon=0
   r.setDate(r.getDate() - diff);
   r.setHours(0, 0, 0, 0);
   return r;
@@ -39,7 +40,7 @@ function getWeekDays(value: Date): Date[] {
   });
 }
 
-/** 生成从 anchor 起连续 count 个月，每月固定 6×7 网格（周一开头） */
+/** 生成从 anchor 起连续 count 个月，仅包含当月天数；并提供第一天的列索引（Mon=0..Sun=6） */
 function buildMonths(anchor: Date, count = 2) {
   return Array.from({ length: count }, (_, k) => {
     const first = startOfMonth(new Date(anchor.getFullYear(), anchor.getMonth() + k, 1));
@@ -47,34 +48,14 @@ function buildMonths(anchor: Date, count = 2) {
     const firstWeekdayMon0 = (first.getDay() + 6) % 7; // 0..6 => Mon..Sun
 
     const days: Date[] = [];
-    // pre
-    for (let i = 0; i < firstWeekdayMon0; i++) {
-      const d = new Date(first);
-      d.setDate(first.getDate() - (firstWeekdayMon0 - i));
-      days.push(d);
-    }
-    // current month
     for (let d = 1; d <= last.getDate(); d++) {
       days.push(new Date(first.getFullYear(), first.getMonth(), d));
     }
-    // Pad to 6 lines (42 spaces)
-    while (days.length % 7 !== 0) {
-      const tail = new Date(days[days.length - 1]);
-      tail.setDate(tail.getDate() + 1);
-      days.push(tail);
-    }
-    if (days.length < 42) {
-      const need = 42 - days.length;
-      for (let i = 0; i < need; i++) {
-        const tail = new Date(days[days.length - 1]);
-        tail.setDate(tail.getDate() + 1);
-        days.push(tail);
-      }
-    }
 
     return {
-      title: `${fmt(first, { month: "long" })} ${first.getFullYear()}`,
+      title: fmt(first, { month: "long" }), // 只显示月份名
       first,
+      firstWeekdayMon0,
       days,
     };
   });
@@ -86,10 +67,10 @@ type DateType = ShiftType;
 type Action = { icon: "menu" | "refresh"; onPress: () => void };
 
 type Props = {
-  value: Date;                         // Currently selected date (controlled)
-  onChange: (d: Date) => void;         // Selection change callback
+  value: Date;                          // Currently selected date (controlled)
+  onChange: (d: Date) => void;          // Selection change callback
   shiftMap?: Record<string, ShiftType>; // YYYY-MM-DD -> type
-  /** The title placed in the center of the header (default display will be "Mon, May 12, 2025") */
+  /** The title placed in the center of the header (default: "Mon, May 12, 2025") */
   title?: string;
   /** Icon button on the left side of the head (menu) */
   leftAction?: Action;
@@ -98,37 +79,23 @@ type Props = {
 };
 
 /* =================== Visual helpers =================== */
-// day:   ☀️ + ● ○
-// night: 🌙 + ○ ●
-/* both:  ⛅ + ● ●
-   none:  null + ○ ○ */
+// day: ●○   night: ○●   both: ●●   none: ○○
 const dotStyles = StyleSheet.create({
   filled: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, backgroundColor: "#000" },
   hollow: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, borderWidth: 1.5, borderColor: "#BDBDBD", backgroundColor: "transparent" },
 });
 
 function visualOf(type: DateType) {
-  if (type === "day-shift")   return { icon: "sunny-outline" as const,  dots: ["filled", "hollow"] as const };
-  if (type === "night-shift") return { icon: "moon-outline" as const,   dots: ["hollow", "filled"] as const };
-  if (type === "both-shifts") return { icon: "partly-sunny-outline" as const, dots: ["filled", "filled"] as const };
-  return { icon: null, dots: ["hollow", "hollow"] as const };
+  if (type === "day-shift")   return { dots: ["filled", "hollow"] as const };
+  if (type === "night-shift") return { dots: ["hollow", "filled"] as const };
+  if (type === "both-shifts") return { dots: ["filled", "filled"] as const };
+  return { dots: ["hollow", "hollow"] as const };
 }
 
 /** Built-in demo: default type rules when there is no shiftMap */
-function getTypeForDate(d: Date): DateType {
-  const weekdayMon0 = (d.getDay() + 6) % 7; // 0..6 = Mon..Sun
-  if (weekdayMon0 === 0) return "night-shift";    // Mon
-  if (weekdayMon0 >= 1 && weekdayMon0 <= 3) return "day-shift"; // Tue-Thu
-  if (weekdayMon0 === 4) return "unallocated";    // Fri
-  if (weekdayMon0 === 5) return "not-working";    // Sat
-  return "night-shift";                            // Sun
-}
-
-/** Use external shiftMap first, otherwise use default rules */
-function getTypeFromMapOrFallback(d: Date, shiftMap?: Props["shiftMap"]): DateType {
+function getTypeFromMap(d: Date, shiftMap?: Props["shiftMap"]): DateType {
   const key = dayKey(d);
-  const t = shiftMap?.[key];
-  return (t as DateType) ?? getTypeForDate(d);
+  return (shiftMap?.[key] as DateType) ?? "unallocated";
 }
 
 const iconFor = (name: Action["icon"]) => (name === "menu" ? "menu-outline" : "refresh");
@@ -151,8 +118,7 @@ export default function CollapsibleCalendar({
   const rotate = useRef(new Animated.Value(0)).current;
   const heightAnim = useRef(new Animated.Value(0)).current;
 
-  // Use expandBase (if present) as the base for the two-month window; 
-  // otherwise, use the current month of selectedDate.
+  // Use expandBase (if present) as the base for the two-month window; otherwise, use the current month of selectedDate.
   const months = useMemo(() => {
     const base = expandBase ?? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
     return buildMonths(base, 2);
@@ -164,7 +130,7 @@ export default function CollapsibleCalendar({
     return days.map((d) => ({
       fullDate: d,
       date: d.getDate(),
-      type: getTypeFromMapOrFallback(d, shiftMap),
+      type: getTypeFromMap(d, shiftMap),
     }));
   }, [selectedDate, shiftMap]);
 
@@ -178,14 +144,15 @@ export default function CollapsibleCalendar({
       Animated.timing(heightAnim, { toValue: next ? 1 : 0, duration: 200, useNativeDriver: false }),
     ]).start();
     setExpanded(next);
-    // To reset the window when it is collapsed, turn on:
     // if (!next) setExpandBase(null);
   };
 
   const iconRotate = rotate.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "180deg"] });
 
-  const expandedMaxH = Math.min(H * 0.7, 600);
-  const expandedH = heightAnim.interpolate({ inputRange: [0, 1], outputRange: [0, expandedMaxH] });
+  // Use flex: 1 to fill remaining screen space instead of fixed height
+  const expandedH = heightAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+
+  const todayKey = dayKey(new Date());
 
   return (
     <View style={styles.container}>
@@ -230,14 +197,14 @@ export default function CollapsibleCalendar({
               <View style={styles.weekRow}>
                 {weekCells.map((item, idx) => {
                   const isSelected = dayKey(item.fullDate) === dayKey(selectedDate);
+                  const isToday = dayKey(item.fullDate) === todayKey;
                   const v = visualOf(item.type);
                   return (
                     <Pressable
                       key={idx}
                       onPress={() => onChange?.(item.fullDate)}
-                      style={[styles.dateContainer, isSelected && { borderColor: COLOR.brand, borderWidth: 1 }]}
+                      style={[styles.dateContainer, isSelected && { borderColor: COLOR.brand, borderWidth: 1 }, isToday && { backgroundColor: COLOR.card }]}
                     >
-                      {!!v.icon && <Ionicons name={v.icon} size={sx(14)} color={COLOR.ink} />}
                       <Text style={styles.dateText}>{item.date}</Text>
                       <TwoDots left={v.dots[0]} right={v.dots[1]} />
                     </Pressable>
@@ -258,8 +225,8 @@ export default function CollapsibleCalendar({
         </View>
       )}
 
-      {/* Expanded state: fixed for two months; with a collapse arrow on top */}
-      <Animated.View style={[styles.expandedContainer, { height: expandedH, overflow: "hidden" }]}>
+      {/* Expanded state */}
+      <Animated.View style={[styles.expandedContainer, { flex: expandedH, overflow: "hidden" }]}>
         {expanded && (
           <>
             <View style={styles.expandCaretTop}>
@@ -272,34 +239,42 @@ export default function CollapsibleCalendar({
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: sx(12) }}>
               {months.map((m, idx) => (
-                <View key={`${m.title}-${idx}`} style={{ marginBottom: sx(8) }}>
-                  <Text style={styles.monthTitle}>{m.title}</Text>
-                  <View style={styles.gridWrap}>
-                    {m.days.map((d, i) => {
-                      const inMonth = d.getMonth() === m.first.getMonth();
-                      const selected = dayKey(d) === dayKey(selectedDate);
-                      const t = getTypeFromMapOrFallback(d, shiftMap);
-                      const v = visualOf(t);
-                      const tint = selected ? COLOR.brand : inMonth ? COLOR.ink : "#C7C7C7";
+                <View key={`${m.title}-${idx}`} style={styles.monthBlock}>
+                  {/* 标题行：高度固定；x 根据当月第一天的列对齐 */}
+                  <View style={styles.monthTitleRow}>
+                    <View
+                      style={[
+                        styles.monthTitleCell,
+                        { left: `${m.firstWeekdayMon0 * COL_W_PCT}%`, /* width: `${COL_W_PCT}%` */ },
+                      ]}
+                    >
+                      <Text style={styles.monthTitleText}>{m.title}</Text>
+                    </View>
+                  </View>
 
+                  {/* 网格：先渲染 offset 个透明占位，再渲染当月所有天 */}
+                  <View style={styles.gridWrap}>
+                    {/* 透明占位，保证列对齐（不显示非本月的日期） */}
+                    {Array.from({ length: m.firstWeekdayMon0 }).map((_, i) => (
+                      <View key={`spacer-${i}`} style={styles.gridCellSpacer} />
+                    ))}
+
+                    {m.days.map((d, i) => {
+                      const selected = dayKey(d) === dayKey(selectedDate);
+                      const isToday = dayKey(d) === todayKey;
+                      const t = getTypeFromMap(d, shiftMap);
+                      const v = visualOf(t);
                       return (
                         <Pressable
                           key={`${dayKey(d)}-${i}`}
-                          style={[styles.gridCell, selected && styles.gridCellSelected]}
+                          style={styles.gridCell}
                           onPress={() => {
                             onChange?.(d);
-                            toggle(); // Collapse after selecting a date; expandBase remains unchanged → the same two months will be displayed next time
+                            toggle();
                           }}
                         >
-                          <View style={{ alignItems: "center", gap: sx(2) }}>
-                            {!!v.icon && <Ionicons name={v.icon} size={sx(12)} color={tint} />}
-                            <Text
-                              style={[
-                                styles.gridText,
-                                !inMonth && styles.gridTextInactive,
-                                selected && styles.gridTextSelected,
-                              ]}
-                            >
+                          <View style={[styles.gridCellContentExpanded, (selected || isToday) && { backgroundColor: isToday ? COLOR.card : "#E9F4FF", borderWidth: selected ? 1 : 0, borderColor: selected ? COLOR.brand : "transparent" }]}>
+                            <Text style={[styles.gridText, selected && styles.gridTextSelected]}>
                               {d.getDate()}
                             </Text>
                             <TwoDots left={v.dots[0]} right={v.dots[1]} />
@@ -382,7 +357,7 @@ const styles = StyleSheet.create({
 
   dateContainer: {
     width: sx(40),
-    height: sx(48), // Leave space for the icon + two dots
+    height: sx(48),
     borderRadius: sx(8),
     justifyContent: "center",
     alignItems: "center",
@@ -437,20 +412,54 @@ const styles = StyleSheet.create({
     borderColor: "#E3E3E3",
   },
 
-  monthTitle: { fontSize: sx(16), fontWeight: "600", color: COLOR.ink, marginBottom: sx(10) },
+  /* ====== Month block ====== */
+  monthBlock: { marginBottom: sx(10) },
 
+  // 标题行占位，高度固定
+  monthTitleRow: {
+    position: "relative",
+    height: sx(20), // 固定 y（标题所在的行高度）
+    marginBottom: sx(4),
+  },
+  // 标题宽度为 1 列，x 通过 left 百分比定位；内部文本居中
+  monthTitleCell: {
+    position: "absolute",
+    top: 0, // fixed y
+    alignItems: "center",
+    justifyContent: "flex-start",
+  },
+  monthTitleText: {
+    fontSize: sx(14),
+    fontWeight: "700",
+    color: COLOR.ink,
+  },
+
+  /* ====== Grid ====== */
   gridWrap: { flexDirection: "row", flexWrap: "wrap" },
+
+  gridCellSpacer: {
+    width: `${COL_W_PCT}%`,
+    height: sx(48),
+  },
+
   gridCell: {
-    width: "14.28%", // 7 colums
-    height: sx(64),
-    borderRadius: sx(6),
+    width: `${COL_W_PCT}%`,
+    height: sx(48),
     justifyContent: "center",
     alignItems: "center",
     marginVertical: sx(2),
   },
-  gridCellSelected: { backgroundColor: "#E9F4FF", borderWidth: 1, borderColor: COLOR.brand },
+
+  // Expanded: content centered with fixed visual size matching week cells
+  gridCellContentExpanded: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: sx(4),
+    width: sx(40),
+    height: sx(48),
+    borderRadius: sx(8),
+  },
 
   gridText: { fontSize: sx(14), color: COLOR.ink },
-  gridTextInactive: { color: "#C7C7C7" },
   gridTextSelected: { color: COLOR.brand, fontWeight: "700" },
 });

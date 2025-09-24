@@ -10,12 +10,12 @@ import SwapShift from "@/components/overlays/SwapShift";
 import TinyMenu from "@/components/overlays/TinyMenu";
 import SuccessToast from "@/components/overlays/SuccessToast";
 import { COLOR } from "@/theme/colors";
-import { buildEventsFor, makeDemoShiftMap } from "@/lib/fakeData";
 import { EventItem } from "@/types/roster";
 import { fmt } from "@/lib/date";
 
 // users for swap
 import { getAvailableUsers, type ApiUser } from "@/api/user";
+import { useRosterData } from "@/hooks/useRoster";
 
 // user infos that only used for UI/SwapShift
 type UIUser = { id: string; name: string; initials: string };
@@ -24,9 +24,11 @@ export default function MyRoster() {
   const rootRef = React.useRef<View>(null);
   const [mode, setMode] = React.useState<"day" | "week">("day");
 
-  const [date, setDate] = React.useState(new Date(2025, 4, 12));
-  const shiftMap = React.useMemo(makeDemoShiftMap, []);
-  const events = React.useMemo(() => buildEventsFor(date, shiftMap), [date, shiftMap]);
+  // Default to today
+  const [date, setDate] = React.useState(new Date());
+  // TODO: Remove mock flag once roster API is connected.
+  const { shiftMap, getEventsForDate, refresh: refreshRoster } = useRosterData(date, { mock: true });
+  const events = React.useMemo(() => getEventsForDate(date), [getEventsForDate, date]);
 
   // ===== avaliable users for wsap (api original data) =====
   const [availableUsers, setAvailableUsers] = useState<ApiUser[]>([]);
@@ -115,6 +117,7 @@ export default function MyRoster() {
           leftAction={{ icon: "menu", onPress: () => setMode((m) => (m === "day" ? "week" : "day")) }}
           rightAction={{ icon: "refresh", onPress: () => {
             setLoadingUsers(true);
+            refreshRoster();
             getAvailableUsers()
               .then((users) => setAvailableUsers(users))
               .catch((e) => setUserErr(e?.message ?? "Failed to load users"))
@@ -128,7 +131,8 @@ export default function MyRoster() {
       ) : (
         <WeekTimeline
           weekStart={weekStart}
-          getEventsFor={(d) => buildEventsFor(d, shiftMap)}
+          selectedDate={date}
+          getEventsFor={(d) => getEventsForDate(d)}
           onOpenDetails={openDetails}
           onOpenRequest={openRequestFromWeek}
         />
@@ -190,3 +194,4 @@ export default function MyRoster() {
 const styles = StyleSheet.create({
   calendarStack: { position: "relative", zIndex: 2, elevation: 4 },
 });
+

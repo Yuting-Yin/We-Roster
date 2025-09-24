@@ -48,25 +48,43 @@ export default function DayTimeline({
                   left: TIME_GUTTER + sx(8),
                   height,
                   width: W - TIME_GUTTER - sx(16),
-                  borderLeftColor: ev.color ?? COLOR.brand,
+                  borderTopColor: ev.color ?? COLOR.brand,
                 },
               ]}
             >
               <View style={styles.rowBetween}>
-                <View style={{ flex: 1, paddingRight: sx(8) }}>
-                  <Text style={styles.title}>{`${ev.start} - ${ev.end}`}</Text>
-                  {ev.title && <Text style={styles.meta}>{ev.title}</Text>}
-                  {ev.location && <Text style={styles.meta}>{ev.location}</Text>}
-                  {ev.role && <Text style={styles.meta}>{ev.role}</Text>}
+                <View style={styles.infoColumn}>
+                  <View style={styles.infoRow}>
+                    <Ionicons name="time-outline" size={sx(14)} color={COLOR.ink} style={styles.infoIcon} />
+                    <Text style={styles.timeText}>{`${ev.start} - ${ev.end}`}</Text>
+                  </View>
+                  {ev.location ? (
+                    <View style={styles.infoRow}>
+                      <Ionicons name="pin-outline" size={sx(14)} color={COLOR.ink} style={styles.infoIcon} />
+                      <Text style={styles.meta}>{ev.location}</Text>
+                    </View>
+                  ) : null}
+                  {ev.role ? (
+                    <View style={styles.infoRow}>
+                      <Ionicons name="briefcase-outline" size={sx(14)} color={COLOR.ink} style={styles.infoIcon} />
+                      <Text style={styles.meta}>{ev.role}</Text>
+                    </View>
+                  ) : null}
+                  {ev.teammates ? (
+                    <View style={styles.infoRow}>
+                      <Ionicons name="people-outline" size={sx(14)} color={COLOR.ink} style={styles.infoIcon} />
+                      <Text style={styles.meta}>{ev.teammates}</Text>
+                    </View>
+                  ) : null}
                 </View>
 
                 {ev.action === "arrow" ? (
                   <Pressable onPress={() => onOpenDetails(ev)} hitSlop={10}>
-                    <Ionicons name="arrow-forward-circle" size={sx(28)} color={COLOR.brand} />
+                    <Ionicons name="arrow-forward-circle" size={sx(36)} color={COLOR.brand} />
                   </Pressable>
                 ) : (
                   <Pressable onPress={() => onOpenRequest(ev)} hitSlop={10}>
-                    <Ionicons name="add-circle" size={sx(28)} color={COLOR.brand} />
+                    <Ionicons name="add-circle" size={sx(36)} color={COLOR.brand} />
                   </Pressable>
                 )}
               </View>
@@ -79,16 +97,19 @@ export default function DayTimeline({
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: "relative", backgroundColor: "#fff" },
+  wrap: { position: "relative", backgroundColor: "#fff", marginTop: sx(32) },
   hourRow: { position: "absolute", left: 0, right: 0, height: 1 },
   hourText: { position: "absolute", left: sx(8), top: -sy(8), width: sx(44), color: COLOR.label, fontSize: sx(10) },
   hourLine: { position: "absolute", left: sx(52), right: 0, top: 0, height: 1, backgroundColor: COLOR.line },
   card: {
-    position: "absolute", backgroundColor: COLOR.card,
-    borderLeftWidth: sx(3), borderRadius: sx(8), padding: sx(12),
+    position: "absolute", backgroundColor: `${COLOR.card}80`,
+    borderTopWidth: sx(3), borderRadius: sx(8), padding: sx(12),
     shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 1,
   },
   rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  title: { color: COLOR.ink, fontSize: sx(12), fontWeight: "700", marginBottom: sy(6) },
-  meta: { color: COLOR.ink, fontSize: sx(12), marginTop: sy(2) },
+  infoColumn: { flex: 1, paddingRight: sx(8), gap: sy(4) },
+  infoRow: { flexDirection: "row", alignItems: "center" },
+  infoIcon: { marginRight: sx(6) },
+  timeText: { color: COLOR.ink, fontSize: sx(12), fontWeight: "700" },
+  meta: { color: COLOR.ink, fontSize: sx(12) },
 });
