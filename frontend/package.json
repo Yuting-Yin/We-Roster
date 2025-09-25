@@ -14,6 +14,7 @@
     "@expo/metro-runtime": "~6.1.1",
     "@expo/vector-icons": "^15.0.2",
     "@hookform/resolvers": "^5.2.1",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-navigation/bottom-tabs": "^7.4.7",
     "@react-navigation/material-top-tabs": "^7.3.7",
     "@react-navigation/native": "^7.1.17",
@@ -36,9 +37,10 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@types/node": "^24.5.2",
     "@types/react": "~19.1.0",
     "babel-plugin-module-resolver": "^5.0.2",
-    "typescript": "~5.8.3"
+    "typescript": "~5.9.2"
   },
   "private": true
 }

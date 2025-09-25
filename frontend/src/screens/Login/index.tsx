@@ -13,8 +13,7 @@ import { StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation/RootNavigator";
-import { login } from "../../api/login";
-import { healthCheck } from "../../api/health";
+import { useAuth } from "@/contexts/AuthContext";
 
 const HI_FI_WIDTH = 412;
 const HI_FI_HEIGHT = 917;
@@ -26,35 +25,31 @@ type LoginNav = NativeStackNavigationProp<RootStackParamList, "Login">;
 
 export default function Login() {
   const navigation = useNavigation<LoginNav>();
+  const { login: authLogin } = useAuth();
   const [domain, setDomain] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
-
-  async function onTestHealth() {
-    try {
-      const data = await healthCheck();
-      Alert.alert("Health", JSON.stringify(data));
-    } catch (e: any) {
-      Alert.alert("Health Error", e?.message ?? "Unknown");
-    }
-  }
+  const [loading, setLoading] = useState(false);
 
   async function onLogin() {
-    try {
-      // true login
-      const data = await login(email, password);
-      // TODO: implement token / remember logic
-
-      // successfully login -> dashboard
-      navigation.replace("AppTabs"); // or: navigation.navigate("AppTabs")
-    } catch (e: any) {
-      Alert.alert("Login Failed", e?.message ?? "Unknown");
+    if (!domain.trim() || !email.trim() || !password.trim()) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
     }
-  }
 
-  async function dummyLogin(){
-    navigation.replace("AppTabs"); 
+    setLoading(true);
+    try {
+      // Use the AuthContext login method which handles token storage
+      await authLogin(domain, email, password);
+      
+      // Successfully login -> navigate to dashboard
+      navigation.replace("AppTabs");
+    } catch (e: any) {
+      Alert.alert("Login Failed", e?.message ?? "Unknown error");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -92,19 +87,19 @@ export default function Login() {
 
       {/* Login */}
       <TouchableOpacity
-        // TODO: replace with real login logic
-        onPress={dummyLogin}
+        onPress={onLogin}
         activeOpacity={0.85}
+        disabled={loading}
         style={{
           marginTop: sy(140),
           marginHorizontal: sx(42),
           paddingVertical: sy(12),
           borderRadius: sy(18),
-          backgroundColor: "#4090CD",
+          backgroundColor: loading ? "#ccc" : "#4090CD",
           alignItems: "center",
         }}
       >
-        <Text style={styles.loginText}>LOGIN</Text>
+        <Text style={styles.loginText}>{loading ? "LOGGING IN..." : "LOGIN"}</Text>
       </TouchableOpacity>
 
       {/* Forgot password */}

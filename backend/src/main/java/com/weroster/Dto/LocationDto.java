@@ -1,12 +1,24 @@
-package com.weroster.Dto;
+package com.weroster.dto;
 
 public class LocationDto {
-    public String campus;   // use location.name
-    public String address;  // you don't have it -> null
-    public String room;     // you don't have it -> null
-
+    private String name;
+    private String code;
+    private String type;
+    
     public LocationDto() {}
-    public LocationDto(String campus, String address, String room) {
-        this.campus = campus; this.address = address; this.room = room;
+    
+    public LocationDto(String name, String code, String type) {
+        this.name = name;
+        this.code = code;
+        this.type = type;
     }
+    
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    
+    public String getCode() { return code; }
+    public void setCode(String code) { this.code = code; }
+    
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
 }

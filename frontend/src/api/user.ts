@@ -1,4 +1,6 @@
 // src/api/user.ts
+import { API_BASE_URL } from '../config/env';
+
 export type ApiUser = {
   id: string;
   displayName: string;
@@ -6,8 +8,8 @@ export type ApiUser = {
   avatarUrl?: string;
 };
 
-const USE_MOCK = true; // have not connect to the backend yet
-const BASE_URL = "https://api.my-backend.com"; // TODO: replace with real url
+const USE_MOCK = false; // now connected to backend
+const BASE_URL = API_BASE_URL;
 
 async function fetchJSON<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -33,6 +35,6 @@ export async function getAvailableUsers(): Promise<ApiUser[]> {
       { id: "u005", displayName: "Emily Wang", title: "RN" },
     ];
   }
-  // backend example
+  // backend example - TODO: implement actual endpoint
   return fetchJSON<ApiUser[]>("/users/available");
 }

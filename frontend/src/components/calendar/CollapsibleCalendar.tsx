@@ -79,23 +79,28 @@ type Props = {
 };
 
 /* =================== Visual helpers =================== */
-// day: ●○   night: ○●   both: ●●   none: ○○
+// AM: ●○   PM/AH/ON_CALL: ○●   not-working/unallocated: ○○
 const dotStyles = StyleSheet.create({
   filled: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, backgroundColor: "#000" },
   hollow: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, borderWidth: 1.5, borderColor: "#BDBDBD", backgroundColor: "transparent" },
 });
 
 function visualOf(type: DateType) {
-  if (type === "day-shift")   return { dots: ["filled", "hollow"] as const };
-  if (type === "night-shift") return { dots: ["hollow", "filled"] as const };
-  if (type === "both-shifts") return { dots: ["filled", "filled"] as const };
-  return { dots: ["hollow", "hollow"] as const };
+  // Handle actual shift types directly
+  if (type === "AM") return { dots: ["filled", "hollow"] as const };      // ●○ AM shift
+  if (type === "PM") return { dots: ["hollow", "filled"] as const };      // ○● PM shift  
+  if (type === "AH") return { dots: ["hollow", "filled"] as const };      // ○● After Hours
+  if (type === "ON_CALL") return { dots: ["hollow", "filled"] as const }; // ○● On Call
+  if (type === "not-working") return { dots: ["hollow", "hollow"] as const }; // ○○ Not working
+  return { dots: ["hollow", "hollow"] as const }; // ○○ Unallocated
 }
 
 /** Built-in demo: default type rules when there is no shiftMap */
 function getTypeFromMap(d: Date, shiftMap?: Props["shiftMap"]): DateType {
   const key = dayKey(d);
-  return (shiftMap?.[key] as DateType) ?? "unallocated";
+  const result = (shiftMap?.[key] as DateType) ?? "unallocated";
+  console.log(`🔍 getTypeFromMap: ${key} -> ${result}`, shiftMap?.[key]);
+  return result;
 }
 
 const iconFor = (name: Action["icon"]) => (name === "menu" ? "menu-outline" : "refresh");
@@ -111,6 +116,9 @@ export default function CollapsibleCalendar({
 }: Props) {
   const selectedDate = value;
   const [expanded, setExpanded] = useState(false);
+  
+  // Debug: Log shiftMap data
+  console.log("🔍 CollapsibleCalendar shiftMap:", shiftMap);
 
   // Lock the start month of the expansion window (set when expanding for the first time)
   const [expandBase, setExpandBase] = useState<Date | null>(null);

@@ -8,15 +8,17 @@ CREATE TABLE Hospital(
 
 CREATE TABLE Users(
                       Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                      domain VARCHAR(100) NOT NULL,
                       role VARCHAR(32) NOT NULL,
-                      email VARCHAR(320) UNIQUE,
+                      email VARCHAR(320) NOT NULL,
                       salt VARCHAR(255),
                       password_hash VARCHAR(255) NOT NULL,
                       status VARCHAR(30) NOT NULL,
                       created_time DATETIME,
                       status_time DATETIME NULL,
                       last_login_time DATETIME NULL,
-                      login_attempts INT NOT NULL DEFAULT 0
+                      login_attempts INT NOT NULL DEFAULT 0,
+                      UNIQUE KEY unique_domain_email (domain, email)
 ) ENGINE = InnoDB;
 
 CREATE TABLE designation(
@@ -132,16 +134,31 @@ CREATE TABLE shift_assignment (
 ) ENGINE=InnoDB;
 
 CREATE TABLE leave_request(
-                              ID BIGINT AUTO_INCREMENT PRIMARY KEY,
+                              id BIGINT AUTO_INCREMENT PRIMARY KEY,
                               start_time DATETIME,
-                              end_time DATETIME
+                              end_time DATETIME,
+                              staff_id BIGINT,
+                              request_type VARCHAR(50),
+                              reason TEXT,
+                              status VARCHAR(30) DEFAULT 'PENDING',
+                              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                              approved_at DATETIME NULL,
+                              approved_by BIGINT NULL,
+                              CONSTRAINT fk_leave_staff FOREIGN KEY (staff_id) REFERENCES staff(id),
+                              CONSTRAINT fk_leave_approved_by FOREIGN KEY (approved_by) REFERENCES staff(id)
 ) ENGINE = InnoDB;
 
 CREATE TABLE shift_swap(
                            id BIGINT AUTO_INCREMENT PRIMARY KEY,
                            from_time DATETIME NOT NULL,
                            to_time DATETIME NOT NULL,
-                           date_made DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                           date_made DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                           requester_id BIGINT,
+                           target_id BIGINT,
+                           message TEXT,
+                           status VARCHAR(30) DEFAULT 'PENDING',
+                           CONSTRAINT fk_swap_requester FOREIGN KEY (requester_id) REFERENCES staff(id),
+                           CONSTRAINT fk_swap_target FOREIGN KEY (target_id) REFERENCES staff(id)
 ) ENGINE = InnoDB;
 
 CREATE TABLE open_shift(
@@ -151,18 +168,19 @@ CREATE TABLE open_shift(
 
 USE weroster;  -- or your actual schema
 
+SET @domain := 'weroster.local';
 SET @email := 'admin@weroster.local';
 SET @plain := 'ChangeMe123!';
 
--- If you “use md5 for salt”, make one (32-hex chars)
+-- If you "use md5 for salt", make one (32-hex chars)
 SET @salt := MD5(UUID());      -- e.g., "c3a1..."; any string works as long as you store it
 
-INSERT INTO Users (email, salt, password_hash, role, status, created_time)
-VALUES (LOWER(@email), @salt, MD5(CONCAT(@salt, @plain)), 'ADMIN', 'ACTIVE', NOW());
+INSERT INTO Users (domain, email, salt, password_hash, role, status, created_time)
+VALUES (@domain, LOWER(@email), @salt, MD5(CONCAT(@salt, @plain)), 'ADMIN', 'ACTIVE', NOW());
 
 -- sanity check: should be 1
 SELECT MD5(CONCAT(salt, @plain)) = password_hash AS ok
-FROM Users WHERE email=@email;
+FROM Users WHERE domain=@domain AND email=@email;
 
 -- In MySQL (the schema your app uses)
 USE weroster;  -- or your actual DB
@@ -234,4 +252,14 @@ INSERT INTO open_shift(shift_id, date_made) VALUES (@sid, NOW());
 ALTER TABLE open_shift
     ADD COLUMN urgent_flag TINYINT(1) NULL,
     ADD COLUMN extra_pay_cents INT NULL;
+
+-- Create user_staff table to link users with staff
+CREATE TABLE user_staff(
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    staff_id BIGINT NOT NULL,
+    CONSTRAINT fk_user_staff_user FOREIGN KEY (user_id) REFERENCES Users(id),
+    CONSTRAINT fk_user_staff_staff FOREIGN KEY (staff_id) REFERENCES staff(id),
+    UNIQUE KEY unique_user_staff (user_id, staff_id)
+) ENGINE = InnoDB;
 

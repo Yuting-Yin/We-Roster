@@ -1,10 +1,19 @@
-package com.weroster.Dto;
+package com.weroster.dto;
 
 public class DayWindowDto {
-    private String startTime; // "HH:mm"
-    private String endTime;   // "HH:mm"
+    private String start;
+    private String end;
+    
     public DayWindowDto() {}
-    public DayWindowDto(String startTime, String endTime) { this.startTime = startTime; this.endTime = endTime; }
-    public String getStartTime() { return startTime; }
-    public String getEndTime() { return endTime; }
+    
+    public DayWindowDto(String start, String end) {
+        this.start = start;
+        this.end = end;
+    }
+    
+    public String getStart() { return start; }
+    public void setStart(String start) { this.start = start; }
+    
+    public String getEnd() { return end; }
+    public void setEnd(String end) { this.end = end; }
 }

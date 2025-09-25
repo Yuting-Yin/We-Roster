@@ -28,18 +28,21 @@ const SHIFT_BADGES: Record<ShiftSlot | "DEFAULT", { icon: IconName; label: strin
 };
 
 function badgeMetaFor(ev: EventItem): { icon: IconName; label: string } {
-  let slot = ev.shiftSlot as ShiftSlot | undefined;
-  if (!slot && ev.title) {
+  // Use the shift type directly from the event
+  if (ev.type && SHIFT_BADGES[ev.type]) {
+    return SHIFT_BADGES[ev.type];
+  }
+  
+  // Fallback to title parsing if type is not available
+  if (ev.title) {
     const lower = ev.title.toLowerCase();
-    if (lower.includes("on-call")) slot = "ON_CALL";
-    else if (lower.includes("after")) slot = "AH";
-    else if (lower.includes("ah")) slot = "AH";
-    else if (lower.includes("pm")) slot = "PM";
-    else if (lower.includes("am")) slot = "AM";
+    if (lower.includes("on-call")) return SHIFT_BADGES["ON_CALL"];
+    else if (lower.includes("after")) return SHIFT_BADGES["AH"];
+    else if (lower.includes("ah")) return SHIFT_BADGES["AH"];
+    else if (lower.includes("pm")) return SHIFT_BADGES["PM"];
+    else if (lower.includes("am")) return SHIFT_BADGES["AM"];
   }
-  if (slot && SHIFT_BADGES[slot]) {
-    return SHIFT_BADGES[slot];
-  }
+  
   return SHIFT_BADGES.DEFAULT;
 }
 
