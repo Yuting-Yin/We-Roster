@@ -1,36 +1,39 @@
 package com.weroster.config;
 
-import org.springframework.context.annotation.Bean;
+import com.weroster.security.JwtAuthFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.security.config.annotation.web.configuration.*;
 
-import java.util.List;
-
-@Configuration
 @EnableWebSecurity
-public class SecurityConfig {
+@Configuration
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-  @Bean
-  @Order(Ordered.HIGHEST_PRECEDENCE) // 确保这条链优先
-  public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    http
-      .securityMatcher("/**")              // 明确匹配所有请求
-      .csrf(csrf -> csrf.disable())
-      .cors(Customizer.withDefaults())
-      .authorizeHttpRequests(auth -> auth
-        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // 预检也放行
-        .anyRequest().permitAll()
-      );
-    return http.build();
-  }
+    @Autowired private JwtAuthFilter jwtAuthFilter;
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.csrf().disable()
+                .cors().and()
+                .authorizeRequests()
+                .antMatchers(            "/api/v1/health",
+                        "/api/v1/auth/login",
+                        "/swagger-ui.html",
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/webjars/**", "/__whoami", "api/v1/calendar/range2-test").permitAll().antMatchers(org.springframework.http.HttpMethod.GET,
+                        "/api/v1/leave-requests","/api/v1/shift-swaps", "/api/v1/calendar/range2"
+                    ).permitAll().antMatchers(HttpMethod.GET,
+                        "/api/v1/leave-requests",
+                        "/api/v1/shift-swaps",
+                        "/api/v1/my-team",
+                        "/api/v1/my-requests",
+                        "/api/v1/my-team/summary",
+                        "api/v1/leave-requests",
+                        "api/v1/open-shifts/compare",
+                        "/api/v1/open-shifts/**","api/v1/myroster/day").authenticated().anyRequest().authenticated()
+                .and().addFilterBefore(jwtAuthFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
+    }
 }
-
