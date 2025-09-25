@@ -1,5 +1,9 @@
 // Java 8 / Boot 2.4 OK
+<<<<<<< HEAD:backend/src/main/com/weroster/config/CorsConfig.java
 package main.com.weroster.config;
+=======
+package com.weroster.config;
+>>>>>>> temp-backend:backend/src/main/java/com/weroster/config/CorsConfig.java
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
