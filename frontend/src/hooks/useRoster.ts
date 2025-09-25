@@ -32,6 +32,9 @@ export function useRosterData(anchorDate: Date, opts: Options = {}) {
   const [eventsByDate, setEventsByDate] = useState<Record<string, EventItem[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Debug: Log initial state
+  console.log("🔍 useRosterData initial state:", { shiftMap, loading, error });
 
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -66,14 +69,20 @@ export function useRosterData(anchorDate: Date, opts: Options = {}) {
         month: monthKey(base),
         months: String(months),
       });
+      
+      console.log("🔍 useRosterData making API call:", `/api/v1/myroster/roster?${params.toString()}`);
 
       try {
-        const res = await fetchJson<RosterPayload>(`/api/roster?${params.toString()}`, {
+        const res = await fetchJson<RosterPayload>(`/api/v1/myroster/roster?${params.toString()}`, {
           signal: controller.signal,
         });
 
-        setShiftMap(normalizeShiftMap(res.shiftMap));
-        setEventsByDate(normalizeEvents(res.events));
+        console.log("🔍 useRosterData received:", res);
+        const normalizedShiftMap = normalizeShiftMap(res.shiftMap);
+        const normalizedEvents = normalizeEvents(res.events);
+        console.log("🔍 Normalized shiftMap:", normalizedShiftMap);
+        setShiftMap(normalizedShiftMap);
+        setEventsByDate(normalizedEvents);
       } catch (err: any) {
         setError(err?.message ?? "Failed to load roster data");
       } finally {

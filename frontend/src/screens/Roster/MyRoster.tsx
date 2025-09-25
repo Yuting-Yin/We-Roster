@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { View, StyleSheet } from "react-native";
+import React, { useEffect, useState, useRef, useMemo } from "react";
+import { View, StyleSheet, Text } from "react-native";
 import CollapsibleCalendar from "@/components/calendar/CollapsibleCalendar";
 import DayTimeline from "@/components/timeline/DayTimeline";
 import WeekTimeline from "@/components/timeline/WeekTimeline";
@@ -15,20 +15,29 @@ import { fmt } from "@/lib/date";
 
 // users for swap
 import { getAvailableUsers, type ApiUser } from "@/api/user";
+import { useMyRosterData } from "@/hooks/useMyRoster";
 import { useRosterData } from "@/hooks/useRoster";
 
 // user infos that only used for UI/SwapShift
 type UIUser = { id: string; name: string; initials: string };
 
 export default function MyRoster() {
-  const rootRef = React.useRef<View>(null);
-  const [mode, setMode] = React.useState<"day" | "week">("day");
+  const rootRef = useRef<View>(null);
+  const [mode, setMode] = useState<"day" | "week">("day");
 
   // Default to today
-  const [date, setDate] = React.useState(new Date());
-  // TODO: Remove mock flag once roster API is connected.
-  const { shiftMap, getEventsForDate, refresh: refreshRoster } = useRosterData(date, { mock: true });
-  const events = React.useMemo(() => getEventsForDate(date), [getEventsForDate, date]);
+  const [date, setDate] = useState(new Date());
+  
+  // Use useRosterData for calendar dots (shiftMap) - loads data for entire month range
+  const { shiftMap, getEventsForDate: getCalendarEvents, refresh: refreshRoster, loading: calendarLoading, error: calendarError } = useRosterData(date, { mock: false, months: 2 });
+  
+  // Use useMyRosterData for timeline events - loads data for specific day
+  const { getEventsForDate, loading: timelineLoading, error: timelineError } = useMyRosterData(date, { mock: false });
+  const events = useMemo(() => getEventsForDate(date), [getEventsForDate, date]);
+  
+  // Combine loading states and errors
+  const loading = calendarLoading || timelineLoading;
+  const error = calendarError || timelineError;
 
   // ===== avaliable users for wsap (api original data) =====
   const [availableUsers, setAvailableUsers] = useState<ApiUser[]>([]);
@@ -101,6 +110,15 @@ export default function MyRoster() {
 
   return (
     <View ref={rootRef} style={{ flex: 1, backgroundColor: COLOR.bg }}>
+      {/* Show error if API call failed */}
+      {error && (
+        <View style={{ padding: 16, backgroundColor: '#ffebee', margin: 16, borderRadius: 8 }}>
+          <Text style={{ color: '#c62828', textAlign: 'center' }}>
+            Error loading roster: {error}
+          </Text>
+        </View>
+      )}
+
       <View style={styles.calendarStack}>
         <CollapsibleCalendar
           value={date}

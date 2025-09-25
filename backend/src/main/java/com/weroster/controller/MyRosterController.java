@@ -1,155 +1,543 @@
 package com.weroster.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.weroster.service.CalendarServiceV2;
-import com.weroster.service.MyRosterService;
-import com.weroster.Dto.*;
-import com.weroster.Dto.CalendarDayDto;
-import com.weroster.Dto.DayRosterDto;
-import org.springframework.http.MediaType;
+import com.weroster.dto.*;
+import com.weroster.entity.*;
+import com.weroster.repository.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping(value="/api/v1/myroster", produces=MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/api/v1/myroster")
+@CrossOrigin(origins = "*")
 public class MyRosterController {
-    private final MyRosterService myRoster;
-    private final CalendarServiceV2 calendar;
-    private final ObjectMapper om; // Spring Boot 会自动注入
-    private final MyRosterService svc;
+    
+    @Autowired
+    private ShiftRepository shiftRepository;
+    
+    @Autowired
+    private ShiftAssignmentRepository shiftAssignmentRepository;
+    
+    @Autowired
+    private UserStaffRepository userStaffRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @GetMapping("/day")
+    public ResponseEntity<DayRosterDto> getDayRoster(@RequestParam(required = false) String date) {
+        try {
+            LocalDateTime targetDate = date != null ? 
+                LocalDate.parse(date).atStartOfDay() : 
+                LocalDate.now().atStartOfDay();
+            
+            System.out.println("🔍 Looking for shifts on date: " + targetDate);
+            
+            // For now, get the test user (test@example.com)
+            // In a real app, this would come from authentication context
+            User currentUser = userRepository.findByDomainAndEmail("test", "test@example.com")
+                .orElseThrow(() -> new RuntimeException("Test user not found"));
+            
+            System.out.println("👤 Current user: " + currentUser.getEmail());
+            
+            // Find the staff member linked to this user
+            UserStaff userStaff = userStaffRepository.findUserStaffByUser(currentUser)
+                .orElseThrow(() -> new RuntimeException("No staff linked to user"));
+            
+            Staff staff = userStaff.getStaff();
+            System.out.println("👨‍⚕️ Linked staff: " + staff.getFirstName() + " " + staff.getLastName() + " (ID: " + staff.getId() + ")");
+            
+            // Get shift assignments for this staff member on the target date
+            LocalDateTime endDate = targetDate.plusDays(1);
+            System.out.println("🔍 DEBUG: Looking for shifts between " + targetDate + " and " + endDate);
+            System.out.println("🔍 DEBUG: Staff ID: " + staff.getId());
+            
+            // Let's also test the query directly
+            System.out.println("🔍 DEBUG: Testing direct query for staff " + staff.getId());
+            List<ShiftAssignment> allAssignmentsForStaff = shiftAssignmentRepository.findAll().stream()
+                .filter(sa -> sa.getStaff().getId().equals(staff.getId()))
+                .collect(Collectors.toList());
+            System.out.println("🔍 DEBUG: Found " + allAssignmentsForStaff.size() + " total assignments for staff " + staff.getId());
+            
+            allAssignmentsForStaff.forEach(sa -> {
+                System.out.println("🔍 DEBUG: Assignment " + sa.getId() + " - Shift " + sa.getShift().getId() + " starts at " + sa.getShift().getStartTs());
+            });
+            
+            List<ShiftAssignment> assignments = shiftAssignmentRepository.findByStaffAndDate(staff.getId(), targetDate, endDate);
+            System.out.println("📅 Found " + assignments.size() + " shift assignments for staff " + staff.getId());
+            
+            List<ShiftItem> shiftItems = assignments.stream()
+                    .map(assignment -> {
+                        Shift shift = assignment.getShift();
+                        System.out.println("🔄 Processing shift: " + shift.getId() + " at " + shift.getStartTs());
+                        System.out.println("🔄 Shift department: " + (shift.getDepartment() != null ? shift.getDepartment().getName() : "NULL"));
+                        System.out.println("🔄 Shift location: " + (shift.getLocation() != null ? shift.getLocation().getName() : "NULL"));
+                        System.out.println("🔄 Shift code: " + shift.getCode());
+                        
+                        // Get all assignments for this shift to count coworkers and build teammates
+                        List<ShiftAssignment> allAssignments = shiftAssignmentRepository.findByShiftId(shift.getId());
+                        System.out.println("👥 Found " + allAssignments.size() + " total assignments for shift " + shift.getId());
+                        
+                        // Build teammates list (excluding current user)
+                        List<TeammateDto> teammates = allAssignments.stream()
+                                .filter(sa -> !sa.getStaff().getId().equals(staff.getId())) // Exclude current user
+                                .map(sa -> {
+                                    String fullName = sa.getStaff().getFirstName() + " " + sa.getStaff().getLastName();
+                                    String initials = sa.getStaff().getFirstName().substring(0, 1) + 
+                                                    sa.getStaff().getLastName().substring(0, 1);
+                                    return new TeammateDto(
+                                            sa.getStaff().getId(),
+                                            fullName,
+                                            initials.toUpperCase(),
+                                            sa.getIsLead()
+                                    );
+                                })
+                                .collect(Collectors.toList());
+                        
+                        // Get hospital/campus information
+                        String campus = shift.getDepartment() != null && shift.getDepartment().getHospital() != null ? 
+                                shift.getDepartment().getHospital().getName() : "";
+                        String campusAddress = shift.getDepartment() != null && shift.getDepartment().getHospital() != null ? 
+                                shift.getDepartment().getHospital().getAddress() : "";
+                        
+                        // Get the current staff member's designation for role
+                        String role = assignment.getStaff().getDesignation() != null 
+                                ? assignment.getStaff().getDesignation().getName() 
+                                : "Staff";
 
-    public MyRosterController(MyRosterService myRoster, CalendarServiceV2 calendar, ObjectMapper om, MyRosterService svc) {
-        this.myRoster = myRoster;
-        this.calendar = calendar;
-        this.om = om;
-        this.svc = svc;
-    }
-    record DaySummary(String date, boolean assignedAM, boolean assignedPM, boolean isToday) {}
-
-    /**
-     * Not for ui
-     * @param date
-     * @return
-     * @throws Exception
-     */
-    @GetMapping(value="/day", produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> day(@RequestParam(required=false) String date) throws Exception {
-        var d = (date == null || date.isBlank())
-                ? java.time.LocalDate.now()
-                : java.time.LocalDate.parse(date);
-        DayRosterDto dto = myRoster.day(email(), uid(), d);
-        String json = om.writeValueAsString(dto);
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(json);
-    }
-
-    /**
-     * For ui, backend for the timetable list on we roster home page
-     * @param date
-     * @return
-     * @throws Exception
-     */
-    @GetMapping(value = "/dayview", produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> dayView(@RequestParam String date) throws Exception {
-        var d = java.time.LocalDate.parse(date);
-        DayViewDto dto = myRoster.dayView(email(), uid(), d);
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(om.writeValueAsString(dto));
-    }
-
-    /**
-     * Method for refresh button backend logic
-     * @param weekStart
-     * @param currentDate
-     * @return
-     * @throws Exception
-     */
-    @GetMapping("/refresh")
-    public ResponseEntity<String> refresh(
-            @RequestParam(required = false) String weekStart,
-            @RequestParam(required = false) String currentDate
-    ) throws Exception {
-
-        LocalDate current = (currentDate == null || currentDate.isBlank())
-                ? LocalDate.now()
-                : LocalDate.parse(currentDate);
-
-        // 周一为起点
-        LocalDate weekStartDate = (weekStart == null || weekStart.isBlank())
-                ? current.minusDays((current.getDayOfWeek().getValue() + 6) % 7)
-                : LocalDate.parse(weekStart);
-        LocalDate weekEndDate = weekStartDate.plusDays(6);
-
-        // 1) 拉一个月的日历数据
-        List<?> out = calendar.range(email(), uid(), weekStartDate, 1);
-
-        // 2) 只拣当周 7 天，并“投影”为 Map（date/assignedAM/assignedPM/isToday）
-        List<Map<String, Object>> days = new ArrayList<>(7);
-        for (Object o : out) {
-            if (o instanceof CalendarDayDto d) {
-                LocalDate dd = LocalDate.parse(d.date());
-                if (!dd.isBefore(weekStartDate) && !dd.isAfter(weekEndDate)) {
-                    days.add(Map.of(
-                            "date", d.date(),
-                            "assignedAM", d.assignedAM(),
-                            "assignedPM", d.assignedPM(),
-                            "isToday", d.isToday()
-                    ));
-                }
-            } else {
-                // （可选兜底）如果你还有旧版 POJO，而不是 record，可用 getter 取值
-                try {
-                    Class<?> c = o.getClass();
-                    String date = (String) c.getMethod("getDate").invoke(o);
-                    boolean am  = (boolean) c.getMethod("isAssignedAM").invoke(o);
-                    boolean pm  = (boolean) c.getMethod("isAssignedPM").invoke(o);
-                    boolean today = (boolean) c.getMethod("isToday").invoke(o);
-                    LocalDate dd = LocalDate.parse(date);
-                    if (!dd.isBefore(weekStartDate) && !dd.isAfter(weekEndDate)) {
-                        days.add(Map.of(
-                                "date", date,
-                                "assignedAM", am,
-                                "assignedPM", pm,
-                                "isToday", today
-                        ));
-                    }
-                } catch (Exception ignore) {
-                    // 静默忽略非预期类型
-                }
-            }
+                        ShiftItem shiftItem = new ShiftItem(
+                                shift.getId(),
+                                shift.getStartTs().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                                shift.getEndTs().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                                shift.getDepartment() != null ? shift.getDepartment().getName() : "",
+                                shift.getLocation() != null ? shift.getLocation().getName() : "",
+                                shift.getCode(),
+                                assignment.getIsLead(),
+                                allAssignments.size(),
+                                shift.getNote(),
+                                teammates,
+                                campus,
+                                shift.getLocation() != null ? shift.getLocation().getName() : "",
+                                campusAddress
+                        );
+                        
+                        // Set the role (designation) for the current staff member
+                        shiftItem.setRole(role);
+                        
+                        System.out.println("✅ Created ShiftItem: " + shiftItem.getId() + " - " + shiftItem.getStartTs() + " to " + shiftItem.getEndTs());
+                        return shiftItem;
+                    })
+                    .collect(Collectors.toList());
+            
+            System.out.println("✅ Returning " + shiftItems.size() + " shift items for user");
+            
+            DayRosterDto response = new DayRosterDto(
+                    targetDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                    shiftItems
+            );
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error in getDayRoster: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(null);
         }
-
-        // 3) 当天 timeline（主界面列表）
-        DayRosterDto timeline = myRoster.day(email(), uid(), current);
-
-        // 4) 组装 JSON（手工序列化，彻底绕过 HttpMessageConverter 的历史问题）
-        Map<String, Object> root = new LinkedHashMap<>();
-        root.put("week", Map.of("start", weekStartDate.toString(), "end", weekEndDate.toString()));
-        root.put("days", days);
-        root.put("timeline", timeline);
-
-        String json = om.writeValueAsString(root);
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(json);
+    }
+    
+    @GetMapping("/debug-shifts")
+    public ResponseEntity<?> debugShifts() {
+        try {
+            LocalDateTime today = LocalDate.now().atStartOfDay();
+            LocalDateTime tomorrow = today.plusDays(1);
+            
+            System.out.println("🔍 DEBUG: Checking all shifts between " + today + " and " + tomorrow);
+            
+            // Get all shifts for today
+            List<Shift> allShifts = shiftRepository.findByDateRange(today, tomorrow);
+            System.out.println("🔍 DEBUG: Found " + allShifts.size() + " total shifts in database");
+            
+            // Get all shift assignments for today
+            List<ShiftAssignment> allAssignments = shiftAssignmentRepository.findAll();
+            System.out.println("🔍 DEBUG: Found " + allAssignments.size() + " total shift assignments");
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("dateRange", Map.of("start", today.toString(), "end", tomorrow.toString()));
+            result.put("totalShifts", allShifts.size());
+            result.put("totalAssignments", allAssignments.size());
+            
+            List<Map<String, Object>> shiftDetails = allShifts.stream().map(shift -> {
+                Map<String, Object> shiftInfo = new HashMap<>();
+                shiftInfo.put("id", shift.getId());
+                shiftInfo.put("startTs", shift.getStartTs().toString());
+                shiftInfo.put("endTs", shift.getEndTs().toString());
+                shiftInfo.put("code", shift.getCode());
+                shiftInfo.put("department", shift.getDepartment() != null ? shift.getDepartment().getName() : "NULL");
+                shiftInfo.put("location", shift.getLocation() != null ? shift.getLocation().getName() : "NULL");
+                return shiftInfo;
+            }).collect(Collectors.toList());
+            
+            result.put("shifts", shiftDetails);
+            
+            List<Map<String, Object>> assignmentDetails = allAssignments.stream().map(assignment -> {
+                Map<String, Object> assignmentInfo = new HashMap<>();
+                assignmentInfo.put("id", assignment.getId());
+                assignmentInfo.put("staffId", assignment.getStaff().getId());
+                assignmentInfo.put("shiftId", assignment.getShift().getId());
+                assignmentInfo.put("shiftStartTs", assignment.getShift().getStartTs().toString());
+                assignmentInfo.put("isLead", assignment.getIsLead());
+                return assignmentInfo;
+            }).collect(Collectors.toList());
+            
+            result.put("assignments", assignmentDetails);
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
 
-
-    private String email() {
-        var a = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        return a != null ? a.getName() : null;
+    @GetMapping("/debug-step1")
+    public ResponseEntity<?> debugStep1() {
+        try {
+            User currentUser = userRepository.findByDomainAndEmail("test", "test@example.com")
+                .orElseThrow(() -> new RuntimeException("Test user not found"));
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("step", "1 - User lookup");
+            result.put("user", Map.of("id", currentUser.getId(), "email", currentUser.getEmail()));
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
-    private Long uid() { return null; }
-    @GetMapping(value = "/shift/{shiftId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ShiftDetailsDto shiftDetails(@PathVariable long shiftId) {
-        return svc.shiftDetails(email(), uid(), shiftId);
+    
+    @GetMapping("/debug-step2")
+    public ResponseEntity<?> debugStep2() {
+        try {
+            User currentUser = userRepository.findByDomainAndEmail("test", "test@example.com")
+                .orElseThrow(() -> new RuntimeException("Test user not found"));
+            
+            UserStaff userStaff = userStaffRepository.findUserStaffByUser(currentUser)
+                .orElseThrow(() -> new RuntimeException("No staff linked to user"));
+            
+            Staff staff = userStaff.getStaff();
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("step", "2 - UserStaff link");
+            result.put("user", Map.of("id", currentUser.getId(), "email", currentUser.getEmail()));
+            result.put("staff", Map.of("id", staff.getId(), "name", staff.getFirstName() + " " + staff.getLastName()));
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/debug-step3")
+    public ResponseEntity<?> debugStep3() {
+        try {
+            User currentUser = userRepository.findByDomainAndEmail("test", "test@example.com")
+                .orElseThrow(() -> new RuntimeException("Test user not found"));
+            
+            UserStaff userStaff = userStaffRepository.findUserStaffByUser(currentUser)
+                .orElseThrow(() -> new RuntimeException("No staff linked to user"));
+            
+            Staff staff = userStaff.getStaff();
+            
+            LocalDateTime today = LocalDate.now().atStartOfDay();
+            LocalDateTime tomorrow = today.plusDays(1);
+            List<ShiftAssignment> assignments = shiftAssignmentRepository.findByStaffAndDate(staff.getId(), today, tomorrow);
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("step", "3 - Shift assignments");
+            result.put("staff", Map.of("id", staff.getId(), "name", staff.getFirstName() + " " + staff.getLastName()));
+            result.put("dateRange", Map.of("start", today.toString(), "end", tomorrow.toString()));
+            result.put("assignments", assignments.size());
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/debug")
+    public ResponseEntity<?> debugUserStaff() {
+        try {
+            // Test user lookup
+            User currentUser = userRepository.findByDomainAndEmail("test", "test@example.com")
+                .orElseThrow(() -> new RuntimeException("Test user not found"));
+            
+            System.out.println("🔍 DEBUG: Found user: " + currentUser.getEmail() + " (ID: " + currentUser.getId() + ")");
+            
+            // Test user-staff link
+            UserStaff userStaff = userStaffRepository.findUserStaffByUser(currentUser)
+                .orElseThrow(() -> new RuntimeException("No staff linked to user"));
+            
+            Staff staff = userStaff.getStaff();
+            System.out.println("🔍 DEBUG: Found staff: " + staff.getFirstName() + " " + staff.getLastName() + " (ID: " + staff.getId() + ")");
+            
+            // Test shift assignments
+            LocalDateTime today = LocalDate.now().atStartOfDay();
+            LocalDateTime tomorrow = today.plusDays(1);
+            List<ShiftAssignment> assignments = shiftAssignmentRepository.findByStaffAndDate(staff.getId(), today, tomorrow);
+            
+            System.out.println("🔍 DEBUG: Found " + assignments.size() + " shift assignments");
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("user", Map.of("id", currentUser.getId(), "email", currentUser.getEmail()));
+            result.put("staff", Map.of("id", staff.getId(), "name", staff.getFirstName() + " " + staff.getLastName()));
+            result.put("assignments", assignments.size());
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            System.err.println("❌ DEBUG Error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/roster")
+    public ResponseEntity<Map<String, Object>> getRoster(
+            @RequestParam String month,
+            @RequestParam(defaultValue = "2") int months) {
+        try {
+            // Parse month parameter (format: "2025-09")
+            String[] parts = month.split("-");
+            int year = Integer.parseInt(parts[0]);
+            int monthNum = Integer.parseInt(parts[1]) - 1; // Java months are 0-based
+            
+            LocalDateTime startDate = LocalDate.of(year, monthNum + 1, 1).atStartOfDay();
+            LocalDateTime endDate = startDate.plusMonths(months).minusDays(1).withHour(23).withMinute(59).withSecond(59);
+            
+            System.out.println("🔍 Getting roster for range: " + startDate + " to " + endDate);
+            
+            // Get the test user
+            User currentUser = userRepository.findByDomainAndEmail("test", "test@example.com")
+                .orElseThrow(() -> new RuntimeException("Test user not found"));
+            
+            // Find the staff member linked to this user
+            UserStaff userStaff = userStaffRepository.findUserStaffByUser(currentUser)
+                .orElseThrow(() -> new RuntimeException("No staff linked to user"));
+            
+            Staff staff = userStaff.getStaff();
+            System.out.println("👨‍⚕️ Getting roster for staff: " + staff.getFirstName() + " " + staff.getLastName());
+            
+            // Get all shift assignments for this staff member in the date range
+            List<ShiftAssignment> assignments = shiftAssignmentRepository.findAll().stream()
+                .filter(sa -> sa.getStaff().getId().equals(staff.getId()))
+                .filter(sa -> sa.getShift().getStartTs().isAfter(startDate.minusDays(1)))
+                .filter(sa -> sa.getShift().getStartTs().isBefore(endDate.plusDays(1)))
+                .collect(Collectors.toList());
+            
+            System.out.println("📅 Found " + assignments.size() + " assignments in range");
+            
+            // Build shiftMap and events
+            Map<String, Object> shiftMap = new HashMap<>();
+            Map<String, Object> events = new HashMap<>();
+            
+            // Group assignments by date
+            Map<String, List<ShiftAssignment>> assignmentsByDate = assignments.stream()
+                .collect(Collectors.groupingBy(
+                    sa -> sa.getShift().getStartTs().toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE)
+                ));
+            
+            // Process each date
+            assignmentsByDate.forEach((dateStr, dateAssignments) -> {
+                // Determine shift type for dots - use actual shift types directly
+                Set<String> shiftCodes = dateAssignments.stream()
+                    .map(sa -> sa.getShift().getCode())
+                    .collect(Collectors.toSet());
+                
+                String shiftType;
+                if (shiftCodes.contains("ON_CALL")) {
+                    shiftType = "ON_CALL"; // ○●
+                } else if (shiftCodes.contains("AH")) {
+                    shiftType = "AH"; // ○●
+                } else if (shiftCodes.contains("PM")) {
+                    shiftType = "PM"; // ○●
+                } else if (shiftCodes.contains("AM")) {
+                    shiftType = "AM"; // ●○
+                } else {
+                    shiftType = "unallocated"; // ○○
+                }
+                
+                shiftMap.put(dateStr, shiftType);
+                
+                // Build events for this date
+                List<Map<String, Object>> dateEvents = dateAssignments.stream()
+                    .map(assignment -> {
+                        Shift shift = assignment.getShift();
+                        
+                        // Get all assignments for this shift to count coworkers and build teammates
+                        List<ShiftAssignment> allAssignments = shiftAssignmentRepository.findByShiftId(shift.getId());
+                        
+                        // Build teammates list (excluding current user)
+                        List<Map<String, Object>> teammates = allAssignments.stream()
+                            .filter(sa -> !sa.getStaff().getId().equals(staff.getId()))
+                            .map(sa -> {
+                                String fullName = sa.getStaff().getFirstName() + " " + sa.getStaff().getLastName();
+                                String initials = sa.getStaff().getFirstName().substring(0, 1) + 
+                                                sa.getStaff().getLastName().substring(0, 1);
+                                Map<String, Object> teammate = new HashMap<>();
+                                teammate.put("staffId", sa.getStaff().getId());
+                                teammate.put("staffName", fullName);
+                                teammate.put("staffInitials", initials.toUpperCase());
+                                teammate.put("isLead", sa.getIsLead());
+                                return teammate;
+                            })
+                            .collect(Collectors.toList());
+                        
+                        // Get hospital/campus information
+                        String campus = shift.getDepartment() != null && shift.getDepartment().getHospital() != null ? 
+                                shift.getDepartment().getHospital().getName() : "";
+                        String campusAddress = shift.getDepartment() != null && shift.getDepartment().getHospital() != null ? 
+                                shift.getDepartment().getHospital().getAddress() : "";
+                        
+                        // Get the current staff member's designation for role
+                        String role = assignment.getStaff().getDesignation() != null 
+                                ? assignment.getStaff().getDesignation().getName() 
+                                : "Staff";
+                        
+                        Map<String, Object> event = new HashMap<>();
+                        event.put("id", shift.getId().toString());
+                        event.put("startTs", shift.getStartTs().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                        event.put("endTs", shift.getEndTs().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                        event.put("dept", shift.getDepartment() != null ? shift.getDepartment().getName() : "");
+                        event.put("location", shift.getLocation() != null ? shift.getLocation().getName() : "");
+                        event.put("code", shift.getCode());
+                        event.put("isLead", assignment.getIsLead());
+                        event.put("coworkers", allAssignments.size());
+                        event.put("note", shift.getNote());
+                        event.put("teammates", teammates);
+                        event.put("campus", campus);
+                        event.put("room", shift.getLocation() != null ? shift.getLocation().getName() : "");
+                        event.put("campusAddress", campusAddress);
+                        event.put("role", role);
+                        
+                        return event;
+                    })
+                    .collect(Collectors.toList());
+                
+                events.put(dateStr, dateEvents);
+            });
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("shiftMap", shiftMap);
+            response.put("events", events);
+            
+            System.out.println("✅ Returning roster with " + shiftMap.size() + " dates and " + events.size() + " event groups");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error in getRoster: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/refresh")
+    public ResponseEntity<RefreshResponse> refreshRoster(@RequestParam(required = false) String date) {
+        try {
+            LocalDateTime targetDate = date != null ? 
+                LocalDate.parse(date).atStartOfDay() : 
+                LocalDate.now().atStartOfDay();
+            
+            // Get shifts for the week
+            List<Shift> shifts = shiftRepository.findByDate(targetDate);
+            
+            // Build calendar days
+            List<CalendarDayDto> calendarDays = new ArrayList<>();
+            for (int i = 0; i < 7; i++) {
+                LocalDate day = targetDate.toLocalDate().plusDays(i);
+                boolean isToday = day.equals(LocalDate.now());
+                
+                CalendarDayDto calendarDay = new CalendarDayDto(
+                        day.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                        false, // assignedAM
+                        false, // assignedPM
+                        isToday
+                );
+                calendarDays.add(calendarDay);
+            }
+            
+            // Build week info
+            WeekDto week = new WeekDto(
+                    targetDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                    targetDate.plusDays(6).format(DateTimeFormatter.ISO_LOCAL_DATE)
+            );
+            
+            // Build timeline (same as day roster)
+            List<ShiftItem> shiftItems = shifts.stream()
+                    .map(shift -> {
+                        List<ShiftAssignment> assignments = shiftAssignmentRepository.findByShiftId(shift.getId());
+                        
+                        // Build teammates list (empty for refresh - we don't have current user context)
+                        List<TeammateDto> teammates = assignments.stream()
+                                .map(sa -> {
+                                    String fullName = sa.getStaff().getFirstName() + " " + sa.getStaff().getLastName();
+                                    String initials = sa.getStaff().getFirstName().substring(0, 1) + 
+                                                    sa.getStaff().getLastName().substring(0, 1);
+                                    return new TeammateDto(
+                                            sa.getStaff().getId(),
+                                            fullName,
+                                            initials.toUpperCase(),
+                                            sa.getIsLead()
+                                    );
+                                })
+                                .collect(Collectors.toList());
+                        
+                        // Get hospital/campus information
+                        String campus = shift.getDepartment() != null && shift.getDepartment().getHospital() != null ? 
+                                shift.getDepartment().getHospital().getName() : "";
+                        String campusAddress = shift.getDepartment() != null && shift.getDepartment().getHospital() != null ? 
+                                shift.getDepartment().getHospital().getAddress() : "";
+                        
+                        return new ShiftItem(
+                                shift.getId(),
+                                shift.getStartTs().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                                shift.getEndTs().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                                shift.getDepartment() != null ? shift.getDepartment().getName() : "",
+                                shift.getLocation() != null ? shift.getLocation().getName() : "",
+                                shift.getCode(),
+                                assignments.stream().anyMatch(ShiftAssignment::getIsLead),
+                                assignments.size(),
+                                shift.getNote(),
+                                teammates,
+                                campus,
+                                shift.getLocation() != null ? shift.getLocation().getName() : "",
+                                campusAddress
+                        );
+                    })
+                    .collect(Collectors.toList());
+            
+            DayRosterDto timeline = new DayRosterDto(
+                    targetDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                    shiftItems
+            );
+            
+            RefreshResponse response = new RefreshResponse(week, calendarDays, timeline);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(null);
+        }
     }
 }

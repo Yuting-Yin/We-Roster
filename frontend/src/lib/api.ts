@@ -1,7 +1,7 @@
 // src/lib/api.ts
 
 export const API_BASE: string =
-  process.env.EXPO_PUBLIC_API_BASE ?? "http://localhost:8080";
+  process.env.EXPO_PUBLIC_API_BASE ?? "http://192.168.0.173:8080";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 

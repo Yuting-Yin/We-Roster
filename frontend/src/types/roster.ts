@@ -1,7 +1,8 @@
 export type ShiftType =
-  | "day-shift"
-  | "night-shift"
-  | "both-shifts"
+  | "AM"
+  | "PM" 
+  | "AH"
+  | "ON_CALL"
   | "not-working"
   | "unallocated";
 
@@ -13,6 +14,7 @@ export type Coworker = { id: string; name: string; initials?: string };
 export type EventItem = {
   id: string;
   title: string;
+  type?: ShiftType; // Added type field
   location?: string; // legacy combined field (e.g., "PMCC Theatre 1")
   role?: string;
   teammates?: string;
@@ -21,7 +23,6 @@ export type EventItem = {
   end: string;   // "13:00"
   color?: string;
   action?: "arrow" | "plus";
-  shiftSlot?: ShiftSlot;
   campus?: string;          // e.g., "PMCC"
   room?: string;            // e.g., "Theatre 1"
   campusAddress?: string;   // e.g., address of the campus

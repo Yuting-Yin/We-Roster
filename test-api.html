@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WeRoster API Tester</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .endpoint { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 3px; white-space: pre-wrap; }
+        .error { background: #f8d7da; color: #721c24; }
+        .success { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <h1>WeRoster API Tester</h1>
+    
+    <div class="endpoint">
+        <h3>Step-by-Step Debug</h3>
+        <button onclick="testDebugStep1()">Step 1: User Lookup</button>
+        <button onclick="testDebugStep2()">Step 2: UserStaff Link</button>
+        <button onclick="testDebugStep3()">Step 3: Shift Assignments</button>
+        <button onclick="testDebugShifts()">Debug: All Shifts</button>
+        <div id="debug-step-result" class="result"></div>
+    </div>
+    
+    <div class="endpoint">
+        <h3>Debug User-Staff Link</h3>
+        <button onclick="testDebug()">Test Debug Endpoint</button>
+        <div id="debug-result" class="result"></div>
+    </div>
+    
+    <div class="endpoint">
+        <h3>Day Roster</h3>
+        <button onclick="testDayRoster()">Test Day Roster</button>
+        <div id="roster-result" class="result"></div>
+    </div>
+    
+    <div class="endpoint">
+        <h3>Login Test</h3>
+        <button onclick="testLogin()">Test Login</button>
+        <div id="login-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://192.168.0.173:8080/api/v1';
+        
+        async function testDebugStep1() {
+            const resultDiv = document.getElementById('debug-step-result');
+            resultDiv.textContent = 'Testing Step 1...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/myroster/debug-step1`);
+                const data = await response.text();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `STEP 1 SUCCESS (${response.status}):\n${data}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `STEP 1 ERROR (${response.status}):\n${data}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `STEP 1 NETWORK ERROR:\n${error.message}`;
+            }
+        }
+        
+        async function testDebugStep2() {
+            const resultDiv = document.getElementById('debug-step-result');
+            resultDiv.textContent = 'Testing Step 2...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/myroster/debug-step2`);
+                const data = await response.text();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `STEP 2 SUCCESS (${response.status}):\n${data}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `STEP 2 ERROR (${response.status}):\n${data}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `STEP 2 NETWORK ERROR:\n${error.message}`;
+            }
+        }
+        
+        async function testDebugStep3() {
+            const resultDiv = document.getElementById('debug-step-result');
+            resultDiv.textContent = 'Testing Step 3...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/myroster/debug-step3`);
+                const data = await response.text();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `STEP 3 SUCCESS (${response.status}):\n${data}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `STEP 3 ERROR (${response.status}):\n${data}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `STEP 3 NETWORK ERROR:\n${error.message}`;
+            }
+        }
+        
+        async function testDebugShifts() {
+            const resultDiv = document.getElementById('debug-step-result');
+            resultDiv.textContent = 'Testing Debug Shifts...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/myroster/debug-shifts`);
+                const data = await response.text();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `DEBUG SHIFTS SUCCESS (${response.status}):\n${data}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `DEBUG SHIFTS ERROR (${response.status}):\n${data}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `DEBUG SHIFTS NETWORK ERROR:\n${error.message}`;
+            }
+        }
+        
+        async function testDebug() {
+            const resultDiv = document.getElementById('debug-result');
+            resultDiv.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/myroster/debug`);
+                const data = await response.text();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `SUCCESS (${response.status}):\n${data}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `ERROR (${response.status}):\n${data}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `NETWORK ERROR:\n${error.message}`;
+            }
+        }
+        
+        async function testDayRoster() {
+            const resultDiv = document.getElementById('roster-result');
+            resultDiv.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/myroster/day`);
+                const data = await response.text();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `SUCCESS (${response.status}):\n${data}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `ERROR (${response.status}):\n${data}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `NETWORK ERROR:\n${error.message}`;
+            }
+        }
+        
+        async function testLogin() {
+            const resultDiv = document.getElementById('login-result');
+            resultDiv.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        domain: 'test',
+                        email: 'test@example.com',
+                        password: 'hello'
+                    })
+                });
+                
+                const data = await response.text();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `SUCCESS (${response.status}):\n${data}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `ERROR (${response.status}):\n${data}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `NETWORK ERROR:\n${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
