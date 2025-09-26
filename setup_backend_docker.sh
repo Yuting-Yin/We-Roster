@@ -60,11 +60,25 @@ sleep 10
 # Test MySQL connection
 echo
 echo "[4/4] Testing MySQL connection..."
-if docker exec mysql-weroster mysql -u root -proot -e "SELECT 1;" &> /dev/null; then
+echo "Waiting for MySQL to be fully ready..."
+
+# Try multiple times to ensure MySQL is ready
+MYSQL_READY=0
+for i in {1..5}; do
+    if docker exec mysql-weroster mysql -u root -proot -e "SELECT 1;" &> /dev/null; then
+        MYSQL_READY=1
+        break
+    fi
+    echo "Attempt $i/5: MySQL not ready yet, waiting..."
+    sleep 3
+done
+
+if [ $MYSQL_READY -eq 1 ]; then
     echo "✓ MySQL is ready"
 else
     echo "WARNING: MySQL might not be ready yet"
     echo "Please wait a moment and try running the backend manually"
+    echo "You can check MySQL status with: docker logs mysql-weroster"
 fi
 
 echo
