@@ -29,10 +29,20 @@ public class MyRosterController {
     private ShiftAssignmentRepository shiftAssignmentRepository;
     
     @Autowired
-    private UserStaffRepository userStaffRepository;
+    private StaffRepository staffRepository;
     
     @Autowired
     private UserRepository userRepository;
+    
+    /**
+     * Helper method to find staff linked to a user using direct relationship
+     */
+    private Staff findStaffByUser(User user) {
+        return staffRepository.findAll().stream()
+            .filter(staff -> staff.getUser() != null && staff.getUser().getId().equals(user.getId()))
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException("No staff linked to user"));
+    }
     
     @GetMapping("/day")
     public ResponseEntity<DayRosterDto> getDayRoster(@RequestParam(required = false) String date) {
@@ -51,10 +61,7 @@ public class MyRosterController {
             System.out.println("👤 Current user: " + currentUser.getEmail());
             
             // Find the staff member linked to this user
-            UserStaff userStaff = userStaffRepository.findUserStaffByUser(currentUser)
-                .orElseThrow(() -> new RuntimeException("No staff linked to user"));
-            
-            Staff staff = userStaff.getStaff();
+            Staff staff = findStaffByUser(currentUser);
             System.out.println("👨‍⚕️ Linked staff: " + staff.getFirstName() + " " + staff.getLastName() + " (ID: " + staff.getId() + ")");
             
             // Get shift assignments for this staff member on the target date
@@ -231,13 +238,10 @@ public class MyRosterController {
             User currentUser = userRepository.findByDomainAndEmail("test", "test@example.com")
                 .orElseThrow(() -> new RuntimeException("Test user not found"));
             
-            UserStaff userStaff = userStaffRepository.findUserStaffByUser(currentUser)
-                .orElseThrow(() -> new RuntimeException("No staff linked to user"));
-            
-            Staff staff = userStaff.getStaff();
+            Staff staff = findStaffByUser(currentUser);
             
             Map<String, Object> result = new HashMap<>();
-            result.put("step", "2 - UserStaff link");
+            result.put("step", "2 - Direct User-Staff relationship");
             result.put("user", Map.of("id", currentUser.getId(), "email", currentUser.getEmail()));
             result.put("staff", Map.of("id", staff.getId(), "name", staff.getFirstName() + " " + staff.getLastName()));
             
@@ -254,10 +258,7 @@ public class MyRosterController {
             User currentUser = userRepository.findByDomainAndEmail("test", "test@example.com")
                 .orElseThrow(() -> new RuntimeException("Test user not found"));
             
-            UserStaff userStaff = userStaffRepository.findUserStaffByUser(currentUser)
-                .orElseThrow(() -> new RuntimeException("No staff linked to user"));
-            
-            Staff staff = userStaff.getStaff();
+            Staff staff = findStaffByUser(currentUser);
             
             LocalDateTime today = LocalDate.now().atStartOfDay();
             LocalDateTime tomorrow = today.plusDays(1);
@@ -277,7 +278,7 @@ public class MyRosterController {
     }
 
     @GetMapping("/debug")
-    public ResponseEntity<?> debugUserStaff() {
+    public ResponseEntity<?> debugUserStaffRelationship() {
         try {
             // Test user lookup
             User currentUser = userRepository.findByDomainAndEmail("test", "test@example.com")
@@ -286,10 +287,7 @@ public class MyRosterController {
             System.out.println("🔍 DEBUG: Found user: " + currentUser.getEmail() + " (ID: " + currentUser.getId() + ")");
             
             // Test user-staff link
-            UserStaff userStaff = userStaffRepository.findUserStaffByUser(currentUser)
-                .orElseThrow(() -> new RuntimeException("No staff linked to user"));
-            
-            Staff staff = userStaff.getStaff();
+            Staff staff = findStaffByUser(currentUser);
             System.out.println("🔍 DEBUG: Found staff: " + staff.getFirstName() + " " + staff.getLastName() + " (ID: " + staff.getId() + ")");
             
             // Test shift assignments
@@ -333,10 +331,7 @@ public class MyRosterController {
                 .orElseThrow(() -> new RuntimeException("Test user not found"));
             
             // Find the staff member linked to this user
-            UserStaff userStaff = userStaffRepository.findUserStaffByUser(currentUser)
-                .orElseThrow(() -> new RuntimeException("No staff linked to user"));
-            
-            Staff staff = userStaff.getStaff();
+            Staff staff = findStaffByUser(currentUser);
             System.out.println("👨‍⚕️ Getting roster for staff: " + staff.getFirstName() + " " + staff.getLastName());
             
             // Get all shift assignments for this staff member in the date range

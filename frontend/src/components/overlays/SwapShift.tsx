@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import Avatar from "@/components/common/Avatar";
-import { fmt } from "@/lib/date";
+import { fmt, dayKey } from "@/lib/date";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type { EventItem } from "@/types/roster";
 import { getMockShiftForUser } from "@/lib/fakeData";
@@ -31,15 +31,18 @@ export default function SwapShift({
   availableUsers, loading, error,
   getShiftForUser,
 }: SwapShiftProps) {
-  const { displayName, initials, designation } = useCurrentUser({ mock: true });
+  const { user, displayName, initials, designation } = useCurrentUser({ mock: true });
 
   const [message, setMessage] = React.useState("");
   const [query, setQuery] = React.useState("");
   const [selected, setSelected] = React.useState<string | undefined>();
   const [submitting, setSubmitting] = React.useState(false);
 
-  // candidates = all available users for swap
-  const candidates = availableUsers;
+  // candidates = all available users for swap (excluding current user)
+  const candidates = React.useMemo(() => {
+    const currentUserId = user?.id;
+    return availableUsers.filter(u => u.id !== currentUserId);
+  }, [availableUsers, user?.id]);
 
   // searching users (case insensitive)
   const filtered = React.useMemo(() => {
@@ -59,7 +62,7 @@ export default function SwapShift({
         requesterId,
         targetUserId: selected,
         shiftId: currentEvent?.id,
-        date: fmt(date, { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-"),
+        date: dayKey(date),
         start: slot?.start ?? "08:00",
         end: slot?.end ?? "13:00",
         message: message?.trim() || undefined,

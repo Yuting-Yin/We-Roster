@@ -3,26 +3,61 @@ import { View, ScrollView, Text, TextInput, Pressable, Animated, StyleSheet, Key
 import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
-import { fmt as fmtDate } from "@/lib/date";
+import { fmt as fmtDate, dayKey } from "@/lib/date";
 import Chip from "@/components/common/Chip";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { createLeaveRequest } from "@/api/leave";
+import SuccessToast from "@/components/overlays/SuccessToast";
+import FailToast from "@/components/overlays/FailToast";
+import WarningToast from "@/components/overlays/WarningToast";
 
 export default function RequestLeave({
-  visible, onCancel, onSubmitted, date, slot,
+  visible, onCancel, onSubmitted, date, slot, shiftId,
 }: {
   visible: boolean;
   onCancel: () => void;
   onSubmitted: () => void;
   date: Date;
   slot?: { start: string; end: string };
+  shiftId?: string; // ID of the shift this leave request is for
 }) {
-  const { user } = useCurrentUser({ mock: true });
+  const { user, loading, error } = useCurrentUser({ mock: false });
+  
+  // Debug logging for user data
+  React.useEffect(() => {
+    console.log('🔍 RequestLeave - User data:', user);
+    console.log('🔍 RequestLeave - Loading:', loading);
+    console.log('🔍 RequestLeave - Error:', error);
+  }, [user, loading, error]);
 
   const [leaveType] = React.useState<string | null>(null);
   const [reason, setReason] = React.useState("");
   const [allDay, setAllDay] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  
+  // Toast state
+  const [successToast, setSuccessToast] = React.useState(false);
+  const [failToast, setFailToast] = React.useState(false);
+  const [warningToast, setWarningToast] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState("");
+  
+  const showSuccessToast = (message: string) => { 
+    setToastMessage(message); 
+    setSuccessToast(true); 
+    setTimeout(() => setSuccessToast(false), 1800); 
+  };
+  
+  const showFailToast = (message: string) => { 
+    setToastMessage(message); 
+    setFailToast(true); 
+    setTimeout(() => setFailToast(false), 1800); 
+  };
+  
+  const showWarningToast = (message: string) => { 
+    setToastMessage(message); 
+    setWarningToast(true); 
+    setTimeout(() => setWarningToast(false), 1800); 
+  };
 
   const anim = React.useRef(new Animated.Value(0)).current;
   React.useEffect(() => {
@@ -69,18 +104,39 @@ export default function RequestLeave({
       const payload = {
         requestType: leaveType,
         allDay,
-        date: fmtDate(date, { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\//g, "-") as unknown as string,
+        date: dayKey(date),
         start: allDay ? null : (slot?.start ?? null),
         end: allDay ? null : (slot?.end ?? null),
         reason: reason?.trim() || undefined,
         createdBy: { id: user?.id ?? "u_unknown", name: user?.name ?? undefined, email: user?.email ?? undefined },
         createdAt: new Date().toISOString(),
-        shiftId: undefined, // TODO: pass actual shift id when available from context
+        shiftId: allDay ? undefined : shiftId, // Pass shift ID only for Shift Leave (not All Day Leave)
       };
-      await createLeaveRequest(payload);
+      
+      const result = await createLeaveRequest(payload);
+      if (result && typeof result === 'object' && 'success' in result) {
+        if (result.success === false) {
+          // Handle duplicate or other errors
+          if ('duplicate' in result && result.duplicate === true) {
+            // Show the specific error message from backend
+            const errorMessage = (result as any).error || 'A leave request for this day already exists. Please check your existing requests.';
+            showWarningToast(errorMessage);
+            return; // Don't call onSubmitted for duplicates
+          } else {
+            const errorResult = result as { success: boolean; error?: string; duplicate?: boolean };
+            showFailToast(`Failed to submit: ${errorResult.error || 'Unknown error'}`);
+            return; // Don't call onSubmitted for errors
+          }
+        } else {
+          showSuccessToast('Successfully submitted');
+        }
+      } else {
+        showSuccessToast('Successfully submitted');
+      }
       onSubmitted?.();
-    } catch (e) {
-      onSubmitted?.();
+    } catch (e: any) {
+      console.error('🔍 Leave Request - Error:', e);
+      showFailToast('Failed to submit: Network error or server issue');
     } finally {
       setSubmitting(false);
     }
@@ -135,8 +191,18 @@ export default function RequestLeave({
               {!allDay && (<><View style={{ width: sx(8) }} /><Chip>{slot?.start ?? "08:00"}</Chip></>)}
             </View>} />
             <Row label="End" right={<View style={{ flexDirection: "row" }}>
-              <Chip>{fmtDate(date, { day: "2-digit", month: "short" })}</Chip>
-              {!allDay && (<><View style={{ width: sx(8) }} /><Chip>{slot?.end ?? "13:00"}</Chip></>)}
+              {(() => {
+                // Handle overnight shifts - if end time is earlier than start time, it's next day
+                const isOvernight = slot && slot.end < slot.start;
+                // For "All Day" mode, always use the same date as start (even for overnight shifts)
+                const endDate = allDay ? date : (isOvernight ? new Date(date.getTime() + 24 * 60 * 60 * 1000) : date);
+                return (
+                  <>
+                    <Chip>{fmtDate(endDate, { day: "2-digit", month: "short" })}</Chip>
+                    {!allDay && (<><View style={{ width: sx(8) }} /><Chip>{slot?.end ?? "13:00"}</Chip></>)}
+                  </>
+                );
+              })()}
             </View>} />
 
             {/* Reason */}
@@ -157,6 +223,11 @@ export default function RequestLeave({
           </ScrollView>
         </KeyboardAvoidingView>
       </Animated.View>
+      
+      {/* Toast notifications */}
+      <SuccessToast visible={successToast} text={toastMessage} />
+      <FailToast visible={failToast} text={toastMessage} />
+      <WarningToast visible={warningToast} text={toastMessage} />
     </View>
   );
 }

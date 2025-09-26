@@ -4,6 +4,8 @@ import { View, Text, StyleSheet, FlatList, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
+import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
+import { useOverlayContext } from "@/contexts/OverlayContext";
 import { fmt } from "@/lib/date";
 
 import OpenShiftsFilter, { FilterValue, Session } from "@/components/overlays/OpenShiftsFilter";
@@ -79,6 +81,28 @@ export default function OpenShifts() {
 
   const [toast, setToast] = useState(false);
   const showToast = () => { setToast(true); setTimeout(() => setToast(false), 1800); };
+
+  // Register overlays with context for auto-close functionality
+  const { registerOverlay, unregisterOverlay } = useOverlayContext();
+  
+  React.useEffect(() => {
+    registerOverlay('openshifts-filter', () => setFilterVisible(false));
+    registerOverlay('openshifts-detail', () => setDetailVisible(false));
+    registerOverlay('openshifts-toast', () => setToast(false));
+    
+    return () => {
+      unregisterOverlay('openshifts-filter');
+      unregisterOverlay('openshifts-detail');
+      unregisterOverlay('openshifts-toast');
+    };
+  }, [registerOverlay, unregisterOverlay]);
+
+  // Auto-close overlays when navigating to other tabs
+  useAutoCloseOverlays([
+    () => setFilterVisible(false),
+    () => setDetailVisible(false),
+    () => setToast(false)
+  ]);
 
   const coworkers: Coworker[] = [
     { id: "u_tv", name: "Thu Vo", initials: "TV" },

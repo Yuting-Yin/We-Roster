@@ -1,5 +1,5 @@
 // src/api/user.ts
-import { API_BASE_URL } from '../config/env';
+import { API_BASE } from '../lib/api';
 
 export type ApiUser = {
   id: string;
@@ -9,7 +9,7 @@ export type ApiUser = {
 };
 
 const USE_MOCK = false; // now connected to backend
-const BASE_URL = API_BASE_URL;
+const BASE_URL = API_BASE;
 
 async function fetchJSON<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -35,6 +35,6 @@ export async function getAvailableUsers(): Promise<ApiUser[]> {
       { id: "u005", displayName: "Emily Wang", title: "RN" },
     ];
   }
-  // backend example - TODO: implement actual endpoint
-  return fetchJSON<ApiUser[]>("/users/available");
+  // backend endpoint
+  return fetchJSON<ApiUser[]>("/api/v1/users/available");
 }

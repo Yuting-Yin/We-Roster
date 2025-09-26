@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../config/env';
+import { API_BASE, setAuthTokenGetter } from '../lib/api';
 
 interface AuthContextType {
   token: string | null;
@@ -18,16 +18,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Load token from storage on app start
     loadToken();
-  }, []);
+    
+    // Set up auth token getter for API calls
+    setAuthTokenGetter(() => token);
+  }, [token]);
 
   const loadToken = async () => {
     try {
       const storedToken = await AsyncStorage.getItem('auth_token');
       if (storedToken) {
         setTokenState(storedToken);
+        console.log('🔍 AuthContext - Token loaded from storage');
       }
     } catch (error) {
-      console.error('Failed to load token:', error);
+      console.error('🔍 AuthContext - Failed to load token:', error);
     }
   };
 
@@ -35,38 +39,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       if (newToken) {
         await AsyncStorage.setItem('auth_token', newToken);
+        console.log('🔍 AuthContext - Token saved');
       } else {
         await AsyncStorage.removeItem('auth_token');
+        console.log('🔍 AuthContext - Token cleared');
       }
       setTokenState(newToken);
     } catch (error) {
-      console.error('Failed to save token:', error);
+      console.error('🔍 AuthContext - Failed to save token:', error);
     }
   };
 
   const login = async (domain: string, email: string, password: string) => {
     try {
-      // For now, we'll use the fixed backend URL, but domain could be used to determine the backend
-      // TODO: Implement dynamic backend URL based on domain
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      console.log('🔍 AuthContext - Login attempt:', { domain, email, password: '***' });
+      
+      const response = await fetch(`${API_BASE}/api/v1/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ domain, email, password }),
       });
 
       if (!response.ok) {
-        throw new Error(`Login failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error('🔍 AuthContext - Login failed:', response.status, errorText);
+        throw new Error(`Login failed: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('🔍 AuthContext - Login successful');
       await setToken(data.accessToken);
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('🔍 AuthContext - Login error:', error);
       throw error;
     }
   };
 
   const logout = async () => {
+    console.log('🔍 AuthContext - Logout');
     await setToken(null);
   };
 

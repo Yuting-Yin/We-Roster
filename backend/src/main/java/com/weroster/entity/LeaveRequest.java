@@ -29,6 +29,10 @@ public class LeaveRequest {
     @JoinColumn(name = "staff_id")
     private Staff staff;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shift_id")
+    private Shift shift;
+    
     @Column(name = "request_type", length = 50)
     private String requestType;
     

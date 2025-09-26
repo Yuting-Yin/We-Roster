@@ -26,7 +26,6 @@ const SLOT_BLUEPRINTS: Array<{
 	{ type: "ON_CALL", title: "On-call duty", start: "09:00", end: "21:00" },
 ];
 
-// TODO: Remove once roster API supplies real coworker data.
 const DEFAULT_COWORKERS: Record<ShiftSlot, Coworker[]> = {
 	AM: [
 		{ id: 'cw-am-1', name: 'Thu Vo', initials: 'TV' },
@@ -111,12 +110,6 @@ function startOfWeekMon(d: Date): Date {
 	return r;
 }
 
-function yyyyMmDd(d: Date): string {
-	const y = d.getFullYear();
-	const m = String(d.getMonth() + 1).padStart(2, '0');
-	const day = String(d.getDate()).padStart(2, '0');
-	return `${y}-${m}-${day}`;
-}
 
 function relativeAssignmentsToday(): ShiftAssignment[] {
 	const mon = startOfWeekMon(new Date());
@@ -127,28 +120,26 @@ function relativeAssignmentsToday(): ShiftAssignment[] {
 
 	return [
 		// Monday: AM + PM at PMCC Theatre 2
-		{ id: `shift-${yyyyMmDd(mon)}-am`, date: yyyyMmDd(mon), type: "AM", start: "08:00", end: "13:00", location: "PMCC Theatre 2", designation: "Anaes Coordinator", teammates: 3 },
-		{ id: `shift-${yyyyMmDd(mon)}-pm`, date: yyyyMmDd(mon), type: "PM", start: "13:00", end: "18:00", location: "PMCC Theatre 2", designation: "Anaes Coordinator", teammates: 2 },
+		{ id: `shift-${dayKey(mon)}-am`, date: dayKey(mon), type: "AM", start: "08:00", end: "13:00", location: "PMCC Theatre 2", designation: "Anaes Coordinator", teammates: 3 },
+		{ id: `shift-${dayKey(mon)}-pm`, date: dayKey(mon), type: "PM", start: "13:00", end: "18:00", location: "PMCC Theatre 2", designation: "Anaes Coordinator", teammates: 2 },
 
 		// Tuesday: AM + PM at PMCC Ward A
-		{ id: `shift-${yyyyMmDd(tue)}-am`, date: yyyyMmDd(tue), type: "AM", start: "08:30", end: "13:30", location: "PMCC Ward A", designation: "Anaes Lead", teammates: 4 },
-		{ id: `shift-${yyyyMmDd(tue)}-pm`, date: yyyyMmDd(tue), type: "PM", start: "13:30", end: "18:00", location: "PMCC Ward A", designation: "Anaes Lead", teammates: 3 },
+		{ id: `shift-${dayKey(tue)}-am`, date: dayKey(tue), type: "AM", start: "08:30", end: "13:30", location: "PMCC Ward A", designation: "Anaes Lead", teammates: 4 },
+		{ id: `shift-${dayKey(tue)}-pm`, date: dayKey(tue), type: "PM", start: "13:30", end: "18:00", location: "PMCC Ward A", designation: "Anaes Lead", teammates: 3 },
 
 		// Wednesday: ON_CALL at PMCC Campus
-		{ id: `shift-${yyyyMmDd(wed)}-oncall`, date: yyyyMmDd(wed), type: "ON_CALL", start: "09:00", end: "21:00", location: "PMCC Campus", designation: "On-call Anaesthetist", teammates: 5 },
+		{ id: `shift-${dayKey(wed)}-oncall`, date: dayKey(wed), type: "ON_CALL", start: "09:00", end: "21:00", location: "PMCC Campus", designation: "On-call Anaesthetist", teammates: 5 },
 
 		// Thursday: AM + PM at PMC Theatre 1
-		{ id: `shift-${yyyyMmDd(thu)}-am`, date: yyyyMmDd(thu), type: "AM", start: "08:15", end: "13:15", location: "PMC Theatre 1", designation: "Anaes Coordinator", teammates: 2 },
-		{ id: `shift-${yyyyMmDd(thu)}-pm`, date: yyyyMmDd(thu), type: "PM", start: "13:15", end: "18:15", location: "PMC Theatre 1", designation: "Anaes Coordinator", teammates: 2 },
+		{ id: `shift-${dayKey(thu)}-am`, date: dayKey(thu), type: "AM", start: "08:15", end: "13:15", location: "PMC Theatre 1", designation: "Anaes Coordinator", teammates: 2 },
+		{ id: `shift-${dayKey(thu)}-pm`, date: dayKey(thu), type: "PM", start: "13:15", end: "18:15", location: "PMC Theatre 1", designation: "Anaes Coordinator", teammates: 2 },
 
 		// Friday: AM + AH at Procedure Suite
-		{ id: `shift-${yyyyMmDd(fri)}-am`, date: yyyyMmDd(fri), type: "AM", start: "08:00", end: "13:00", location: "Procedure Suite", designation: "Anaes Support", teammates: 1 },
-		{ id: `shift-${yyyyMmDd(fri)}-ah`, date: yyyyMmDd(fri), type: "AH", start: "18:00", end: "21:00", location: "Procedure Suite", designation: "After-hours Cover", teammates: 3 },
+		{ id: `shift-${dayKey(fri)}-am`, date: dayKey(fri), type: "AM", start: "08:00", end: "13:00", location: "Procedure Suite", designation: "Anaes Support", teammates: 1 },
+		{ id: `shift-${dayKey(fri)}-ah`, date: dayKey(fri), type: "AH", start: "18:00", end: "21:00", location: "Procedure Suite", designation: "After-hours Cover", teammates: 3 },
 	];
 }
 
-// Legacy fixed demo kept for reference, not exported
-const DEMO_ASSIGNMENTS_FIXED: ShiftAssignment[] = [];
 
 const SLOT_LABEL: Record<ShiftSlot, string> = {
 	AM: "AM shift",
@@ -212,7 +203,7 @@ function assignmentToEvent(assignment: ShiftAssignment): EventItem {
 		end: assignment.end ?? blueprint.end,
 		color: assignment.color,
 		action: "arrow",
-		shiftSlot: assignment.type,
+		type: assignment.type,
 		campus,
 		room,
 		campusAddress,
@@ -228,7 +219,7 @@ function placeholderEvent(dateKey: string, type: ShiftSlot): EventItem {
 		start: blueprint.start,
 		end: blueprint.end,
 		action: "plus",
-		shiftSlot: type,
+		type: type,
 	};
 }
 
@@ -271,16 +262,18 @@ export function makeDemoShiftMap(assignments: ShiftAssignment[] = makeDemoAssign
 		const types = new Set<ShiftSlot>(items.map((item) => item.type));
 		let shift: ShiftType;
 
-		if (types.has("ON_CALL") || types.has("AH")) {
-			shift = "night-shift";
+		if (types.has("ON_CALL")) {
+			shift = "ON_CALL";
+		} else if (types.has("AH")) {
+			shift = "AH";
 		} else if (types.has("AM") && types.has("PM")) {
-			shift = "both-shifts";
+			shift = "AM"; // Use AM as primary when both shifts exist
 		} else if (types.has("AM")) {
-			shift = "day-shift";
+			shift = "AM";
 		} else if (types.has("PM")) {
-			shift = "night-shift";
+			shift = "PM";
 		} else {
-			shift = "unallocated";
+			shift = "AM"; // Default fallback
 		}
 
 		map[date] = shift;
@@ -289,7 +282,6 @@ export function makeDemoShiftMap(assignments: ShiftAssignment[] = makeDemoAssign
 	return map;
 }
 
-// TODO: Drop fallback builders after real data wiring.
 export function buildEventsFor(date: Date, assignments: ShiftAssignment[] = makeDemoAssignments()): EventItem[] {
 	const grouped = groupByDate(assignments);
 	return buildEventsFromGroup(dayKey(date), grouped);
@@ -306,9 +298,8 @@ export function buildEventsMap(assignments: ShiftAssignment[] = makeDemoAssignme
 	return events;
 }
 
-// ===== Mock: resolve a user's shift for swap testing =====
-// Simple mapping: some users have a shift during the requested interval, others are unallocated.
-// u001 -> PMCC Theatre 3; u003 -> PMC Theatre 1; u004 -> Procedure Suite; others unallocated.
+// Mock function to resolve a user's shift for swap testing
+// u001 -> PMCC Theatre 3; u003 -> PMC Theatre 1; u004 -> Procedure Suite; others unallocated
 export function getMockShiftForUser(userId: string, date: Date, slot?: { start: string; end: string }): EventItem | null {
 	const dateKey = dayKey(date);
 	const start = slot?.start ?? "08:00";

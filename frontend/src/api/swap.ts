@@ -12,7 +12,7 @@ export type CreateSwapRequestInput = {
 };
 
 export async function createSwapRequest(input: CreateSwapRequestInput) {
-	return await fetchJson<{ id: string } | { success: boolean }>("/api/swaps", {
+	return await fetchJson<{ id: string } | { success: boolean }>("/api/v1/swaps", {
 		method: "POST",
 		body: input,
 		headers: { "Content-Type": "application/json" },

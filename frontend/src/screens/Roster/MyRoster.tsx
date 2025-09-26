@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { View, StyleSheet, Text } from "react-native";
+import { useRoute } from "@react-navigation/native";
 import CollapsibleCalendar from "@/components/calendar/CollapsibleCalendar";
 import DayTimeline from "@/components/timeline/DayTimeline";
 import WeekTimeline from "@/components/timeline/WeekTimeline";
@@ -17,6 +18,8 @@ import { fmt } from "@/lib/date";
 import { getAvailableUsers, type ApiUser } from "@/api/user";
 import { useMyRosterData } from "@/hooks/useMyRoster";
 import { useRosterData } from "@/hooks/useRoster";
+import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
+import { useOverlayContext } from "@/contexts/OverlayContext";
 
 // user infos that only used for UI/SwapShift
 type UIUser = { id: string; name: string; initials: string };
@@ -24,9 +27,17 @@ type UIUser = { id: string; name: string; initials: string };
 export default function MyRoster() {
   const rootRef = useRef<View>(null);
   const [mode, setMode] = useState<"day" | "week">("day");
+  const route = useRoute<any>();
 
-  // Default to today
-  const [date, setDate] = useState(new Date());
+  // Use navigation param if provided, otherwise default to today
+  const [date, setDate] = useState(() => {
+    const selectedDate = route.params?.selectedDate;
+    console.log('🔍 Roster - route.params:', route.params);
+    console.log('🔍 Roster - selectedDate:', selectedDate);
+    const finalDate = selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date();
+    console.log('🔍 Roster - finalDate:', finalDate);
+    return finalDate;
+  });
   
   // Use useRosterData for calendar dots (shiftMap) - loads data for entire month range
   const { shiftMap, getEventsForDate: getCalendarEvents, refresh: refreshRoster, loading: calendarLoading, error: calendarError } = useRosterData(date, { mock: false, months: 2 });
@@ -49,8 +60,13 @@ export default function MyRoster() {
     setLoadingUsers(true);
     setUserErr(null);
     getAvailableUsers()
-      .then((users) => mounted && setAvailableUsers(users))
-      .catch((e) => mounted && setUserErr(e?.message ?? "Failed to load users"))
+      .then((users) => {
+        if (mounted) setAvailableUsers(users);
+      })
+      .catch((e) => {
+        console.error('🔍 MyRoster - Error loading users:', e);
+        if (mounted) setUserErr(e?.message ?? "Failed to load users");
+      })
       .finally(() => mounted && (setLoadingUsers(false)));
     return () => { mounted = false; };
   }, []);
@@ -81,6 +97,37 @@ export default function MyRoster() {
   const [toast, setToast] = React.useState(false);
   const showToast = () => { setToast(true); setTimeout(() => setToast(false), 1800); };
 
+  // Register overlays with context for auto-close functionality
+  const { registerOverlay, unregisterOverlay } = useOverlayContext();
+  
+  React.useEffect(() => {
+    registerOverlay('myroster-detail', () => setDetailVisible(false));
+    registerOverlay('myroster-menu', () => setMenuVisible(false));
+    registerOverlay('myroster-request', () => setReqVisible(false));
+    registerOverlay('myroster-leave', () => setLeaveVisible(false));
+    registerOverlay('myroster-swap', () => setSwapVisible(false));
+    registerOverlay('myroster-toast', () => setToast(false));
+    
+    return () => {
+      unregisterOverlay('myroster-detail');
+      unregisterOverlay('myroster-menu');
+      unregisterOverlay('myroster-request');
+      unregisterOverlay('myroster-leave');
+      unregisterOverlay('myroster-swap');
+      unregisterOverlay('myroster-toast');
+    };
+  }, [registerOverlay, unregisterOverlay]);
+
+  // Auto-close overlays when navigating to other tabs
+  useAutoCloseOverlays([
+    () => setDetailVisible(false),
+    () => setMenuVisible(false),
+    () => setReqVisible(false),
+    () => setLeaveVisible(false),
+    () => setSwapVisible(false),
+    () => setToast(false)
+  ]);
+
   const openDetails = (ev: EventItem) => { setDetailEvent(ev); setDetailVisible(true); };
   const closeDetails = () => { setDetailVisible(false); setMenuVisible(false); };
 
@@ -97,7 +144,9 @@ export default function MyRoster() {
     return { id: String(u.id), name, initials: initialsOf(name) };
   };
   const availableUIUsers = React.useMemo<UIUser[]>(
-    () => availableUsers.map(toUIUser),
+    () => {
+      return availableUsers.map(toUIUser);
+    },
     [availableUsers]
   );
 
@@ -173,7 +222,14 @@ export default function MyRoster() {
         visible={detailVisible && menuVisible}
         anchor={menuAnchor}
         onClose={() => setMenuVisible(false)}
-        onRequestLeave={() => { setMenuVisible(false); setLeaveVisible(true); }}
+        onRequestLeave={() => { 
+          setMenuVisible(false); 
+          // Set reqSlot to current shift's times when opening leave request
+          if (detailEvent) {
+            setReqSlot({ start: detailEvent.start, end: detailEvent.end });
+          }
+          setLeaveVisible(true); 
+        }}
         onSwapShift={() => { setMenuVisible(false); setSwapVisible(true); }}
       />
 
@@ -188,9 +244,15 @@ export default function MyRoster() {
       <RequestLeave
         visible={leaveVisible}
         onCancel={() => setLeaveVisible(false)}
-        onSubmitted={() => { setLeaveVisible(false); showToast(); }}
+        onSubmitted={() => { 
+          setLeaveVisible(false); 
+          showToast();
+          // Refresh roster data to show the new leave request
+          refreshRoster();
+        }}
         date={date}
         slot={reqSlot}
+        shiftId={detailEvent?.id} // Pass the current shift's ID for Day Leave requests
       />
 
       <SwapShift

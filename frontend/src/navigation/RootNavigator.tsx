@@ -12,6 +12,7 @@ import Settings from "@/screens/Settings";
 
 // 主题色（给 Profile / EditProfile 的头部用）
 import { COLOR } from "@/theme/colors";
+import { OverlayProvider } from "@/contexts/OverlayContext";
 
 /** ====== 顶层 Stack 的参数类型 ====== */
 export type RootStackParamList = {
@@ -33,7 +34,13 @@ export default function RootNavigator() {
       >
         <Stack.Screen name="Splash" component={Splash} />
         <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="AppTabs" component={AppTabs} />
+        <Stack.Screen name="AppTabs">
+          {() => (
+            <OverlayProvider>
+              <AppTabs />
+            </OverlayProvider>
+          )}
+        </Stack.Screen>
 
         {/* 个人信息页：需要展示标题栏（蓝色） */}
         <Stack.Screen

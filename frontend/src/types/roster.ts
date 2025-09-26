@@ -1,12 +1,8 @@
-export type ShiftType =
-  | "AM"
-  | "PM" 
-  | "AH"
-  | "ON_CALL"
-  | "not-working"
-  | "unallocated";
+// Actual shift types (when staff is working)
+export type ShiftType = "AM" | "PM" | "AH" | "ON_CALL";
 
-export type ShiftSlot = "AM" | "PM" | "AH" | "ON_CALL";
+// Legacy alias for backward compatibility
+export type ShiftSlot = ShiftType;
 
 export type Coworker = { id: string; name: string; initials?: string };
 
@@ -14,7 +10,7 @@ export type Coworker = { id: string; name: string; initials?: string };
 export type EventItem = {
   id: string;
   title: string;
-  type?: ShiftType; // Added type field
+  type?: ShiftType; // Only actual shift types, not status types
   location?: string; // legacy combined field (e.g., "PMCC Theatre 1")
   role?: string;
   teammates?: string;

@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchJson } from "@/lib/api";
 import type { User } from "@/types/user";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Options = {
   mock?: boolean;   // 开发期离线测试
@@ -12,6 +13,7 @@ export function useCurrentUser(opts: Options = {}) {
   const envMock = process.env.EXPO_PUBLIC_MOCK_DASHBOARD === "1";
   const useMock = opts.mock ?? envMock;
   const delayMs = opts.delayMs ?? 200;
+  const { token, isAuthenticated } = useAuth();
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,13 +31,13 @@ export function useCurrentUser(opts: Options = {}) {
       timerRef.current = setTimeout(() => {
         setUser({
           id: "u_mock",
-          email: "example.email@gmail.com",
-          firstName: "Amy",
-          lastName: "T.",
-          name: "Amy T.",
-          designation: "Trainee",
-          accreditation: "Accreditation",
-          phone: "(+61) 123-456-789",
+          email: "sarah.johnson@weroster.com",
+          firstName: "Sarah",
+          lastName: "Johnson",
+          name: "Sarah Johnson",
+          designation: "Registered Nurse",
+          accreditation: "RN Certification",
+          phone: "555-0101",
           ical: "https://example.com/calendar.ics",
         });
         setLoading(false);
@@ -48,27 +50,48 @@ export function useCurrentUser(opts: Options = {}) {
     abortRef.current = controller;
 
     try {
-      // 推荐：GET /api/me => User 或 { user: User }
-      const data = await fetchJson<User | { user: User }>("/api/me", {
+      if (!token) {
+        setError("No authentication token available");
+        setLoading(false);
+        return;
+      }
+
+      // Get current user from backend
+      const data = await fetchJson<User>("/api/v1/auth/me", {
         signal: controller.signal,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
-      const u = (data as any)?.user ?? (data as any);
-      setUser(u as User);
+      setUser(data as User);
     } catch (e: any) {
-      setError(e?.message ?? "Failed to load current user");
+      // If API call fails and we're not using mock, show error
+      // If we're using mock, the mock data will be loaded in the mock section
+      if (!useMock) {
+        setError(e?.message ?? "Failed to load current user");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
+    if (useMock) {
+      load(); // Load mock data
+    } else if (isAuthenticated && token) {
+      load(); // Load real data when authenticated
+    } else {
+      setUser(null);
+      setLoading(false);
+      setError("Not authenticated");
+    }
+    
     return () => {
       abortRef.current?.abort();
       if (timerRef.current) clearTimeout(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [useMock, delayMs]);
+  }, [useMock, delayMs, isAuthenticated, token]);
 
   const refresh = async () => load();
 
