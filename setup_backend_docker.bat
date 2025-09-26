@@ -65,12 +65,28 @@ timeout /t 10 /nobreak >nul
 :: Test MySQL connection
 echo.
 echo [4/4] Testing MySQL connection...
-docker exec mysql-weroster mysql -u root -proot -e "SELECT 1;" >nul 2>&1
-if errorlevel 1 (
+echo Waiting for MySQL to be fully ready...
+timeout /t 5 /nobreak >nul
+
+:: Try multiple times to ensure MySQL is ready
+set mysql_ready=0
+for /L %%i in (1,1,5) do (
+    docker exec mysql-weroster mysql -u root -proot -e "SELECT 1;" >nul 2>&1
+    if not errorlevel 1 (
+        set mysql_ready=1
+        goto :mysql_ready
+    )
+    echo Attempt %%i/5: MySQL not ready yet, waiting...
+    timeout /t 3 /nobreak >nul
+)
+
+:mysql_ready
+if !mysql_ready!==1 (
+    echo ✓ MySQL is ready
+) else (
     echo WARNING: MySQL might not be ready yet
     echo Please wait a moment and try running the backend manually
-) else (
-    echo ✓ MySQL is ready
+    echo You can check MySQL status with: docker logs mysql-weroster
 )
 
 echo.

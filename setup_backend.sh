@@ -35,8 +35,57 @@ fi
 # Check if MySQL is running
 echo
 echo "[2/6] Checking MySQL connection..."
-if ! mysql -u root -proot -e "SELECT 1;" &> /dev/null; then
-    echo "WARNING: Cannot connect to MySQL with default credentials (root/root)"
+echo "Testing MySQL connection with different methods..."
+
+# Find MySQL executable
+MYSQL_EXE="mysql"
+if command -v mysql &> /dev/null; then
+    MYSQL_EXE="mysql"
+elif [ -f "/usr/bin/mysql" ]; then
+    MYSQL_EXE="/usr/bin/mysql"
+elif [ -f "/usr/local/bin/mysql" ]; then
+    MYSQL_EXE="/usr/local/bin/mysql"
+fi
+
+# Try different MySQL connection methods
+MYSQL_CONNECTED=0
+
+# Method 1: Try with -proot (no space)
+if $MYSQL_EXE -u root -proot -e "SELECT 1;" &> /dev/null; then
+    MYSQL_CONNECTED=1
+    MYSQL_CMD="$MYSQL_EXE -u root -proot"
+    echo "✓ MySQL connection successful (method 1: -proot)"
+fi
+
+# Method 2: Try with -p root (with space)
+if [ $MYSQL_CONNECTED -eq 0 ] && $MYSQL_EXE -u root -p root -e "SELECT 1;" &> /dev/null; then
+    MYSQL_CONNECTED=1
+    MYSQL_CMD="$MYSQL_EXE -u root -p root"
+    echo "✓ MySQL connection successful (method 2: -p root)"
+fi
+
+# Method 3: Try without password
+if [ $MYSQL_CONNECTED -eq 0 ] && $MYSQL_EXE -u root -e "SELECT 1;" &> /dev/null; then
+    MYSQL_CONNECTED=1
+    MYSQL_CMD="$MYSQL_EXE -u root"
+    echo "✓ MySQL connection successful (method 3: no password)"
+fi
+
+# Method 4: Try with different ports
+if [ $MYSQL_CONNECTED -eq 0 ]; then
+    for port in 3306 3307 3308; do
+        if $MYSQL_EXE -u root -proot -P $port -e "SELECT 1;" &> /dev/null; then
+            MYSQL_CONNECTED=1
+            MYSQL_CMD="$MYSQL_EXE -u root -proot -P $port"
+            echo "✓ MySQL connection successful (port $port)"
+            break
+        fi
+    done
+fi
+
+# If all methods fail, ask user to continue
+if [ $MYSQL_CONNECTED -eq 0 ]; then
+    echo "WARNING: Cannot connect to MySQL with any standard method"
     echo
     echo "Please ensure MySQL is installed and running:"
     echo "- Ubuntu/Debian: sudo apt install mysql-server"
@@ -50,29 +99,47 @@ if ! mysql -u root -proot -e "SELECT 1;" &> /dev/null; then
     if [[ ! "$continue" =~ ^[Yy]$ ]]; then
         exit 1
     fi
-else
-    echo "✓ MySQL connection successful"
+    MYSQL_CMD="$MYSQL_EXE -u root -proot"
 fi
+
+echo
 
 # Create database if it doesn't exist
 echo
 echo "[3/6] Setting up database..."
-if mysql -u root -proot -e "CREATE DATABASE IF NOT EXISTS weroster;" &> /dev/null; then
+if $MYSQL_CMD -e "CREATE DATABASE IF NOT EXISTS weroster;" &> /dev/null; then
     echo "✓ Database 'weroster' created/verified"
 else
     echo "ERROR: Failed to create database"
-    exit 1
+    echo "Trying alternative method..."
+    if $MYSQL_EXE -u root -p -e "CREATE DATABASE IF NOT EXISTS weroster;" &> /dev/null; then
+        echo "✓ Database 'weroster' created/verified (alternative method)"
+    else
+        echo "ERROR: Still failed to create database"
+        echo "Please create the database manually:"
+        echo "$MYSQL_EXE -u root -p"
+        echo "CREATE DATABASE IF NOT EXISTS weroster;"
+        echo "exit;"
+        exit 1
+    fi
 fi
 
 # Run database schema
 echo
 echo "[4/6] Running database schema..."
 if [ -f "DataBase/Database.sql" ]; then
-    if mysql -u root -proot weroster < "DataBase/Database.sql" &> /dev/null; then
+    if $MYSQL_CMD weroster < "DataBase/Database.sql" &> /dev/null; then
         echo "✓ Database schema applied"
     else
-        echo "WARNING: Failed to run database schema"
-        echo "This might be normal if tables already exist"
+        echo "WARNING: Failed to run database schema with primary method"
+        echo "Trying alternative method..."
+        if $MYSQL_EXE -u root -p weroster < "DataBase/Database.sql" &> /dev/null; then
+            echo "✓ Database schema applied (alternative method)"
+        else
+            echo "WARNING: Failed to run database schema"
+            echo "This might be normal if tables already exist"
+            echo "Tables will be created automatically by Spring Boot"
+        fi
     fi
 else
     echo "WARNING: Database.sql not found, skipping schema setup"
@@ -83,11 +150,17 @@ fi
 echo
 echo "[5/6] Building backend application..."
 cd backend
-if ./gradlew clean build -x test &> /dev/null; then
+echo "Building backend (this may take a few minutes)..."
+if ./gradlew clean build -x test; then
     echo "✓ Backend built successfully"
 else
     echo "ERROR: Failed to build backend"
     echo "Please check the error messages above"
+    echo
+    echo "Common solutions:"
+    echo "- Check if Java 17+ is installed"
+    echo "- Check if all dependencies are available"
+    echo "- Try running: ./gradlew clean build -x test"
     exit 1
 fi
 
