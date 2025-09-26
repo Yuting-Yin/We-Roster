@@ -38,6 +38,7 @@ CREATE TABLE staff(
                       id BIGINT AUTO_INCREMENT PRIMARY KEY,
                       hospital_id BIGINT NOT NULL,
                       designation_id BIGINT NULL,
+                      user_id BIGINT NULL,
                       first_name VARCHAR(100) NOT NULL,
                       last_name VARCHAR(100) NOT NULL,
                       gender VARCHAR(16),
@@ -54,7 +55,9 @@ CREATE TABLE staff(
                       note TEXT,
                       created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                       CONSTRAINT fk_staff_hospital FOREIGN KEY (hospital_id) REFERENCES Hospital(id),
-                      CONSTRAINT fk_staff_designation FOREIGN KEY (designation_id) REFERENCES designation(id)
+                      CONSTRAINT fk_staff_designation FOREIGN KEY (designation_id) REFERENCES designation(id),
+                      CONSTRAINT fk_staff_user FOREIGN KEY (user_id) REFERENCES Users(id),
+                      UNIQUE KEY unique_staff_user (user_id)
 ) ENGINE = InnoDB;
 
 CREATE TABLE dept(
@@ -104,22 +107,7 @@ CREATE TABLE shift (
 ) ENGINE=InnoDB;
 
 
-CREATE TABLE roster_template (
-                                 id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                 status VARCHAR(20) DEFAULT 'ACTIVE',
-                                 name VARCHAR(120) NOT NULL,
-                                 code VARCHAR(50),
-                                 created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                 note TEXT
-) ENGINE=InnoDB;
-
-CREATE TABLE roster_template_shift (
-                                       shift_id    BIGINT NOT NULL,
-                                       template_id BIGINT NOT NULL,
-                                       PRIMARY KEY (template_id, shift_id),
-                                       CONSTRAINT fk_template_rts FOREIGN KEY (template_id) REFERENCES roster_template(id) ON DELETE CASCADE,
-                                       CONSTRAINT fk_shift_rts    FOREIGN KEY (shift_id)    REFERENCES shift(id)           ON DELETE CASCADE
-) ENGINE=InnoDB;
+-- roster_template tables removed - not used in current implementation
 
 CREATE TABLE shift_assignment (
                                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -138,6 +126,7 @@ CREATE TABLE leave_request(
                               start_time DATETIME,
                               end_time DATETIME,
                               staff_id BIGINT,
+                              shift_id BIGINT NULL,
                               request_type VARCHAR(50),
                               reason TEXT,
                               status VARCHAR(30) DEFAULT 'PENDING',
@@ -145,6 +134,7 @@ CREATE TABLE leave_request(
                               approved_at DATETIME NULL,
                               approved_by BIGINT NULL,
                               CONSTRAINT fk_leave_staff FOREIGN KEY (staff_id) REFERENCES staff(id),
+                              CONSTRAINT fk_leave_shift FOREIGN KEY (shift_id) REFERENCES shift(id),
                               CONSTRAINT fk_leave_approved_by FOREIGN KEY (approved_by) REFERENCES staff(id)
 ) ENGINE = InnoDB;
 
@@ -163,103 +153,19 @@ CREATE TABLE shift_swap(
 
 CREATE TABLE open_shift(
                            shift_id BIGINT PRIMARY KEY,
-                           date_made DATETIME NOT NULL
+                           date_made DATETIME NOT NULL,
+                           urgent_flag TINYINT(1) NULL,
+                           extra_pay_cents INT NULL,
+                           CONSTRAINT fk_open_shift_shift FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE
 ) ENGINE = InnoDB;
 
-USE weroster;  -- or your actual schema
+-- Database schema for WeRoster application
+-- All data population is handled by DataInitializer.java
 
-SET @domain := 'weroster.local';
-SET @email := 'admin@weroster.local';
-SET @plain := 'ChangeMe123!';
-
--- If you "use md5 for salt", make one (32-hex chars)
-SET @salt := MD5(UUID());      -- e.g., "c3a1..."; any string works as long as you store it
-
-INSERT INTO Users (domain, email, salt, password_hash, role, status, created_time)
-VALUES (@domain, LOWER(@email), @salt, MD5(CONCAT(@salt, @plain)), 'ADMIN', 'ACTIVE', NOW());
-
--- sanity check: should be 1
-SELECT MD5(CONCAT(salt, @plain)) = password_hash AS ok
-FROM Users WHERE domain=@domain AND email=@email;
-
--- In MySQL (the schema your app uses)
-USE weroster;  -- or your actual DB
-
--- Leave
-INSERT INTO leave_request (start_time, end_time)
-VALUES ('2025-10-02 00:00:00', '2025-10-08 00:00:00');
-
--- Shift swap
-INSERT INTO shift_swap (from_time, to_time, date_made)
-VALUES ('2025-09-05 08:00:00', '2025-09-05 16:00:00', NOW());
-
-INSERT INTO staff (hospital_id, first_name, last_name, email, status)
-VALUES (1, 'Admin', 'User', 'admin@weroster.local', 'Active');
-
-START TRANSACTION;
-
--- 1) brand-new hospital/designation/department (unique codes)
-INSERT INTO Hospital (name, code, address)
-VALUES ('Test Hospital', 'WRG1', '123 Test St');
-SET @hosp_id := LAST_INSERT_ID();
-
-INSERT INTO designation (name, code, matrix, type, status)
-VALUES ('Registered Nurse', 'RN1', 'RN-4', 'Nursing', 'ACTIVE');
-SET @desig_id := LAST_INSERT_ID();
-
-INSERT INTO dept (hospital_id, name, code)
-VALUES (@hosp_id, 'Intensive Care Unit', 'ICU1');
-SET @dept_id := LAST_INSERT_ID();
-
--- 2) your caller in staff (email must match JWT subject)
-INSERT INTO staff (
-    hospital_id, designation_id, first_name, last_name, email, phone, is_manager, status
-) VALUES (
-             @hosp_id, @desig_id, 'Admin', 'User', 'admin@weroster.local', '+610000000', TRUE, 'Active'
-         );
-SET @staff_id := LAST_INSERT_ID();
-
--- 3) link caller to the dept (so /my-team can find them)
-INSERT INTO staff_department (staff_id, dept_id, is_primary)
-VALUES (@staff_id, @dept_id, TRUE);
-
-COMMIT;
-
--- make sure you have at least one hospital, dept, location
-INSERT INTO Hospital(name, code, address) VALUES ('Test Hospital','TH','Somewhere')
-    ON DUPLICATE KEY UPDATE name=name;
-SET @hid = (SELECT id FROM Hospital WHERE code='TH' LIMIT 1);
-
-INSERT INTO dept(hospital_id, name, code) VALUES (@hid, 'ICU', 'ICU')
-    ON DUPLICATE KEY UPDATE name=name;
-SET @did = (SELECT id FROM dept WHERE code='ICU' LIMIT 1);
-
-INSERT INTO location(name, code, hospital_id) VALUES ('Ward A','WARD-A', @hid)
-    ON DUPLICATE KEY UPDATE name=name;
-SET @loc = (SELECT id FROM location WHERE code='WARD-A' LIMIT 1);
-
--- a future shift (starts in ~1 day for safety)
-INSERT INTO shift(start_ts, end_ts, dept_id, location_id, code, note)
-VALUES (DATE_ADD(NOW(), INTERVAL 1 DAY),
-        DATE_ADD(NOW(), INTERVAL 2 DAY),
-        @did, @loc, 'DAY-8H', 'Open test shift');
-
-SET @sid = LAST_INSERT_ID();
-
--- mark it open
-INSERT INTO open_shift(shift_id, date_made) VALUES (@sid, NOW());
-
-ALTER TABLE open_shift
-    ADD COLUMN urgent_flag TINYINT(1) NULL,
-    ADD COLUMN extra_pay_cents INT NULL;
-
--- Create user_staff table to link users with staff
-CREATE TABLE user_staff(
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    staff_id BIGINT NOT NULL,
-    CONSTRAINT fk_user_staff_user FOREIGN KEY (user_id) REFERENCES Users(id),
-    CONSTRAINT fk_user_staff_staff FOREIGN KEY (staff_id) REFERENCES staff(id),
-    UNIQUE KEY unique_user_staff (user_id, staff_id)
-) ENGINE = InnoDB;
+-- Schema cleanup completed:
+-- - Removed obsolete user_staff table (using direct @OneToOne relationship)
+-- - Removed unused roster_template tables
+-- - Removed redundant test data (DataInitializer.java handles all data)
+-- - Added user_id foreign key to staff table
+-- - Added missing columns to open_shift table
 

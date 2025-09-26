@@ -30,11 +30,15 @@ urgent?: boolean;
 
 
 export type LeaveItem = {
-id: string;
+id: string | number;
 date: string;
-type: "Half-day" | "Full-day";
-category: string;
-state: "Approved" | "Awaiting" | "Declined";
+type: string; // Leave type (e.g., "Day Leave", "Sick Leave", etc.)
+category: string; // Duration display (e.g., "08:00 - 16:00")
+state: "Approved" | "Awaiting" | "Declined" | "PENDING" | "APPROVED" | "REJECTED";
+requestDate?: string; // When the request was made
+startTime?: string; // Start time of the leave
+endTime?: string; // End time of the leave
+reason?: string; // Reason for the leave
 };
 
 

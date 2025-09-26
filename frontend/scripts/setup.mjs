@@ -1,334 +1,193 @@
-// scripts/setup.mjs
-import { execSync } from "node:child_process";
-import {
-  existsSync,
-  copyFileSync,
-  writeFileSync,
-  readFileSync,
-  rmSync,
-} from "node:fs";
+#!/usr/bin/env node
 
-const RESET = process.argv.includes("--reset");
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-const log = (msg) => console.log(`\x1b[36m[setup]\x1b[0m ${msg}`);
-const warn = (msg) => console.warn(`\x1b[33m[warn]\x1b[0m ${msg}`);
-const fail = (msg) => {
-  console.error(`\x1b[31m[error]\x1b[0m ${msg}`);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const projectRoot = join(__dirname, '..');
+
+console.log('🚀 Setting up We-Roster Mobile App...\n');
+
+// Check if we're in the right directory
+if (!existsSync(join(projectRoot, 'package.json'))) {
+  console.error('❌ Error: package.json not found. Please run this script from the frontend directory.');
   process.exit(1);
-};
-
-function run(cmd, opts = {}) {
-  log(`$ ${cmd}`);
-  execSync(cmd, { stdio: "inherit", ...opts });
 }
 
-function getVersion(cmd) {
-  try {
-    return execSync(cmd, { stdio: ["ignore", "pipe", "ignore"] })
-      .toString()
-      .trim();
-  } catch {
-    return null;
-  }
-}
+// Read package.json
+const packageJsonPath = join(projectRoot, 'package.json');
+const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
 
-/* ---------- Checks ---------- */
-function ensureNode() {
-  const v = getVersion("node -v");
-  if (!v) fail("Node.js not installed. Please install Node 18/20/22 LTS.");
-  const major = Number(v.replace(/^v/, "").split(".")[0]);
-  if (major < 18) fail(`Node >= 18 required. Current: ${v}`);
-  log(`Detected Node ${v}`);
-}
+console.log('📦 Project:', packageJson.name);
+console.log('📋 Version:', packageJson.version);
+console.log('🎯 Main entry:', packageJson.main);
 
-function ensureNpm() {
-  const v = getVersion("npm -v");
-  if (!v) fail("npm not found. Please install Node.js with npm included.");
-  log(`Detected npm ${v}`);
-}
+// Check for required files
+const requiredFiles = [
+  'app.json',
+  'babel.config.js',
+  'tsconfig.json',
+  'App.tsx',
+  'src/navigation/RootNavigator.tsx',
+  'src/contexts/AuthContext.tsx'
+];
 
-function maybeWarnWindowsExecPolicy() {
-  if (process.platform === "win32") {
-    warn(
-      "If you hit PowerShell execution policy issues, run (as admin):\n" +
-        "  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force"
-    );
-  }
-}
+console.log('\n🔍 Checking required files...');
+let missingFiles = [];
 
-function ensureExpoCLI() {
-  const v = getVersion("npx expo --version");
-  if (!v) fail("Expo CLI not available via npx. Check your npm installation.");
-  log(`Detected Expo CLI ${v}`);
-}
-
-/* ---------- Install ---------- */
-function cleanIfRequested() {
-  if (!RESET) return;
-  log("Reset mode: removing node_modules and package-lock.json …");
-  try { rmSync("node_modules", { recursive: true, force: true }); } catch {}
-  try { rmSync("package-lock.json", { force: true }); } catch {}
-}
-
-function installDeps() {
-  const hasPackageLock = existsSync("package-lock.json");
-  try {
-    run(hasPackageLock ? "npm ci" : "npm install");
-  } catch {
-    warn("npm ci/install failed. Retrying with --legacy-peer-deps …");
-    try {
-      run("npm install --legacy-peer-deps");
-    } catch {
-      fail("Dependency installation failed.");
-    }
-  }
-}
-
-function getPkg() {
-  return JSON.parse(readFileSync("package.json", "utf8"));
-}
-
-function ensureExpoModules() {
-  // Add more common Expo modules here if you want them auto-installed.
-  const required = ["expo-clipboard"];
-
-  const pkg = getPkg();
-  const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
-  const missing = required.filter((name) => !deps[name]);
-
-  if (missing.length === 0) {
-    log("Expo modules already present (e.g. expo-clipboard).");
-    return;
-  }
-  log(`Missing Expo modules: ${missing.join(", ")}. Installing…`);
-  run(`npx expo install ${missing.join(" ")}`);
-}
-
-/* ---------- Config files ---------- */
-function ensureEnvFiles() {
-  const example = ".env.example";
-  const target = ".env";
-  if (!existsSync(example)) {
-    writeFileSync(
-      example,
-      [
-        "# Example environment file",
-        "EXPO_PUBLIC_API_BASE=https://api.example.com",
-        "EXPO_PUBLIC_ENV=dev",
-        "",
-      ].join("\n"),
-      "utf8"
-    );
-    log("Generated .env.example");
-  }
-  if (!existsSync(target)) {
-    copyFileSync(example, target);
-    log("Created .env from .env.example (please update values).");
+for (const file of requiredFiles) {
+  const filePath = join(projectRoot, file);
+  if (existsSync(filePath)) {
+    console.log(`✅ ${file}`);
   } else {
-    log(".env already exists, skipped.");
+    console.log(`❌ ${file} - MISSING`);
+    missingFiles.push(file);
   }
 }
 
-function writeNvmrcIfMissing() {
-  const nvmrc = ".nvmrc";
-  if (!existsSync(nvmrc)) {
-    const nodeV = getVersion("node -v") || "v20";
-    writeFileSync(nvmrc, nodeV + "\n", "utf8");
-    log(`Wrote ${nvmrc} (${nodeV}).`);
-  }
+if (missingFiles.length > 0) {
+  console.log('\n⚠️  Warning: Some required files are missing:');
+  missingFiles.forEach(file => console.log(`   - ${file}`));
 }
 
-function ensureTsconfig() {
-  const target = "tsconfig.json";
-  const desired = {
-    extends: "expo/tsconfig.base",
-    compilerOptions: {
-      target: "ES2020",
-      lib: ["ES2020", "DOM", "DOM.Iterable"],
-      jsx: "react-jsx",
-      moduleResolution: "Bundler",
-      types: ["node", "react"],
-      allowJs: true,
-      esModuleInterop: true,
-      allowSyntheticDefaultImports: true,
-      skipLibCheck: true,
-      strict: true,
-      noEmit: true,
-    },
-    include: ["src", "App.tsx", "App.ts", "index.ts", "index.tsx"],
-    exclude: ["node_modules", "babel.config.js"],
-  };
+// Check environment variables
+console.log('\n🌍 Environment variables:');
+const envVars = [
+  'EXPO_PUBLIC_API_BASE',
+  'EXPO_PUBLIC_MOCK_ROSTER',
+  'EXPO_PUBLIC_MOCK_LEAVES'
+];
 
-  if (!existsSync(target)) {
-    writeFileSync(target, JSON.stringify(desired, null, 2) + "\n", "utf8");
-    log("Generated tsconfig.json for Expo + React Native.");
+for (const envVar of envVars) {
+  const value = process.env[envVar];
+  if (value) {
+    console.log(`✅ ${envVar}: ${value}`);
   } else {
-    try {
-      const content = JSON.parse(readFileSync(target, "utf8"));
-      if (!content.extends || content.extends !== "expo/tsconfig.base") {
-        writeFileSync(target, JSON.stringify(desired, null, 2) + "\n", "utf8");
-        warn("Rewrote tsconfig.json to a known-good Expo preset.");
-      } else {
-        log("tsconfig.json present. Skipped overwrite.");
-      }
-    } catch {
-      writeFileSync(target, JSON.stringify(desired, null, 2) + "\n", "utf8");
-      warn("tsconfig.json was invalid. Rewrote with Expo preset.");
-    }
+    console.log(`⚠️  ${envVar}: Not set (using defaults)`);
   }
 }
 
-/* ---- TS path aliases (@/* -> src/*) ---- */
-function ensureTsconfigPaths() {
-  const file = "tsconfig.json";
-  let obj;
-  try {
-    obj = JSON.parse(readFileSync(file, "utf8"));
-  } catch {
-    return; // ensureTsconfig will create it
-  }
+// Check dependencies
+console.log('\n📚 Key dependencies:');
+const keyDeps = [
+  'expo',
+  'react',
+  'react-native',
+  '@react-navigation/native',
+  '@react-navigation/bottom-tabs',
+  '@react-navigation/native-stack',
+  '@react-native-async-storage/async-storage'
+];
 
-  let changed = false;
-  obj.compilerOptions ??= {};
-  if (obj.compilerOptions.baseUrl !== ".") {
-    obj.compilerOptions.baseUrl = ".";
-    changed = true;
-  }
-  const paths = obj.compilerOptions.paths ?? {};
-  if (!paths["@/*"] || paths["@/*"][0] !== "src/*") {
-    paths["@/*"] = ["src/*"];
-    obj.compilerOptions.paths = paths;
-    changed = true;
-  }
-
-  if (changed) {
-    writeFileSync(file, JSON.stringify(obj, null, 2) + "\n", "utf8");
-    log("Patched tsconfig.json with baseUrl + paths for '@/'.");
+for (const dep of keyDeps) {
+  if (packageJson.dependencies[dep]) {
+    console.log(`✅ ${dep}: ${packageJson.dependencies[dep]}`);
+  } else if (packageJson.devDependencies[dep]) {
+    console.log(`✅ ${dep}: ${packageJson.devDependencies[dep]} (dev)`);
   } else {
-    log("tsconfig.json already has baseUrl + paths.");
+    console.log(`❌ ${dep}: Not found`);
   }
 }
 
-/* ---- Babel module-resolver for Metro runtime ---- */
-function ensureBabelModuleResolver() {
-  // 1) ensure devDep installed
-  const pkg = getPkg();
-  const all = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
-  if (!all["babel-plugin-module-resolver"]) {
-    run("npm i -D babel-plugin-module-resolver");
-  }
+// Check TypeScript configuration
+console.log('\n🔧 TypeScript configuration:');
+const tsconfigPath = join(projectRoot, 'tsconfig.json');
+if (existsSync(tsconfigPath)) {
+  const tsconfig = JSON.parse(readFileSync(tsconfigPath, 'utf8'));
+  console.log('✅ tsconfig.json found');
+  console.log(`   - Compiler: ${tsconfig.compilerOptions?.target || 'default'}`);
+  console.log(`   - Module: ${tsconfig.compilerOptions?.module || 'default'}`);
+  console.log(`   - JSX: ${tsconfig.compilerOptions?.jsx || 'default'}`);
+} else {
+  console.log('❌ tsconfig.json not found');
+}
 
-  // 2) patch babel.config.js
-  const path = "babel.config.js";
-  let content = existsSync(path)
-    ? readFileSync(path, "utf8")
-    : `module.exports = function (api) { api.cache(true); return { presets: ["babel-preset-expo"], plugins: [] }; };`;
-
-  if (!content.includes("module-resolver")) {
-    if (content.includes("plugins: [")) {
-      content = content.replace(
-        /plugins:\s*\[/,
-        `plugins: [
-      ["module-resolver", {
-        root: ["."],
-        alias: { "@": "./src" },
-        extensions: [".tsx", ".ts", ".js", ".jsx", ".json"]
-      }],`
-      );
-    } else if (content.includes("return {")) {
-      content = content.replace(
-        /return\s*{([\s\S]*?)}/,
-        (m, inner) =>
-          `return { ${inner.trim().replace(/,+$/, "")}, plugins: [["module-resolver", { root: ["."], alias: { "@": "./src" }, extensions: [".tsx", ".ts", ".js", ".jsx", ".json"] }]] }`
-      );
-    } else {
-      // fallback overwrite
-      content = `module.exports = function (api) {
-  api.cache(true);
-  return {
-    presets: ["babel-preset-expo"],
-    plugins: [
-      ["module-resolver", {
-        root: ["."],
-        alias: { "@": "./src" },
-        extensions: [".tsx", ".ts", ".js", ".jsx", ".json"]
-      }]
-    ]
-  };
-};`;
-    }
-    writeFileSync(path, content, "utf8");
-    log("Patched babel.config.js with module-resolver alias '@/'.");
+// Check Babel configuration
+console.log('\n🔧 Babel configuration:');
+const babelConfigPath = join(projectRoot, 'babel.config.js');
+if (existsSync(babelConfigPath)) {
+  console.log('✅ babel.config.js found');
+  const babelConfig = readFileSync(babelConfigPath, 'utf8');
+  if (babelConfig.includes('module-resolver')) {
+    console.log('✅ Module resolver configured');
   } else {
-    log("babel.config.js already has module-resolver.");
+    console.log('⚠️  Module resolver not configured');
+  }
+} else {
+  console.log('❌ babel.config.js not found');
+}
+
+// Check source structure
+console.log('\n📁 Source structure:');
+const srcDirs = [
+  'src/api',
+  'src/components',
+  'src/contexts',
+  'src/hooks',
+  'src/navigation',
+  'src/screens',
+  'src/types',
+  'src/lib',
+  'src/theme'
+];
+
+for (const dir of srcDirs) {
+  const dirPath = join(projectRoot, dir);
+  if (existsSync(dirPath)) {
+    console.log(`✅ ${dir}/`);
+  } else {
+    console.log(`❌ ${dir}/ - MISSING`);
   }
 }
 
-/* ---------- Diagnostics ---------- */
-function expoDoctor() {
-  try {
-    run("npx expo doctor");
-  } catch {
-    warn("Expo doctor reported issues. Review its output for suggestions.");
+// Check for common issues
+console.log('\n🔍 Checking for common issues...');
+
+// Check if node_modules exists
+const nodeModulesPath = join(projectRoot, 'node_modules');
+if (existsSync(nodeModulesPath)) {
+  console.log('✅ node_modules found');
+} else {
+  console.log('⚠️  node_modules not found - run "npm install" first');
+}
+
+// Check for .env files
+const envFiles = ['.env', '.env.local', '.env.development'];
+let envFileFound = false;
+for (const envFile of envFiles) {
+  if (existsSync(join(projectRoot, envFile))) {
+    console.log(`✅ ${envFile} found`);
+    envFileFound = true;
   }
 }
-
-function androidHints() {
-  if (process.platform === "win32" || process.platform === "linux") {
-    const hasAdb = !!getVersion("adb version");
-    if (!hasAdb) {
-      warn(
-        "ADB/Android SDK not found. Install Android Studio and configure ANDROID_HOME."
-      );
-    } else {
-      log("Detected Android platform tools (adb).");
-    }
-  }
+if (!envFileFound) {
+  console.log('⚠️  No .env files found - using default configuration');
 }
 
-function iosHints() {
-  if (process.platform === "darwin") {
-    const xcodebuild = getVersion("xcodebuild -version");
-    if (!xcodebuild) {
-      warn("Xcode not found. Install from App Store for iOS builds.");
-    } else {
-      log(`Detected Xcode: ${xcodebuild.split("\n")[0]}`);
-    }
-  }
+// Summary
+console.log('\n📊 Setup Summary:');
+console.log('================');
+
+if (missingFiles.length === 0) {
+  console.log('✅ All required files are present');
+} else {
+  console.log(`⚠️  ${missingFiles.length} required files are missing`);
 }
 
-function finalTips() {
-  log("Environment setup finished ✅");
-  console.log(
-    [
-      "",
-      "Next steps:",
-      "  npm run start    # start Expo bundler",
-      "  npm run android  # run on Android device/emulator",
-      "  npm run ios      # run on iOS simulator (macOS + Xcode)",
-      "  npm run web      # run in browser",
-      "",
-      "If dependency issues remain, run:",
-      "  npm run setup -- --reset",
-      "",
-    ].join("\n")
-  );
-}
+console.log('\n🚀 Next steps:');
+console.log('1. Install dependencies: npm install');
+console.log('2. Start development server: npm start');
+console.log('3. Run on Android: npm run android');
+console.log('4. Run on iOS: npm run ios');
+console.log('5. Run on Web: npm run web');
 
-/* ---------- Main ---------- */
-ensureNode();
-ensureNpm();
-maybeWarnWindowsExecPolicy();
-ensureExpoCLI();
-cleanIfRequested();
-installDeps();
-ensureExpoModules();
-ensureEnvFiles();
-ensureTsconfig();
-ensureTsconfigPaths();       // add @/* alias to TS
-ensureBabelModuleResolver(); // add @/* alias to Babel/Metro
-writeNvmrcIfMissing();
-expoDoctor();
-androidHints();
-iosHints();
-finalTips();
+console.log('\n📖 Available scripts:');
+console.log('- npm run start    : Start Expo development server');
+console.log('- npm run android  : Run on Android device/emulator');
+console.log('- npm run ios      : Run on iOS device/simulator');
+console.log('- npm run web      : Run on web browser');
+console.log('- npm run clean    : Clean node_modules and package-lock.json');
+
+console.log('\n🎉 Setup complete! Happy coding! 🎉');

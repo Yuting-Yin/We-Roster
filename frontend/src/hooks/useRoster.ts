@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchJson } from "@/lib/api";
 import { dayKey } from "@/lib/date";
 import { buildEventsFor, buildEventsMap, makeDemoAssignments, makeDemoShiftMap } from "@/lib/fakeData";
+import { getRosterPeriodForDate } from "@/lib/rosterPeriods";
 import type { EventItem, ShiftType } from "@/types/roster";
 
 const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -32,14 +33,21 @@ export function useRosterData(anchorDate: Date, opts: Options = {}) {
   const [eventsByDate, setEventsByDate] = useState<Record<string, EventItem[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Debug: Log initial state
-  console.log("🔍 useRosterData initial state:", { shiftMap, loading, error });
 
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const monthAnchorDate = useMemo(() => new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1), [anchorDate]);
+  // Get the roster period for the anchor date
+  const rosterPeriod = useMemo(() => getRosterPeriodForDate(anchorDate), [anchorDate]);
+  
+  // Use the roster period's start month as the anchor for API calls
+  const monthAnchorDate = useMemo(() => {
+    if (rosterPeriod) {
+      return new Date(rosterPeriod.startYear, rosterPeriod.startMonth, 1);
+    }
+    return new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1);
+  }, [rosterPeriod, anchorDate]);
+  
   const fetchKey = useMemo(() => monthKey(monthAnchorDate), [monthAnchorDate]);
 
   const load = useCallback(
@@ -70,17 +78,13 @@ export function useRosterData(anchorDate: Date, opts: Options = {}) {
         months: String(months),
       });
       
-      console.log("🔍 useRosterData making API call:", `/api/v1/myroster/roster?${params.toString()}`);
-
       try {
         const res = await fetchJson<RosterPayload>(`/api/v1/myroster/roster?${params.toString()}`, {
           signal: controller.signal,
         });
 
-        console.log("🔍 useRosterData received:", res);
         const normalizedShiftMap = normalizeShiftMap(res.shiftMap);
         const normalizedEvents = normalizeEvents(res.events);
-        console.log("🔍 Normalized shiftMap:", normalizedShiftMap);
         setShiftMap(normalizedShiftMap);
         setEventsByDate(normalizedEvents);
       } catch (err: any) {

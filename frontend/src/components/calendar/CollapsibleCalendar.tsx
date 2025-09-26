@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { H, sx } from "@/theme/metrics";
 import { ShiftType } from "@/types/roster";
+import { useRosterPeriod } from "@/hooks/useRosterPeriod";
 
 /* ===== Sizes ===== */
 const CARET_SIZE = sx(28);
@@ -16,7 +17,12 @@ const COL_W_PCT = 100 / 7; // 每列百分比宽度
 const fmt = (d: Date, opt: Intl.DateTimeFormatOptions) =>
   new Intl.DateTimeFormat("en-US", opt).format(d);
 
-const dayKey = (d: Date) => d.toISOString().slice(0, 10);
+const dayKey = (d: Date) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const endOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
 
@@ -61,15 +67,17 @@ function buildMonths(anchor: Date, count = 2) {
   });
 }
 
+// Removed buildRosterPeriodMonths - now using centralized roster period system
+
 /* =================== Types =================== */
-type DateType = ShiftType;
+// Use ShiftType for actual shifts, undefined for no shifts
 
 type Action = { icon: "menu" | "refresh"; onPress: () => void };
 
 type Props = {
   value: Date;                          // Currently selected date (controlled)
   onChange: (d: Date) => void;          // Selection change callback
-  shiftMap?: Record<string, ShiftType>; // YYYY-MM-DD -> type
+  shiftMap?: Record<string, ShiftType>; // YYYY-MM-DD -> shift type (undefined = no shifts)
   /** The title placed in the center of the header (default: "Mon, May 12, 2025") */
   title?: string;
   /** Icon button on the left side of the head (menu) */
@@ -85,21 +93,20 @@ const dotStyles = StyleSheet.create({
   hollow: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, borderWidth: 1.5, borderColor: "#BDBDBD", backgroundColor: "transparent" },
 });
 
-function visualOf(type: DateType) {
-  // Handle actual shift types directly
+function visualOf(type: ShiftType | undefined) {
+  // Handle actual shift types
   if (type === "AM") return { dots: ["filled", "hollow"] as const };      // ●○ AM shift
   if (type === "PM") return { dots: ["hollow", "filled"] as const };      // ○● PM shift  
   if (type === "AH") return { dots: ["hollow", "filled"] as const };      // ○● After Hours
   if (type === "ON_CALL") return { dots: ["hollow", "filled"] as const }; // ○● On Call
-  if (type === "not-working") return { dots: ["hollow", "hollow"] as const }; // ○○ Not working
-  return { dots: ["hollow", "hollow"] as const }; // ○○ Unallocated
+  // No shifts = blank dots
+  return { dots: ["hollow", "hollow"] as const }; // ○○ No shifts
 }
 
-/** Built-in demo: default type rules when there is no shiftMap */
-function getTypeFromMap(d: Date, shiftMap?: Props["shiftMap"]): DateType {
+/** Get shift type for a date, returns undefined if no shifts */
+function getShiftTypeForDate(d: Date, shiftMap?: Props["shiftMap"]): ShiftType | undefined {
   const key = dayKey(d);
-  const result = (shiftMap?.[key] as DateType) ?? "unallocated";
-  console.log(`🔍 getTypeFromMap: ${key} -> ${result}`, shiftMap?.[key]);
+  const result = shiftMap?.[key];
   return result;
 }
 
@@ -116,9 +123,6 @@ export default function CollapsibleCalendar({
 }: Props) {
   const selectedDate = value;
   const [expanded, setExpanded] = useState(false);
-  
-  // Debug: Log shiftMap data
-  console.log("🔍 CollapsibleCalendar shiftMap:", shiftMap);
 
   // Lock the start month of the expansion window (set when expanding for the first time)
   const [expandBase, setExpandBase] = useState<Date | null>(null);
@@ -126,11 +130,18 @@ export default function CollapsibleCalendar({
   const rotate = useRef(new Animated.Value(0)).current;
   const heightAnim = useRef(new Animated.Value(0)).current;
 
-  // Use expandBase (if present) as the base for the two-month window; otherwise, use the current month of selectedDate.
+  // Use roster period system to get the correct months
+  const { months: rosterMonths } = useRosterPeriod(selectedDate);
+
+  // Use expandBase (if present) as the base for the two-month window; otherwise, use roster period system.
   const months = useMemo(() => {
-    const base = expandBase ?? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-    return buildMonths(base, 2);
-  }, [selectedDate, expandBase]);
+    if (expandBase) {
+      return buildMonths(expandBase, 2);
+    } else {
+      // Use centralized roster period system to show the correct two-month period
+      return rosterMonths;
+    }
+  }, [selectedDate, expandBase, rosterMonths]);
 
   // Week cell data (read shiftMap first)
   const weekCells = useMemo(() => {
@@ -138,21 +149,27 @@ export default function CollapsibleCalendar({
     return days.map((d) => ({
       fullDate: d,
       date: d.getDate(),
-      type: getTypeFromMap(d, shiftMap),
+      type: getShiftTypeForDate(d, shiftMap),
     }));
   }, [selectedDate, shiftMap]);
 
   const toggle = () => {
     const next = !expanded;
     if (next && !expandBase) {
-      setExpandBase(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+      // Set expandBase to the first month of the roster period that will be shown
+      if (rosterMonths.length > 0) {
+        setExpandBase(rosterMonths[0].first);
+      } else {
+        setExpandBase(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+      }
     }
     Animated.parallel([
       Animated.timing(rotate, { toValue: next ? 1 : 0, duration: 200, useNativeDriver: true }),
       Animated.timing(heightAnim, { toValue: next ? 1 : 0, duration: 200, useNativeDriver: false }),
     ]).start();
     setExpanded(next);
-    // if (!next) setExpandBase(null);
+    // Reset expandBase when collapsing to allow recalculation on next expand
+    if (!next) setExpandBase(null);
   };
 
   const iconRotate = rotate.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "180deg"] });
@@ -270,7 +287,7 @@ export default function CollapsibleCalendar({
                     {m.days.map((d, i) => {
                       const selected = dayKey(d) === dayKey(selectedDate);
                       const isToday = dayKey(d) === todayKey;
-                      const t = getTypeFromMap(d, shiftMap);
+                      const t = getShiftTypeForDate(d, shiftMap);
                       const v = visualOf(t);
                       return (
                         <Pressable

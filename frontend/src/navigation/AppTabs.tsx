@@ -15,7 +15,7 @@ function MyTeam() { return <View style={{flex:1,alignItems:"center",justifyConte
 
 export type AppTabParamList = {
   Dashboard: undefined;
-  Roster: undefined;
+  Roster: { selectedDate?: string } | undefined;
   "My Request": undefined;
   "My Team": undefined;
 };
@@ -60,6 +60,12 @@ export default function AppTabs() {
             elevation: 6, // Android
             },
         })}
+        screenListeners={{
+          tabPress: () => {
+            // This will fire for any tab press
+            console.log('Tab pressed - overlays should close');
+          },
+        }}
     >
     <Tab.Screen name="Dashboard" component={Dashboard} />
     <Tab.Screen name="Roster" component={RosterScreen} />

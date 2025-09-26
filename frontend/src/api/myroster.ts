@@ -1,5 +1,5 @@
 // frontend/src/api/myroster.ts
-import { API_BASE_URL } from '../config/env';
+import { API_BASE } from '../lib/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Types matching backend DTOs
@@ -121,11 +121,11 @@ async function fetchWithAuth<T>(url: string, options: RequestInit = {}): Promise
 // API functions
 export async function getDayRoster(date?: string): Promise<DayRosterDto> {
   const params = date ? `?date=${date}` : '';
-  return fetchWithAuth<DayRosterDto>(`${API_BASE_URL}/myroster/day${params}`);
+  return fetchWithAuth<DayRosterDto>(`${API_BASE}/api/v1/myroster/day${params}`);
 }
 
 export async function getDayView(date: string): Promise<DayViewDto> {
-  return fetchWithAuth<DayViewDto>(`${API_BASE_URL}/myroster/dayview?date=${date}`);
+  return fetchWithAuth<DayViewDto>(`${API_BASE}/api/v1/myroster/dayview?date=${date}`);
 }
 
 export async function refreshRoster(weekStart?: string, currentDate?: string): Promise<RefreshResponse> {
@@ -134,15 +134,15 @@ export async function refreshRoster(weekStart?: string, currentDate?: string): P
   if (currentDate) params.append('currentDate', currentDate);
   
   const queryString = params.toString();
-  const url = `${API_BASE_URL}/myroster/refresh${queryString ? `?${queryString}` : ''}`;
+  const url = `${API_BASE}/api/v1/myroster/refresh${queryString ? `?${queryString}` : ''}`;
   
   return fetchWithAuth<RefreshResponse>(url);
 }
 
 export async function getShiftDetails(shiftId: number): Promise<ShiftDetailsDto> {
-  return fetchWithAuth<ShiftDetailsDto>(`${API_BASE_URL}/myroster/shift/${shiftId}`);
+  return fetchWithAuth<ShiftDetailsDto>(`${API_BASE}/api/v1/myroster/shift/${shiftId}`);
 }
 
 export async function getCalendarRange(start: string, months: number = 1): Promise<CalendarDayDto[]> {
-  return fetchWithAuth<CalendarDayDto[]>(`${API_BASE_URL}/calendar/range?start=${start}&months=${months}`);
+  return fetchWithAuth<CalendarDayDto[]>(`${API_BASE}/api/v1/calendar/range?start=${start}&months=${months}`);
 }

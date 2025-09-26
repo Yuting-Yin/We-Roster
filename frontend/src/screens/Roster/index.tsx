@@ -1,6 +1,7 @@
 import React from "react";
 import { SafeAreaView, View, StyleSheet } from "react-native";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
+import { useRoute } from "@react-navigation/native";
 import AppBar from "@/components/common/AppBar";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
@@ -16,6 +17,12 @@ function TeamRoster() {
 }
 
 export default function RosterScreen() {
+  const route = useRoute<any>();
+  const selectedDate = route.params?.selectedDate;
+  
+  console.log('🔍 RosterScreen - route.params:', route.params);
+  console.log('🔍 RosterScreen - selectedDate:', selectedDate);
+  
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLOR.bg }}>
       <AppBar />
@@ -34,7 +41,11 @@ export default function RosterScreen() {
           },
         }}
       >
-        <Tab.Screen name="MY ROSTER" component={MyRoster} />
+        <Tab.Screen 
+          name="MY ROSTER" 
+          component={MyRoster}
+          initialParams={{ selectedDate }}
+        />
         <Tab.Screen name="TEAM ROSTER" component={TeamRoster} />
         <Tab.Screen name="OPEN SHIFTS" component={OpenShifts} />
       </Tab.Navigator>

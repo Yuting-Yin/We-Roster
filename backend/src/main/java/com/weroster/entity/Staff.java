@@ -76,8 +76,9 @@ public class Staff {
     @Column(name = "created_time", nullable = false)
     private LocalDateTime createdTime;
     
-    @OneToOne(mappedBy = "staff", cascade = CascadeType.ALL)
-    private UserStaff userStaff;
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "user_id")
+    private User user;
     
     @OneToMany(mappedBy = "staff", cascade = CascadeType.ALL)
     private List<StaffDepartment> staffDepartments;

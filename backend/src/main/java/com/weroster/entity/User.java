@@ -51,5 +51,5 @@ public class User {
     private Integer loginAttempts = 0;
     
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    private UserStaff userStaff;
+    private Staff staff;
 }

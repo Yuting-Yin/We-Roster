@@ -8,9 +8,10 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
+import java.util.Random;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -40,15 +41,25 @@ public class DataInitializer implements CommandLineRunner {
     private ShiftAssignmentRepository shiftAssignmentRepository;
     
     @Autowired
-    private UserStaffRepository userStaffRepository;
+    private LeaveRequestRepository leaveRequestRepository;
+    
+    // Removed UserStaffRepository - using direct User-Staff relationship
 
     @Override
     public void run(String... args) throws Exception {
+        
+        // Clear leave requests for testing (real version should not do this)
+        System.out.println("🔍 DataInitializer - Clearing existing leave requests for testing...");
+        leaveRequestRepository.deleteAll();
+        System.out.println("🔍 DataInitializer - Leave requests cleared");
         
         // Only initialize if database is empty
         if (userRepository.count() == 0) {
             createMockData();
         }
+        
+        // Always create test leave requests (for testing purposes)
+        createTestLeaveRequests();
     }
     
     private void createMockData() {
@@ -360,7 +371,7 @@ public class DataInitializer implements CommandLineRunner {
                 .build();
         offCampusTrainee = staffRepository.save(offCampusTrainee);
         
-        // Create Test User and link to staff
+        // Create Test User and link directly to nurse1
         User testUser = User.builder()
                 .domain("test")
                 .email("test@example.com")
@@ -374,278 +385,186 @@ public class DataInitializer implements CommandLineRunner {
                 .build();
         testUser = userRepository.save(testUser);
         
-        // Link test user to nurse1
-        UserStaff userStaff = UserStaff.builder()
-                .user(testUser)
-                .staff(nurse1)
-                .build();
-        userStaff = userStaffRepository.save(userStaff);
+        // Link test user directly to nurse1
+        nurse1.setUser(testUser);
+        nurse1 = staffRepository.save(nurse1);
         
-        System.out.println("🔗 Created UserStaff link:");
+        System.out.println("🔗 Created direct User-Staff link:");
         System.out.println("   User ID: " + testUser.getId() + " (" + testUser.getEmail() + ")");
         System.out.println("   Staff ID: " + nurse1.getId() + " (" + nurse1.getFirstName() + " " + nurse1.getLastName() + ")");
-        System.out.println("   UserStaff ID: " + userStaff.getId());
         
-        // Create Shifts for Today and Tomorrow using flexible shift times
-        LocalDate today = LocalDate.now();
-        LocalDate tomorrow = today.plusDays(1);
+        // Note: Individual shifts for today/tomorrow are now handled by the comprehensive shift system
+        // This ensures no overlaps and consistent shift patterns
         
-        // Today's AM shift (flexible morning time: 10:00-15:00)
-        Shift morningShiftToday = Shift.builder()
-                .startTs(today.atTime(10, 0)) // 10:00 AM
-                .endTs(today.atTime(15, 0))   // 3:00 PM (5 hours)
-                .code("AM")
-                .department(emergencyDept)
-                .location(edRoom1)
-                .note("Flexible AM shift in ED")
+        // Note: Shift assignments are now handled by the comprehensive shift system
+        // This ensures proper staff distribution and no overlapping assignments
+        
+        // Create more staff members for better testing
+        Staff nurse4 = Staff.builder()
+                .firstName("Jennifer")
+                .lastName("Martinez")
+                .email("jennifer.martinez@weroster.com")
+                .phone("555-0110")
+                .designation(nurseDesignation)
+                .hospital(hospital)
+                .status("ACTIVE")
+                .isManager(false)
+                .type("FULL_TIME")
+                .hireDate(LocalDate.of(2023, 5, 10))
+                .createdTime(LocalDateTime.now())
+                .statusTime(LocalDateTime.now())
                 .build();
-        morningShiftToday = shiftRepository.save(morningShiftToday);
+        nurse4 = staffRepository.save(nurse4);
         
-        // Today's PM shift (flexible afternoon time: 14:00-20:00)
-        Shift afternoonShiftToday = Shift.builder()
-                .startTs(today.atTime(14, 0)) // 2:00 PM
-                .endTs(today.atTime(20, 0))  // 8:00 PM (6 hours)
-                .code("PM")
-                .department(icuDept)
-                .location(icuBed1)
-                .note("Flexible PM shift in ICU")
+        Staff nurse5 = Staff.builder()
+                .firstName("David")
+                .lastName("Thompson")
+                .email("david.thompson@weroster.com")
+                .phone("555-0111")
+                .designation(nurseDesignation)
+                .hospital(hospital)
+                .status("ACTIVE")
+                .isManager(false)
+                .type("PART_TIME")
+                .hireDate(LocalDate.of(2023, 7, 15))
+                .createdTime(LocalDateTime.now())
+                .statusTime(LocalDateTime.now())
                 .build();
-        afternoonShiftToday = shiftRepository.save(afternoonShiftToday);
+        nurse5 = staffRepository.save(nurse5);
         
-        // Today's AH shift (completely flexible: 9:00-17:00)
-        Shift anyHourShiftToday = Shift.builder()
-                .startTs(today.atTime(9, 0))  // 9:00 AM
-                .endTs(today.atTime(17, 0))   // 5:00 PM (8 hours)
-                .code("AH")
-                .department(medicalDept)
-                .location(medWard)
-                .note("Flexible Any Hour shift in Medical Ward")
+        Staff doctor2 = Staff.builder()
+                .firstName("Dr. Amanda")
+                .lastName("Lee")
+                .email("amanda.lee@weroster.com")
+                .phone("555-0202")
+                .designation(doctorDesignation)
+                .hospital(hospital)
+                .status("ACTIVE")
+                .isManager(false)
+                .type("FULL_TIME")
+                .hireDate(LocalDate.of(2022, 9, 1))
+                .createdTime(LocalDateTime.now())
+                .statusTime(LocalDateTime.now())
                 .build();
-        anyHourShiftToday = shiftRepository.save(anyHourShiftToday);
+        doctor2 = staffRepository.save(doctor2);
         
-        // Tomorrow's AM shift (flexible morning time: 7:00-12:00)
-        Shift morningShiftTomorrow = Shift.builder()
-                .startTs(tomorrow.atTime(7, 0))  // 7:00 AM
-                .endTs(tomorrow.atTime(12, 0))   // 12:00 PM (5 hours)
-                .code("AM")
-                .department(emergencyDept)
-                .location(edRoom1)
-                .note("Early AM shift in ED")
+        Staff nurse6 = Staff.builder()
+                .firstName("Rachel")
+                .lastName("Green")
+                .email("rachel.green@weroster.com")
+                .phone("555-0112")
+                .designation(nurseDesignation)
+                .hospital(hospital)
+                .status("ACTIVE")
+                .isManager(false)
+                .type("FULL_TIME")
+                .hireDate(LocalDate.of(2023, 2, 20))
+                .createdTime(LocalDateTime.now())
+                .statusTime(LocalDateTime.now())
                 .build();
-        morningShiftTomorrow = shiftRepository.save(morningShiftTomorrow);
+        nurse6 = staffRepository.save(nurse6);
         
-        // Tomorrow's PM shift (flexible afternoon time: 15:00-21:00)
-        Shift afternoonShiftTomorrow = Shift.builder()
-                .startTs(tomorrow.atTime(15, 0)) // 3:00 PM
-                .endTs(tomorrow.atTime(21, 0))  // 9:00 PM (6 hours)
-                .code("PM")
-                .department(icuDept)
-                .location(icuBed1)
-                .note("Late PM shift in ICU")
-                .build();
-        afternoonShiftTomorrow = shiftRepository.save(afternoonShiftTomorrow);
+        // Create user accounts for all staff members (excluding nurse1 who already has test user)
+        List<Staff> allStaff = Arrays.asList(nurse1, nurse2, doctor1, nurse3, surgeon, anaesCoordinator, 
+                nurseConsultant, trainee, medStudent, offCampusTrainee, nurse4, nurse5, doctor2, nurse6);
         
-        // Tomorrow's ON_CALL shift (completely flexible: 22:00-06:00 next day)
-        Shift onCallShiftTomorrow = Shift.builder()
-                .startTs(tomorrow.atTime(22, 0)) // 10:00 PM
-                .endTs(tomorrow.plusDays(1).atTime(6, 0)) // 6:00 AM next day (8 hours)
-                .code("ON_CALL")
-                .department(medicalDept)
-                .location(medWard)
-                .note("On-call shift overnight")
-                .build();
-        onCallShiftTomorrow = shiftRepository.save(onCallShiftTomorrow);
+        // Create user accounts for staff members (excluding nurse1 who already has test user)
+        List<Staff> staffNeedingUsers = Arrays.asList(nurse2, doctor1, nurse3, surgeon, anaesCoordinator, 
+                nurseConsultant, trainee, medStudent, offCampusTrainee, nurse4, nurse5, doctor2, nurse6);
         
-        // Create Shift Assignments
-        // Assign nurse1 (test user) to morning shift today
-        ShiftAssignment assignment1 = ShiftAssignment.builder()
-                .shift(morningShiftToday)
-                .staff(nurse1)
-                .isLead(false)
-                .assignedAt(LocalDateTime.now())
-                .note("Regular assignment")
-                .build();
-        shiftAssignmentRepository.save(assignment1);
-        
-        // Assign doctor1 as lead to morning shift today
-        ShiftAssignment assignment2 = ShiftAssignment.builder()
-                .shift(morningShiftToday)
-                .staff(doctor1)
-                .isLead(true)
-                .assignedAt(LocalDateTime.now())
-                .note("Lead assignment")
-                .build();
-        shiftAssignmentRepository.save(assignment2);
-        
-        // Assign nurse2 to afternoon shift today
-        ShiftAssignment assignment3 = ShiftAssignment.builder()
-                .shift(afternoonShiftToday)
-                .staff(nurse2)
-                .isLead(false)
-                .assignedAt(LocalDateTime.now())
-                .note("ICU assignment")
-                .build();
-        shiftAssignmentRepository.save(assignment3);
-        
-        // Assign nurse3 to AH shift today
-        ShiftAssignment assignment4 = ShiftAssignment.builder()
-                .shift(anyHourShiftToday)
-                .staff(nurse3)
-                .isLead(false)
-                .assignedAt(LocalDateTime.now())
-                .note("AH shift assignment")
-                .build();
-        shiftAssignmentRepository.save(assignment4);
-        
-        // Assign nurse1 (test user) to tomorrow's afternoon shift
-        ShiftAssignment assignment5 = ShiftAssignment.builder()
-                .shift(afternoonShiftTomorrow)
-                .staff(nurse1)
-                .isLead(false)
-                .assignedAt(LocalDateTime.now())
-                .note("Tomorrow PM assignment")
-                .build();
-        shiftAssignmentRepository.save(assignment5);
-        
-        // Assign doctor1 to tomorrow's AM shift
-        ShiftAssignment assignment6 = ShiftAssignment.builder()
-                .shift(morningShiftTomorrow)
-                .staff(doctor1)
-                .isLead(true)
-                .assignedAt(LocalDateTime.now())
-                .note("Tomorrow AM lead assignment")
-                .build();
-        shiftAssignmentRepository.save(assignment6);
-        
-        // Assign nurse2 to tomorrow's ON_CALL shift
-        ShiftAssignment assignment7 = ShiftAssignment.builder()
-                .shift(onCallShiftTomorrow)
-                .staff(nurse2)
-                .isLead(false)
-                .assignedAt(LocalDateTime.now())
-                .note("ON_CALL shift assignment")
-                .build();
-        shiftAssignmentRepository.save(assignment7);
+        for (Staff staff : staffNeedingUsers) {
+            User user = User.builder()
+                    .domain("staff")
+                    .email(staff.getEmail())
+                    .passwordHash("5d41402abc4b2a76b9719d911017c592") // "hello" in MD5
+                    .salt("")
+                    .role("USER")
+                    .status("ACTIVE")
+                    .createdTime(LocalDateTime.now())
+                    .statusTime(LocalDateTime.now())
+                    .loginAttempts(0)
+                    .build();
+            user = userRepository.save(user);
+            
+            // Link user directly to staff
+            staff.setUser(user);
+            staffRepository.save(staff);
+        }
         
         // Create comprehensive mock data for the last 2 months
         System.out.println("📅 Creating comprehensive mock data for the last 2 months...");
         
-        LocalDate startDate = LocalDate.now().minusMonths(2);
-        LocalDate endDate = LocalDate.now().plusDays(7); // Include next week
+        // Always create test data for current month to ensure frontend can find shifts
+        LocalDate currentDate = LocalDate.now();
+        LocalDate startDate = currentDate.withDayOfMonth(1); // Start of current month
+        LocalDate endDate = currentDate.plusDays(14); // Current date + 2 weeks
         
         int shiftCount = 0;
         int assignmentCount = 0;
         
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            // Skip weekends for some variety
-            if (date.getDayOfWeek().getValue() > 5 && date.getDayOfWeek().getValue() % 2 == 0) {
-                continue;
-            }
+            // Create non-overlapping shifts using distinct time slots
+            List<Shift> dayShifts = new ArrayList<>();
             
-            // Create AM shift
+            // AM shift: 8:00-16:00 (8 hours)
             Shift amShift = Shift.builder()
-                    .startTs(date.atTime(8, 0)) // 8:00 AM
-                    .endTs(date.atTime(16, 0))  // 4:00 PM
+                    .startTs(date.atTime(8, 0))
+                    .endTs(date.atTime(16, 0))
                     .code("AM")
                     .department(emergencyDept)
                     .location(edRoom1)
                     .note("Morning shift - " + date.toString())
                     .build();
             amShift = shiftRepository.save(amShift);
+            dayShifts.add(amShift);
             shiftCount++;
             
-            // Create PM shift
+            // PM shift: 16:00-00:00 (8 hours, next day)
             Shift pmShift = Shift.builder()
-                    .startTs(date.atTime(16, 0)) // 4:00 PM
-                    .endTs(date.atTime(23, 59))  // 11:59 PM (valid hour)
+                    .startTs(date.atTime(16, 0))
+                    .endTs(date.plusDays(1).atTime(0, 0))
                     .code("PM")
                     .department(icuDept)
                     .location(icuBed1)
                     .note("Evening shift - " + date.toString())
                     .build();
             pmShift = shiftRepository.save(pmShift);
+            dayShifts.add(pmShift);
             shiftCount++;
             
-            // Create AH shift (every other day)
+            // AH shift: 00:00-08:00 (8 hours, overnight) - every other day
             if (date.getDayOfMonth() % 2 == 0) {
                 Shift ahShift = Shift.builder()
-                        .startTs(date.atTime(22, 0)) // 10:00 PM
-                        .endTs(date.plusDays(1).atTime(6, 0)) // Next day 6:00 AM
+                        .startTs(date.atTime(0, 0))
+                        .endTs(date.atTime(8, 0))
                         .code("AH")
                         .department(medicalDept)
                         .location(medWard)
                         .note("After hours shift - " + date.toString())
                         .build();
                 ahShift = shiftRepository.save(ahShift);
+                dayShifts.add(ahShift);
                 shiftCount++;
-                
-                // Assign nurse3 to AH shift
-                ShiftAssignment ahAssignment = ShiftAssignment.builder()
-                        .shift(ahShift)
-                        .staff(nurse3)
-                        .isLead(false)
-                        .assignedAt(LocalDateTime.now())
-                        .note("AH shift assignment")
-                        .build();
-                shiftAssignmentRepository.save(ahAssignment);
-                assignmentCount++;
             }
             
-            // Create ON_CALL shift (every 3rd day)
+            // ON_CALL shift: 20:00-04:00 (8 hours, late night) - every 3rd day
             if (date.getDayOfMonth() % 3 == 0) {
                 Shift onCallShift = Shift.builder()
-                        .startTs(date.atTime(6, 0)) // 6:00 AM
-                        .endTs(date.atTime(14, 0))  // 2:00 PM
+                        .startTs(date.atTime(20, 0))
+                        .endTs(date.plusDays(1).atTime(4, 0))
                         .code("ON_CALL")
                         .department(emergencyDept)
                         .location(edRoom1)
                         .note("On-call shift - " + date.toString())
                         .build();
                 onCallShift = shiftRepository.save(onCallShift);
+                dayShifts.add(onCallShift);
                 shiftCount++;
-                
-                // Assign doctor1 to ON_CALL shift
-                ShiftAssignment onCallAssignment = ShiftAssignment.builder()
-                        .shift(onCallShift)
-                        .staff(doctor1)
-                        .isLead(true)
-                        .assignedAt(LocalDateTime.now())
-                        .note("ON_CALL lead assignment")
-                        .build();
-                shiftAssignmentRepository.save(onCallAssignment);
-                assignmentCount++;
             }
             
-            // Assign multiple staff to shifts on weekdays (2-4 staff per shift, no overlaps)
-            if (date.getDayOfWeek().getValue() <= 5) {
-                // AM Shift: Assign 3-4 staff members
-                List<Staff> amStaff = Arrays.asList(nurse1, nurse2, nurseConsultant, trainee);
-                for (int i = 0; i < 3; i++) { // Assign 3 staff to AM shift
-                    ShiftAssignment amAssignment = ShiftAssignment.builder()
-                            .shift(amShift)
-                            .staff(amStaff.get(i))
-                            .isLead(i == 0) // First staff is lead
-                            .assignedAt(LocalDateTime.now())
-                            .note("AM shift assignment - staff " + (i + 1))
-                            .build();
-                    shiftAssignmentRepository.save(amAssignment);
-                    assignmentCount++;
-                }
-                
-                // PM Shift: Assign 2-3 staff members (different from AM to avoid overlap)
-                List<Staff> pmStaff = Arrays.asList(doctor1, surgeon, anaesCoordinator);
-                for (int i = 0; i < 2; i++) { // Assign 2 staff to PM shift
-                    ShiftAssignment pmAssignment = ShiftAssignment.builder()
-                            .shift(pmShift)
-                            .staff(pmStaff.get(i))
-                            .isLead(i == 0) // First staff is lead
-                            .assignedAt(LocalDateTime.now())
-                            .note("PM shift assignment - staff " + (i + 1))
-                            .build();
-                    shiftAssignmentRepository.save(pmAssignment);
-                    assignmentCount++;
-                }
-            }
+            // Assign staff to shifts with variety for swap testing
+            assignStaffToShifts(dayShifts, allStaff, date, shiftAssignmentRepository);
+            assignmentCount += dayShifts.size() * 2; // Average 2 staff per shift
         }
         
         System.out.println("✅ Mock data created successfully!");
@@ -653,26 +572,235 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("   - 1 Hospital: " + hospital.getName());
         System.out.println("   - 3 Departments: ED, ICU, Medical Ward");
         System.out.println("   - 3 Locations: ED Room 1, ICU Bed 1, Medical Ward A");
-        System.out.println("   - 4 Staff members: Sarah Johnson, Michael Chen, Dr. Emily Rodriguez, Jessica Williams");
-        System.out.println("   - " + (6 + shiftCount) + " Shifts: Original 6 + " + shiftCount + " comprehensive shifts");
-        System.out.println("   - " + (7 + assignmentCount) + " Shift assignments: Original 7 + " + assignmentCount + " comprehensive assignments");
-        System.out.println("   - Test user linked to Sarah Johnson");
+        System.out.println("   - 14 Staff members with user accounts:");
+        System.out.println("     • Sarah Johnson (nurse1@weroster.com)");
+        System.out.println("     • Michael Chen (nurse2@weroster.com)");
+        System.out.println("     • Dr. Emily Rodriguez (doctor1@weroster.com)");
+        System.out.println("     • Jessica Williams (nurse3@weroster.com)");
+        System.out.println("     • Dr. Robert Wilson (surgeon@weroster.com)");
+        System.out.println("     • Sarah Brown (anaes@weroster.com)");
+        System.out.println("     • Michael Davis (consultant@weroster.com)");
+        System.out.println("     • Emma Taylor (trainee@weroster.com)");
+        System.out.println("     • James Anderson (student@weroster.com)");
+        System.out.println("     • Lisa Garcia (offcampus@weroster.com)");
+        System.out.println("     • Jennifer Martinez (nurse4@weroster.com)");
+        System.out.println("     • David Thompson (nurse5@weroster.com)");
+        System.out.println("     • Dr. Amanda Lee (doctor2@weroster.com)");
+        System.out.println("     • Rachel Green (nurse6@weroster.com)");
+        System.out.println("   - " + shiftCount + " Shifts: All non-overlapping comprehensive shifts");
+        System.out.println("   - " + assignmentCount + " Shift assignments: All comprehensive assignments");
+        System.out.println("   - All staff have user accounts with password: hello");
         System.out.println("   - Data spans: " + startDate + " to " + endDate + " (2+ months)");
-        System.out.println("🔐 Login credentials: test@example.com / hello");
-        System.out.println("📅 Flexible Shift System:");
-        System.out.println("   - AM: Morning shifts (flexible start/end times)");
-        System.out.println("   - PM: Afternoon shifts (flexible start/end times)");
-        System.out.println("   - AH: Any Hour shifts (completely flexible)");
-        System.out.println("   - ON_CALL: On-call shifts (completely flexible)");
+        System.out.println("🔐 Login credentials for testing:");
+        System.out.println("   - test@example.com / hello (original test user)");
+        System.out.println("   - Any staff email / hello (e.g., sarah.johnson@weroster.com)");
+        System.out.println("📅 Non-Overlapping Shift System:");
+        System.out.println("   - AM: 8:00-16:00 (3 staff per shift)");
+        System.out.println("   - PM: 16:00-00:00 (2 staff per shift)");
+        System.out.println("   - AH: 00:00-08:00 (2 staff per shift, every other day)");
+        System.out.println("   - ON_CALL: 20:00-04:00 (1 staff per shift, every 3rd day)");
+        System.out.println("🔄 Perfect for swap testing with diverse staff assignments!");
         
-            // Verify the user-staff link exists (without accessing lazy properties)
-            Optional<UserStaff> verifyLink = userStaffRepository.findUserStaffByUser(testUser);
-        if (verifyLink.isPresent()) {
-            System.out.println("✅ Verification: UserStaff link exists");
-            System.out.println("   User ID: " + verifyLink.get().getUser().getId());
-            System.out.println("   Staff ID: " + verifyLink.get().getStaff().getId());
+        // Verify the user-staff link exists using direct relationship
+        if (nurse1.getUser() != null) {
+            System.out.println("✅ Verification: Direct User-Staff link exists");
+            System.out.println("   User ID: " + nurse1.getUser().getId() + " (" + nurse1.getUser().getEmail() + ")");
+            System.out.println("   Staff ID: " + nurse1.getId() + " (" + nurse1.getFirstName() + " " + nurse1.getLastName() + ")");
         } else {
-            System.out.println("❌ Verification: UserStaff link NOT found!");
+            System.out.println("❌ Verification: Direct User-Staff link NOT found!");
+        }
+    }
+    
+    /**
+     * Assign staff to shifts with variety for swap testing
+     * Ensures no time overlaps and creates diverse assignments
+     */
+    private void assignStaffToShifts(List<Shift> shifts, List<Staff> allStaff, LocalDate date, 
+                                   ShiftAssignmentRepository shiftAssignmentRepository) {
+        Random random = new Random(date.toEpochDay()); // Use date as seed for consistent randomness
+        
+        for (Shift shift : shifts) {
+            // Determine how many staff to assign based on shift type
+            int staffCount = getStaffCountForShift(shift.getCode());
+            
+            // Get available staff for this shift (avoid overlaps)
+            List<Staff> availableStaff = getAvailableStaffForShift(shift, allStaff, date);
+            
+            // Shuffle and select staff
+            List<Staff> shuffledStaff = new ArrayList<>(availableStaff);
+            for (int i = shuffledStaff.size() - 1; i > 0; i--) {
+                int j = random.nextInt(i + 1);
+                Staff temp = shuffledStaff.get(i);
+                shuffledStaff.set(i, shuffledStaff.get(j));
+                shuffledStaff.set(j, temp);
+            }
+            
+            // Assign staff to shift
+            for (int i = 0; i < Math.min(staffCount, shuffledStaff.size()); i++) {
+                Staff staff = shuffledStaff.get(i);
+                boolean isLead = (i == 0); // First assigned staff is lead
+                
+                ShiftAssignment assignment = ShiftAssignment.builder()
+                        .shift(shift)
+                        .staff(staff)
+                        .isLead(isLead)
+                        .assignedAt(LocalDateTime.now())
+                        .note(shift.getCode() + " shift assignment - " + staff.getFirstName() + " " + staff.getLastName())
+                        .build();
+                shiftAssignmentRepository.save(assignment);
+            }
+        }
+    }
+    
+    /**
+     * Get the number of staff to assign based on shift type
+     */
+    private int getStaffCountForShift(String shiftCode) {
+        switch (shiftCode) {
+            case "AM":
+                return 3; // 3 staff for AM shifts
+            case "PM":
+                return 2; // 2 staff for PM shifts
+            case "AH":
+                return 2; // 2 staff for AH shifts
+            case "ON_CALL":
+                return 1; // 1 staff for ON_CALL shifts
+            default:
+                return 2;
+        }
+    }
+    
+    /**
+     * Get available staff for a shift, ensuring no overlaps and proper test user assignments
+     */
+    private List<Staff> getAvailableStaffForShift(Shift shift, List<Staff> allStaff, LocalDate date) {
+        List<Staff> availableStaff = new ArrayList<>();
+        
+        // Use a deterministic pattern based on date and shift type to ensure consistency
+        int dayOfYear = date.getDayOfYear();
+        int shiftTypeHash = shift.getCode().hashCode();
+        
+        for (int i = 0; i < allStaff.size(); i++) {
+            Staff staff = allStaff.get(i);
+            
+            // Ensure test user (nurse1) gets regular assignments for testing
+            boolean isTestUser = staff.getEmail().equals("sarah.johnson@weroster.com");
+            
+            // Use a pattern that ensures:
+            // 1. Test user gets assignments on specific days for testing
+            // 2. No staff gets assigned to overlapping shifts
+            // 3. Good distribution across all staff
+            
+            boolean isAvailable = true;
+            
+            if (isTestUser) {
+                // Test user gets assignments on specific days for testing
+                if (shift.getCode().equals("AM") && dayOfYear % 7 == 0) {
+                    isAvailable = true; // Test user gets AM shifts every 7 days
+                } else if (shift.getCode().equals("PM") && dayOfYear % 7 == 3) {
+                    isAvailable = true; // Test user gets PM shifts every 7 days
+                } else if (shift.getCode().equals("AH") && dayOfYear % 14 == 6) {
+                    isAvailable = true; // Test user gets AH shifts every 14 days
+                } else if (shift.getCode().equals("ON_CALL") && dayOfYear % 21 == 9) {
+                    isAvailable = true; // Test user gets ON_CALL shifts every 21 days
+                } else {
+                    isAvailable = false; // Test user doesn't get other shifts
+                }
+            } else {
+                // Other staff get distributed assignments
+                int staffHash = (staff.getId().intValue() + dayOfYear + shiftTypeHash) % 7;
+                
+                if (shift.getCode().equals("AM") && staffHash < 4) {
+                    isAvailable = true; // 4 out of 7 staff available for AM
+                } else if (shift.getCode().equals("PM") && staffHash < 3) {
+                    isAvailable = true; // 3 out of 7 staff available for PM
+                } else if (shift.getCode().equals("AH") && staffHash < 2) {
+                    isAvailable = true; // 2 out of 7 staff available for AH
+                } else if (shift.getCode().equals("ON_CALL") && staffHash < 1) {
+                    isAvailable = true; // 1 out of 7 staff available for ON_CALL
+                } else {
+                    isAvailable = false;
+                }
+            }
+            
+            if (isAvailable) {
+                availableStaff.add(staff);
+            }
+        }
+        
+        return availableStaff;
+    }
+    
+    private void createTestLeaveRequests() {
+        System.out.println("🔍 DataInitializer - Creating test leave requests...");
+        
+        // Find the test user (Sarah Johnson)
+        User testUser = userRepository.findAll().stream()
+            .filter(user -> "test@example.com".equals(user.getEmail()))
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException("Test user not found"));
+        Staff testStaff = testUser.getStaff();
+        if (testStaff == null) {
+            System.out.println("🔍 DataInitializer - Test user has no staff record, skipping leave requests");
+            return;
+        }
+        
+        // Find some shifts for the test user
+        List<Shift> testUserShifts = shiftAssignmentRepository.findAll().stream()
+            .filter(assignment -> assignment.getStaff().getId().equals(testStaff.getId()))
+            .map(assignment -> assignment.getShift())
+            .distinct()
+            .limit(3)
+            .toList();
+        
+        if (testUserShifts.isEmpty()) {
+            System.out.println("🔍 DataInitializer - No shifts found for test user, skipping leave requests");
+            return;
+        }
+        
+        // Create test leave requests
+        List<LeaveRequest> testLeaves = new ArrayList<>();
+        
+        // 1. Month Leave request with status "REJECTED" (Declined) - Fixed dates to avoid conflicts
+        LeaveRequest monthLeave = LeaveRequest.builder()
+            .staff(testStaff)
+            .shift(null) // Month leave is not tied to a specific shift
+            .startTime(LocalDateTime.of(2025, 10, 1, 0, 0)) // Fixed date: Oct 1, 2025
+            .endTime(LocalDateTime.of(2025, 10, 31, 23, 59)) // Fixed date: Oct 31, 2025
+            .requestType("Month Leave")
+            .reason("Family vacation")
+            .status("REJECTED")
+            .createdAt(LocalDateTime.now().minusDays(5))
+            .build();
+        testLeaves.add(monthLeave);
+        System.out.println("🔍 DataInitializer - Created Month Leave request (REJECTED)");
+        
+        // 2. Week Leave request with status "APPROVED" - Fixed dates to avoid conflicts
+        LeaveRequest weekLeave = LeaveRequest.builder()
+            .staff(testStaff)
+            .shift(null) // Week leave is not tied to a specific shift
+            .startTime(LocalDateTime.of(2025, 11, 1, 0, 0)) // Fixed date: Nov 1, 2025
+            .endTime(LocalDateTime.of(2025, 11, 7, 23, 59)) // Fixed date: Nov 7, 2025
+            .requestType("Week Leave")
+            .reason("Medical treatment")
+            .status("APPROVED")
+            .createdAt(LocalDateTime.now().minusDays(3))
+            .build();
+        testLeaves.add(weekLeave);
+        System.out.println("🔍 DataInitializer - Created Week Leave request (APPROVED)");
+        
+        // Save all test leave requests
+        leaveRequestRepository.saveAll(testLeaves);
+        System.out.println("🔍 DataInitializer - Saved " + testLeaves.size() + " test leave requests");
+        
+        // Log details
+        for (LeaveRequest leave : testLeaves) {
+            System.out.println("🔍 DataInitializer - Leave Request ID: " + leave.getId() + 
+                ", Type: " + leave.getRequestType() + 
+                ", Status: " + leave.getStatus() + 
+                ", Start: " + leave.getStartTime() + 
+                ", End: " + leave.getEndTime() +
+                ", Shift ID: " + (leave.getShift() != null ? leave.getShift().getId() : "null"));
         }
     }
 }

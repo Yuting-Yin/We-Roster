@@ -15,7 +15,8 @@ async function copy(text: string | undefined) {
 }
 
 export default function ProfileScreen() {
-  // 如需连后端，把 mock: true 去掉即可；或用 .env 开关 EXPO_PUBLIC_MOCK_DASHBOARD=1
+  // To connect to backend, change mock: true to mock: false
+  // Or use .env variable EXPO_PUBLIC_MOCK_DASHBOARD=1
   const {
     displayName,
     initials,

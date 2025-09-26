@@ -10,6 +10,7 @@ import {
   type CalendarDayDto,
   type RefreshResponse
 } from "@/api/myroster";
+import { fetchJson } from "@/lib/api";
 import { dayKey } from "@/lib/date";
 import type { EventItem, ShiftType } from "@/types/roster";
 
@@ -30,7 +31,7 @@ export function useMyRosterData(anchorDate: Date, opts: Options = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Convert backend data to frontend format
+  // Convert raw shift data to EventItem format
   const convertShiftToEvent = useCallback((shift: any): EventItem => {
     const startTime = new Date(shift.startTs).toLocaleTimeString('en-US', { 
       hour12: false, 
@@ -43,11 +44,11 @@ export function useMyRosterData(anchorDate: Date, opts: Options = {}) {
       minute: '2-digit' 
     });
 
-    // Show coworker count instead of teammate names
-    const coworkerCount = shift.coworkers || 0;
-    const teammatesString = coworkerCount > 1 
-      ? `working with ${coworkerCount - 1} others`
-      : undefined;
+    // Show teammate count
+    const teammateCount = shift.teammates ? shift.teammates.length : 0;
+    const teammatesString = teammateCount > 0 
+      ? `working with ${teammateCount} others`
+      : 'working alone';
 
     // Convert teammates to coworkers format
     const coworkers = shift.teammates ? shift.teammates.map((t: any) => ({
@@ -68,80 +69,60 @@ export function useMyRosterData(anchorDate: Date, opts: Options = {}) {
       title: `${shift.dept || 'Shift'} - ${locationString}`,
       type: shift.code as ShiftType,
       location: locationString,
-      role: shift.role, // This will be the designation from backend
+      role: shift.role,
       teammates: teammatesString,
       coworkers: coworkers,
-      action: "arrow", // Allocated shifts show arrow (for details)
+      action: "arrow",
       campus: shift.campus,
       room: shift.room,
       campusAddress: shift.campusAddress,
     };
   }, []);
 
-  const convertDayRosterToEvents = useCallback((dayRoster: DayRosterDto): EventItem[] => {
-    return dayRoster.shifts.map(convertShiftToEvent);
-  }, [convertShiftToEvent]);
-
-  const convertToShiftMap = useCallback((dayRoster: DayRosterDto): Record<string, ShiftType> => {
-    const shiftMap: Record<string, ShiftType> = {};
-    
-    // Group shifts by date to determine the correct DateType
-    const shiftsByDate: Record<string, string[]> = {};
-    dayRoster.shifts.forEach(shift => {
-      const shiftDate = shift.startTs.split('T')[0]; // "2025-09-25T08:00:00" -> "2025-09-25"
-      if (!shiftsByDate[shiftDate]) {
-        shiftsByDate[shiftDate] = [];
-      }
-      shiftsByDate[shiftDate].push(shift.code);
-    });
-    
-    // Convert shift codes to DateType for each date - use actual shift types directly
-    Object.entries(shiftsByDate).forEach(([date, shiftCodes]) => {
-      const types = new Set(shiftCodes);
-      let dateType: ShiftType;
-      
-      // Priority order: ON_CALL > AH > PM > AM
-      if (types.has("ON_CALL")) {
-        dateType = "ON_CALL"; // ○●
-      } else if (types.has("AH")) {
-        dateType = "AH"; // ○●
-      } else if (types.has("PM")) {
-        dateType = "PM"; // ○●
-      } else if (types.has("AM")) {
-        dateType = "AM"; // ●○
-      } else {
-        dateType = "unallocated"; // ○○
-      }
-      
-      shiftMap[date] = dateType;
-    });
-    
-    return shiftMap;
-  }, []);
-
-  const groupEventsByDate = useCallback((events: EventItem[], shifts: any[]): Record<string, EventItem[]> => {
-    const grouped: Record<string, EventItem[]> = {};
-    events.forEach((event, index) => {
-      // Extract date from startTs string directly to avoid timezone issues
-      const shiftDate = shifts[index].startTs.split('T')[0]; // "2025-09-25T08:00:00" -> "2025-09-25"
-      if (!grouped[shiftDate]) {
-        grouped[shiftDate] = [];
-      }
-      grouped[shiftDate].push(event);
-    });
-    return grouped;
-  }, []);
-
-  const loadDayData = useCallback(async (date: Date) => {
+  const loadData = useCallback(async () => {
     if (useMock) {
       setLoading(true);
       setError(null);
       
       // Simulate API delay
       setTimeout(() => {
-        // Mock data - you can replace this with actual mock data
-        setShiftMap({});
-        setEventsByDate({});
+        // Mock data for Sarah Johnson's shifts this week
+        const today = new Date();
+        const mockEventsByDate: Record<string, EventItem[]> = {};
+        const mockShiftMap: Record<string, ShiftType> = {};
+        
+        // Generate mock shifts for the current week
+        for (let i = 0; i < 7; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() - today.getDay() + i); // Start of week + i days
+          const dateKey = date.toISOString().split('T')[0];
+          
+          // Add some shifts for certain days
+          if (i === 1 || i === 3 || i === 5) { // Tuesday, Thursday, Saturday
+            const shiftType = i === 1 ? 'AM' : i === 3 ? 'PM' : 'AH';
+            mockEventsByDate[dateKey] = [{
+              id: `mock-shift-${i}`,
+              start: i === 1 ? '08:00' : i === 3 ? '16:00' : '00:00',
+              end: i === 1 ? '16:00' : i === 3 ? '00:00' : '08:00',
+              title: `${shiftType} Shift - Emergency Department`,
+              type: shiftType as ShiftType,
+              location: 'Emergency Department - ED Room 1',
+              role: 'Registered Nurse',
+              teammates: 'working with 2 others',
+              action: 'arrow',
+              campus: 'Main Campus',
+              room: 'ED Room 1',
+              campusAddress: '123 Hospital St, City'
+            }];
+            mockShiftMap[dateKey] = shiftType as ShiftType;
+          } else {
+            mockEventsByDate[dateKey] = [];
+            // No shift = no entry in mockShiftMap (undefined)
+          }
+        }
+        
+        setShiftMap(mockShiftMap);
+        setEventsByDate(mockEventsByDate);
         setLoading(false);
       }, delayMs);
       return;
@@ -151,66 +132,41 @@ export function useMyRosterData(anchorDate: Date, opts: Options = {}) {
       setLoading(true);
       setError(null);
 
-      const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+      // Use the same approach as useRosterData - load data for multiple months
+      const monthAnchorDate = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1);
+      const params = new URLSearchParams({
+        month: monthAnchorDate.toISOString().slice(0, 7), // YYYY-MM format
+        months: '2', // Load 2 months of data
+      });
       
-      // Get day roster data
-      const dayRoster = await getDayRoster(dateStr);
-      const events = convertDayRosterToEvents(dayRoster);
-      const shiftMap = convertToShiftMap(dayRoster);
       
-      // Group events by their actual dates using original shift data
-      const groupedEvents = groupEventsByDate(events, dayRoster.shifts);
+      const res = await fetchJson<{
+        events?: Record<string, EventItem[] | undefined>;
+        shiftMap?: Record<string, ShiftType>;
+      }>(`/api/v1/myroster/roster?${params.toString()}`);
 
-      setEventsByDate(prev => ({
-        ...prev,
-        ...groupedEvents
-      }));
+      // Normalize and set the data
+      const normalizedEvents: Record<string, EventItem[]> = {};
+      Object.entries(res.events || {}).forEach(([date, shifts]) => {
+        if (shifts && Array.isArray(shifts)) {
+          normalizedEvents[date] = shifts.map(convertShiftToEvent);
+        }
+      });
+      const normalizedShiftMap = res.shiftMap || {};
       
-      setShiftMap(prev => ({
-        ...prev,
-        ...shiftMap
-      }));
+      setEventsByDate(normalizedEvents);
+      setShiftMap(normalizedShiftMap);
 
     } catch (err: any) {
       setError(err?.message ?? "Failed to load roster data");
     } finally {
       setLoading(false);
     }
-  }, [useMock, delayMs, convertDayRosterToEvents, convertToShiftMap]);
-
-  const loadCalendarData = useCallback(async (startDate: Date, months: number = 1) => {
-    if (useMock) return;
-
-    try {
-      const startStr = startDate.toISOString().split('T')[0];
-      const calendarDays = await getCalendarRange(startStr, months);
-      
-      // Convert calendar data to shift map
-      const newShiftMap: Record<string, ShiftType> = {};
-      calendarDays.forEach(day => {
-        if (day.assignedAM || day.assignedPM) {
-          newShiftMap[day.date] = day.assignedAM ? 'AM' : 'PM';
-        }
-      });
-
-      setShiftMap(prev => ({
-        ...prev,
-        ...newShiftMap
-      }));
-
-    } catch (err: any) {
-      console.error('Failed to load calendar data:', err);
-    }
-  }, [useMock]);
+  }, [useMock, delayMs]);
 
   const refresh = useCallback(async () => {
-    const today = new Date();
-    await loadDayData(today);
-    
-    // Also load calendar data for the current month
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    await loadCalendarData(monthStart, 1);
-  }, [loadDayData, loadCalendarData]);
+    await loadData();
+  }, [loadData]);
 
   const getEventsForDate = useCallback(
     (d: Date) => {
@@ -222,22 +178,19 @@ export function useMyRosterData(anchorDate: Date, opts: Options = {}) {
 
   // Load initial data
   useEffect(() => {
-    loadDayData(anchorDate);
-    
-    // Load calendar data for the current month
-    const monthStart = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1);
-    loadCalendarData(monthStart, 1);
-  }, [anchorDate, loadDayData, loadCalendarData]);
+    loadData();
+  }, [loadData]);
 
   return useMemo(
     () => ({ 
       shiftMap, 
+      eventsByDate,
       loading, 
       error, 
       refresh, 
       getEventsForDate,
-      loadDayData 
+      loadData 
     }),
-    [shiftMap, loading, error, refresh, getEventsForDate, loadDayData]
+    [shiftMap, eventsByDate, loading, error, refresh, getEventsForDate, loadData]
   );
 }

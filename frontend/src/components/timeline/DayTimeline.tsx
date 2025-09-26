@@ -1,16 +1,22 @@
 // day view for My roster page
 
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { EventItem } from "@/types/roster";
 import { sx, sy, W } from "@/theme/metrics";
 import { COLOR } from "@/theme/colors";
 
-const HOUR_START = 8, HOUR_END = 21, HOUR_HEIGHT = sy(72), TIME_GUTTER = sx(52);
+const HOUR_START = 0, HOUR_END = 24, HOUR_HEIGHT = sy(72), TIME_GUTTER = sx(52);
 const toMinutes = (t: string) => { const [h,m]=t.split(":").map(Number); return h*60+m; };
 const yFromTime = (t: string) => ((toMinutes(t)-HOUR_START*60)/60)*HOUR_HEIGHT;
-const hFromRange = (s: string, e: string) => ((toMinutes(e)-toMinutes(s))/60)*HOUR_HEIGHT;
+const hFromRange = (s: string, e: string) => {
+  const startMinutes = toMinutes(s);
+  const endMinutes = toMinutes(e);
+  // Handle overnight shifts (e.g., 22:00-06:00)
+  const duration = endMinutes < startMinutes ? (24*60 - startMinutes + endMinutes) : (endMinutes - startMinutes);
+  return (duration/60)*HOUR_HEIGHT;
+};
 
 export default function DayTimeline({
   events,
@@ -22,9 +28,38 @@ export default function DayTimeline({
   onOpenRequest: (ev: EventItem) => void;
 }) {
   const totalHeight = (HOUR_END - HOUR_START) * HOUR_HEIGHT;
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Auto-scroll to first event when events change
+  useEffect(() => {
+    if (events.length > 0 && scrollViewRef.current) {
+      // Find the earliest event start time
+      const earliestEvent = events.reduce((earliest, current) => {
+        const earliestTime = toMinutes(earliest.start);
+        const currentTime = toMinutes(current.start);
+        return currentTime < earliestTime ? current : earliest;
+      });
+
+      // Calculate scroll position to show the first event
+      const firstEventTop = yFromTime(earliestEvent.start);
+      const scrollPosition = Math.max(0, firstEventTop - sy(100)); // Offset by 100px to show some context above
+
+      // Scroll to the first event with smooth animation
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({
+          y: scrollPosition,
+          animated: true,
+        });
+      }, 100);
+    }
+  }, [events]);
 
   return (
-    <ScrollView contentContainerStyle={{ paddingBottom: sy(80) }}>
+    <ScrollView 
+      ref={scrollViewRef}
+      contentContainerStyle={{ paddingBottom: sy(80) }}
+      showsVerticalScrollIndicator={true}
+    >
       <View style={[styles.wrap, { height: totalHeight }]}>
         {Array.from({ length: HOUR_END - HOUR_START + 1 }).map((_, i) => {
           const hour = HOUR_START + i, top = i * HOUR_HEIGHT, label = `${String(hour).padStart(2,"0")}:00`;
@@ -37,7 +72,15 @@ export default function DayTimeline({
         })}
 
         {events.map((ev) => {
-          const top = yFromTime(ev.start), height = hFromRange(ev.start, ev.end);
+          const startMinutes = toMinutes(ev.start);
+          const endMinutes = toMinutes(ev.end);
+          const isOvernight = endMinutes < startMinutes;
+          
+          // For overnight shifts, we'll show them as two separate visual elements
+          // or adjust the rendering to handle the midnight crossover
+          const top = yFromTime(ev.start);
+          const height = hFromRange(ev.start, ev.end);
+          
           return (
             <View
               key={ev.id}
@@ -46,9 +89,12 @@ export default function DayTimeline({
                 {
                   top,
                   left: TIME_GUTTER + sx(8),
-                  height,
+                  height: Math.min(height, totalHeight - top), // Ensure card doesn't extend beyond timeline
                   width: W - TIME_GUTTER - sx(16),
                   borderTopColor: ev.color ?? COLOR.brand,
+                  // Add visual indicator for overnight shifts
+                  borderLeftWidth: isOvernight ? sx(4) : 0,
+                  borderLeftColor: isOvernight ? COLOR.warn : 'transparent',
                 },
               ]}
             >
