@@ -198,6 +198,12 @@ public class LeaveController {
             
             return ResponseEntity.ok(response);
             
+        } catch (RuntimeException e) {
+            System.out.println("🔍 Leave Request - Error: " + e.getMessage());
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            return ResponseEntity.status(400).body(response);
         } catch (Exception e) {
             System.out.println("🔍 Leave Request - Error: " + e.getMessage());
             e.printStackTrace();

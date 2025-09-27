@@ -11,7 +11,8 @@
     "moduleResolution": "Bundler",
     "types": [
       "node",
-      "react"
+      "react",
+      "jest"
     ],
     "allowJs": true,
     "esModuleInterop": true,
@@ -31,7 +32,8 @@
     "App.tsx",
     "App.ts",
     "index.ts",
-    "index.tsx"
+    "index.tsx",
+    "src/__tests__/**/*"
   ],
   "exclude": [
     "node_modules",

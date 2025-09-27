@@ -3,7 +3,9 @@ package com.weroster.config;
 import com.weroster.entity.*;
 import com.weroster.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -14,7 +16,11 @@ import java.util.List;
 import java.util.Random;
 
 @Component
+@Profile("!test")
 public class DataInitializer implements CommandLineRunner {
+
+    @Value("${com.weroster.config.DataInitializer.enabled:true}")
+    private boolean enabled;
 
     @Autowired
     private UserRepository userRepository;
@@ -47,6 +53,10 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        if (!enabled) {
+            System.out.println("🔍 DataInitializer - Disabled by configuration");
+            return;
+        }
         
         // Clear leave requests for testing (real version should not do this)
         System.out.println("🔍 DataInitializer - Clearing existing leave requests for testing...");
