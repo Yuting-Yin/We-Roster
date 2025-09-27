@@ -1,0 +1,277 @@
+import React, { useEffect, useState, useRef, useMemo } from "react";
+import { View, StyleSheet, Text } from "react-native";
+import { useRoute } from "@react-navigation/native";
+import CollapsibleCalendar from "@/components/calendar/CollapsibleCalendar";
+import DayTimeline from "@/components/timeline/DayTimeline";
+import WeekTimeline from "@/components/timeline/WeekTimeline";
+import ShiftDetails from "@/components/overlays/ShiftDetails";
+import RequestShift from "@/components/overlays/RequestShift";
+import RequestLeave from "@/components/overlays/RequestLeave";
+import SwapShift from "@/components/overlays/SwapShift";
+import TinyMenu from "@/components/overlays/TinyMenu";
+import SuccessToast from "@/components/overlays/SuccessToast";
+import { COLOR } from "@/theme/colors";
+import { EventItem } from "@/types/roster";
+import { fmt } from "@/lib/date";
+
+// users for swap
+import { getAvailableUsers, type ApiUser } from "@/api/user";
+import { useMyRosterData } from "@/hooks/useMyRoster";
+import { useRosterData } from "@/hooks/useRoster";
+import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
+import { useOverlayContext } from "@/contexts/OverlayContext";
+
+// user infos that only used for UI/SwapShift
+type UIUser = { id: string; name: string; initials: string };
+
+export default function MyRoster() {
+  const rootRef = useRef<View>(null);
+  const [mode, setMode] = useState<"day" | "week">("day");
+  const route = useRoute<any>();
+
+  // Use navigation param if provided, otherwise default to today
+  const [date, setDate] = useState(() => {
+    const selectedDate = route.params?.selectedDate;
+    console.log('🔍 Roster - route.params:', route.params);
+    console.log('🔍 Roster - selectedDate:', selectedDate);
+    const finalDate = selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date();
+    console.log('🔍 Roster - finalDate:', finalDate);
+    return finalDate;
+  });
+  
+  // Use useRosterData for calendar dots (shiftMap) - loads data for entire month range
+  const { shiftMap, getEventsForDate: getCalendarEvents, refresh: refreshRoster, loading: calendarLoading, error: calendarError } = useRosterData(date, { mock: false, months: 2 });
+  
+  // Use useMyRosterData for timeline events - loads data for specific day
+  const { getEventsForDate, loading: timelineLoading, error: timelineError } = useMyRosterData(date, { mock: false });
+  const events = useMemo(() => getEventsForDate(date), [getEventsForDate, date]);
+  
+  // Combine loading states and errors
+  const loading = calendarLoading || timelineLoading;
+  const error = calendarError || timelineError;
+
+  // ===== avaliable users for wsap (api original data) =====
+  const [availableUsers, setAvailableUsers] = useState<ApiUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [userErr, setUserErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoadingUsers(true);
+    setUserErr(null);
+    getAvailableUsers()
+      .then((users) => {
+        if (mounted) setAvailableUsers(users);
+      })
+      .catch((e) => {
+        console.error('🔍 MyRoster - Error loading users:', e);
+        if (mounted) setUserErr(e?.message ?? "Failed to load users");
+      })
+      .finally(() => mounted && (setLoadingUsers(false)));
+    return () => { mounted = false; };
+  }, []);
+
+  // —— Week related —— //
+  const startOfWeekMon = (d: Date) => {
+    const r = new Date(d);
+    const day = r.getDay(); // 0..6
+    const diff = day === 0 ? -6 : 1 - day;
+    r.setDate(r.getDate() + diff);
+    r.setHours(0, 0, 0, 0);
+    return r;
+  };
+  const weekStart = React.useMemo(() => startOfWeekMon(date), [date]);
+
+  // overlays
+  const [detailVisible, setDetailVisible] = React.useState(false);
+  const [detailEvent, setDetailEvent] = React.useState<EventItem | undefined>();
+  const [menuVisible, setMenuVisible] = React.useState(false);
+  const [menuAnchor, setMenuAnchor] = React.useState<{ x: number; y: number } | null>(null);
+
+  const [reqVisible, setReqVisible] = React.useState(false);
+  const [reqSlot, setReqSlot] = React.useState<{ start: string; end: string } | undefined>();
+
+  const [leaveVisible, setLeaveVisible] = React.useState(false);
+  const [swapVisible, setSwapVisible] = React.useState(false);
+
+  const [toast, setToast] = React.useState(false);
+  const showToast = () => { setToast(true); setTimeout(() => setToast(false), 1800); };
+
+  // Register overlays with context for auto-close functionality
+  const { registerOverlay, unregisterOverlay } = useOverlayContext();
+  
+  React.useEffect(() => {
+    registerOverlay('myroster-detail', () => setDetailVisible(false));
+    registerOverlay('myroster-menu', () => setMenuVisible(false));
+    registerOverlay('myroster-request', () => setReqVisible(false));
+    registerOverlay('myroster-leave', () => setLeaveVisible(false));
+    registerOverlay('myroster-swap', () => setSwapVisible(false));
+    registerOverlay('myroster-toast', () => setToast(false));
+    
+    return () => {
+      unregisterOverlay('myroster-detail');
+      unregisterOverlay('myroster-menu');
+      unregisterOverlay('myroster-request');
+      unregisterOverlay('myroster-leave');
+      unregisterOverlay('myroster-swap');
+      unregisterOverlay('myroster-toast');
+    };
+  }, [registerOverlay, unregisterOverlay]);
+
+  // Auto-close overlays when navigating to other tabs
+  useAutoCloseOverlays([
+    () => setDetailVisible(false),
+    () => setMenuVisible(false),
+    () => setReqVisible(false),
+    () => setLeaveVisible(false),
+    () => setSwapVisible(false),
+    () => setToast(false)
+  ]);
+
+  const openDetails = (ev: EventItem) => { setDetailEvent(ev); setDetailVisible(true); };
+  const closeDetails = () => { setDetailVisible(false); setMenuVisible(false); };
+
+  const openRequest = (ev: EventItem) => { setReqSlot({ start: ev.start, end: ev.end }); setReqVisible(true); };
+
+  // —— API User → UI User —— //
+  const initialsOf = (fullName: string) => {
+    const parts = (fullName || "").trim().split(/\s+/);
+    if (parts.length <= 1) return (parts[0] || "NA").slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+  const toUIUser = (u: ApiUser): UIUser => {
+    const name = (u as any).displayName ?? (u as any).name ?? "";
+    return { id: String(u.id), name, initials: initialsOf(name) };
+  };
+  const availableUIUsers = React.useMemo<UIUser[]>(
+    () => {
+      return availableUsers.map(toUIUser);
+    },
+    [availableUsers]
+  );
+
+  // Click "+" in Week: switch to the corresponding date and then open RequestShift
+  const openRequestFromWeek = (day: Date, slot: { start: string; end: string }) => {
+    setDate(new Date(day));
+    setReqSlot(slot);
+    setReqVisible(true);
+  };
+
+  return (
+    <View ref={rootRef} style={{ flex: 1, backgroundColor: COLOR.bg }}>
+      {/* Show error if API call failed */}
+      {error && (
+        <View style={{ padding: 16, backgroundColor: '#ffebee', margin: 16, borderRadius: 8 }}>
+          <Text style={{ color: '#c62828', textAlign: 'center' }}>
+            Error loading roster: {error}
+          </Text>
+        </View>
+      )}
+
+      <View style={styles.calendarStack}>
+        <CollapsibleCalendar
+          value={date}
+          onChange={setDate}
+          shiftMap={shiftMap}
+          title={
+            mode === "day"
+              ? `${fmt(date, { weekday: "short" })}, ${fmt(date, { day: "2-digit", month: "long", year: "numeric" })}`
+              : `${fmt(weekStart, { day: "2-digit", month: "short" })} - ${fmt(
+                  new Date(weekStart.getTime() + 6 * 86400000),
+                  { day: "2-digit", month: "short", year: "numeric" }
+                )}`
+          }
+          leftAction={{ icon: "menu", onPress: () => setMode((m) => (m === "day" ? "week" : "day")) }}
+          rightAction={{ icon: "refresh", onPress: () => {
+            setLoadingUsers(true);
+            refreshRoster();
+            getAvailableUsers()
+              .then((users) => setAvailableUsers(users))
+              .catch((e) => setUserErr(e?.message ?? "Failed to load users"))
+              .finally(() => setLoadingUsers(false));
+          }}}
+        />
+      </View>
+
+      {mode === "day" ? (
+        <DayTimeline events={events} onOpenDetails={openDetails} onOpenRequest={openRequest} />
+      ) : (
+        <WeekTimeline
+          weekStart={weekStart}
+          selectedDate={date}
+          getEventsFor={(d) => getEventsForDate(d)}
+          onOpenDetails={openDetails}
+          onOpenRequest={openRequestFromWeek}
+        />
+      )}
+
+      <ShiftDetails
+        visible={detailVisible}
+        onClose={closeDetails}
+        onPressPlus={({ x, y }) => {
+          rootRef.current?.measureInWindow((rx, ry) => {
+            setMenuAnchor({ x: x - rx, y: y - ry });
+            setMenuVisible(true);
+          });
+        }}
+        date={date}
+        event={detailEvent}
+      />
+
+      <TinyMenu
+        visible={detailVisible && menuVisible}
+        anchor={menuAnchor}
+        onClose={() => setMenuVisible(false)}
+        onRequestLeave={() => { 
+          setMenuVisible(false); 
+          // Set reqSlot to current shift's times when opening leave request
+          if (detailEvent) {
+            setReqSlot({ start: detailEvent.start, end: detailEvent.end });
+          }
+          setLeaveVisible(true); 
+        }}
+        onSwapShift={() => { setMenuVisible(false); setSwapVisible(true); }}
+      />
+
+      <RequestShift
+        visible={reqVisible}
+        onCancel={() => setReqVisible(false)}
+        onSubmitted={() => { setReqVisible(false); showToast(); }}
+        date={date}
+        slot={reqSlot}
+      />
+
+      <RequestLeave
+        visible={leaveVisible}
+        onCancel={() => setLeaveVisible(false)}
+        onSubmitted={() => { 
+          setLeaveVisible(false); 
+          showToast();
+          // Refresh roster data to show the new leave request
+          refreshRoster();
+        }}
+        date={date}
+        slot={reqSlot}
+        shiftId={detailEvent?.id} // Pass the current shift's ID for Day Leave requests
+      />
+
+      <SwapShift
+        visible={swapVisible}
+        onCancel={() => setSwapVisible(false)}
+        onSubmitted={() => { setSwapVisible(false); showToast(); }}
+        date={date}
+        slot={reqSlot}
+        availableUsers={availableUIUsers}
+        // loading={loadingUsers}
+        // error={userErr}
+      />
+
+      <SuccessToast visible={toast} text="Successfully submitted" />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  calendarStack: { position: "relative", zIndex: 2, elevation: 4 },
+});
+
