@@ -4,77 +4,138 @@
   <summary>Table of Contents</summary>
   <ol>
     <li><a href="#project-overview">Project Overview</a></li>
-    <li><a href="#github-repo-structure">Github Repo Structure</a></li>
-    <li><a href="#client-contact-information">Client Contact Information</a></li>
-    <li><a href="#team-supervisor">Team Supervisor</a></li>
-    <li><a href="#team-members">Team Members</a></li>
+    <li><a href="#quick-setup">Quick Setup</a></li>
+    <li><a href="#tech-stack">Tech Stack</a></li>
+    <li><a href="#project-structure">Project Structure</a></li>
+    <li><a href="#team-information">Team Information</a></li>
     <li><a href="#change-logs">Change Logs</a></li>
-    <ul>
   </ol>
 </details>
 
 ## Project Overview
-WeRoster is an employee rostering system used by organisations with shift-based workforces (e.g., hospitals, hospitality, retail). The platform’s primary purpose is to streamline shift scheduling, improve communication between managers and staff, and reduce inefficiencies in current processes. It currently operates as a mobile app for staff and a web interface for managers, but has gaps in functionality, performance, and integration.
+WeRoster is an employee rostering system used by organisations with shift-based workforces (e.g., hospitals, hospitality, retail). The platform's primary purpose is to streamline shift scheduling, improve communication between managers and staff, and reduce inefficiencies in current processes. It currently operates as a mobile app for staff and a web interface for managers, but has gaps in functionality, performance, and integration.
 
-## Github Repo Structure
+## Quick Setup
 
-```
-.
-├── docs/                          # Documentation files (organized by sprints)
-│   ├── main/                      # Main project documentation
-│   │   └── RiskManagement.md      # Risk management documentation
-│   ├── sprint 1/                  # Sprint 1 documentation and deliverables
-│   │   └── RiskMonitoring.md      # Risk monitoring documentation
-│   │   └── ProjectInitiation.md   # Initial project planning, objectives, and scope for Sprint 1
-│   ├── sprint 2/                  # Sprint 2 documentation and deliverables
-│   └── sprint 3/                  # Sprint 3 documentation and deliverables
-├── tests/                         # User/system tests
-├── prototypes/                    # Prototype designs representing different fidelity levels
-├── ui/                            # Graphical assets (icons, fonts, backgrounds, etc.)
-├── data samples/                  # Input data to simulate/demonstrate the prototype
-├── templates/                     # Project templates and guides
-│   ├── Burn_Down_Chart_Guide_and_Example.md
-│   ├── Communication_Strategy_Guide_and_Example.md
-│   ├── Defect_Log_Guide_and_Example.md
-│   ├── Groomed_PB_Guide_and_Example.md
-│   ├── Project_Decisions_and_Actions_Guide_and_Example.md
-│   ├── Project_Initiation_Guide_and_Example.md
-│   ├── QA_Strategy_Guide_and_Example.md
-│   ├── Retrospective_Guide_and_Example.md
-│   ├── Risk_Managment_Guide_and_Example.md
-│   ├── Risk_Monitoring_Guide_and_Example.md
-│   ├── Scrum_Roles_Responsibilities_Guide_and_Example.md
-│   ├── Showcase_Guide_and_Example.md
-│   ├── Sprint_Backlog_Guide_and_Example.md
-│   ├── Sprint_Planning_Guide_and_Example.md
-│   └── Stand_Up_Meeting_Guide_And_Example.md
-├── etc/                           # Additional project resources
-│   ├── Test.md
-│   └── burn_down_chart_example.jpg
-└── README.md                      # Project description and documentation
+### Prerequisites
+- **Java 17+** - [Download](https://adoptium.net/)
+- **MySQL 8.0+** - [Download](https://dev.mysql.com/downloads/mysql/)
+- **Node.js 18+** - [Download](https://nodejs.org/)
+
+### One-Click Setup
+
+**Windows:**
+```cmd
+# Clone the repository
+git clone <repository-url>
+cd We-Roster
+
+# Setup backend
+.\setup_backend.bat
+
+# Setup frontend (in new terminal)
+cd frontend
+npm install
+npm start
 ```
 
-## Client Contact Information
+**Linux/macOS:**
+```bash
+# Clone the repository
+git clone <repository-url>
+cd We-Roster
 
+# Setup backend
+chmod +x setup_backend.sh
+./setup_backend.sh
+
+# Setup frontend (in new terminal)
+cd frontend
+npm install
+npm start
+```
+
+### Alternative: Docker Setup
+```bash
+# Use Docker for MySQL
+.\setup_backend_docker.bat  # Windows
+./setup_backend_docker.sh   # Linux/macOS
+
+# Then run backend setup
+.\setup_backend.bat         # Windows
+./setup_backend.sh          # Linux/macOS
+```
+
+### Access the Application
+- **Backend API**: http://localhost:8080/api/v1
+- **Health Check**: http://localhost:8080/api/v1/health
+- **Frontend**: Scan QR code with Expo Go app
+
+### Test Credentials
+- **Domain**: `test`
+- **Email**: `sarah.johnson@weroster.com`
+- **Password**: `hello`
+
+> 📖 **For detailed setup instructions, troubleshooting, and manual setup steps, see [SETUP_GUIDE.md](SETUP_GUIDE.md)**
+
+## Tech Stack
+
+### Backend
+- **Framework**: Spring Boot 3.x
+- **Language**: Java 17+
+- **Database**: MySQL 8.0+
+- **Build Tool**: Gradle
+- **Authentication**: JWT
+
+### Frontend
+- **Framework**: React Native with Expo
+- **Language**: TypeScript
+- **Navigation**: React Navigation
+- **State Management**: React Hooks
+- **HTTP Client**: Axios
+
+## Project Structure
+
+```
+We-Roster/
+├── backend/                       # Spring Boot backend application
+│   ├── src/main/java/            # Java source code
+│   ├── src/main/resources/       # Configuration files
+│   └── build.gradle              # Gradle build configuration
+├── frontend/                      # React Native mobile application
+│   ├── src/                      # TypeScript source code
+│   ├── assets/                   # Images and static assets
+│   └── package.json              # Node.js dependencies
+├── DataBase/                      # Database schema and scripts
+│   └── Database.sql              # MySQL database schema
+├── setup_backend.bat             # Windows backend setup script
+├── setup_backend.sh              # Linux/macOS backend setup script
+├── setup_backend_docker.bat      # Windows Docker MySQL setup
+├── setup_backend_docker.sh       # Linux/macOS Docker MySQL setup
+├── SETUP_GUIDE.md                # Detailed setup instructions
+└── README.md                     # Project overview and quick setup
+```
+
+## Team Information
+
+### Client Contact
 | Name            | Email                           |
 | --------------- | ------------------------------- |
-| Quan Pham   | [client.email@domain.com]      |
+| Quan Pham       | [client.email@domain.com]      |
 
-## Team Supervisor
-
+### Team Supervisor
 | Name            | Email                           |
 | --------------- | ------------------------------- |
-| Sandy Luo    | sandyluo@unimelb.edu.au     |
+| Sandy Luo       | sandyluo@unimelb.edu.au        |
 
-## Team Members
-
-| Name          | Email                               | Role          |
-| ------------- | ----------------------------------- | ------------- |
-| Katherine Xin    | kaxin@student.unimelb.edu.au     | Product owner |
-| Haoyu Hu    | haoyu.hu.2@student.unimelb.edu.au     | Scrum master  |
-| Yichen Pan    | yichenp2@student.unimelb.edu.au     | Developer     |
-| Quan yu    | quyu@student.unimelb.edu.au     | Developer     |
-| Yuting Yin    | yuting.yin@student.unimelb.edu.au     | Developer     |
+### Team Members
+| Name            | Email                               | Role          |
+| --------------- | ----------------------------------- | ------------- |
+| Katherine Xin   | kaxin@student.unimelb.edu.au        | Product owner |
+| Haoyu Hu        | haoyu.hu.2@student.unimelb.edu.au  | Scrum master  |
+| Yichen Pan      | yichenp2@student.unimelb.edu.au     | Developer     |
+| Quan yu         | quyu@student.unimelb.edu.au         | Developer     |
+| Yuting Yin      | yuting.yin@student.unimelb.edu.au   | Developer     |
 
 ## Change Logs
 ### Sprint 1
@@ -92,7 +153,9 @@ WeRoster is an employee rostering system used by organisations with shift-based 
 | ---- | ----------- | --- |
 | [Date] | [Description] | [commit-hash] |
 
-Project Link:
-[https://github.com/Yuting-Yin/We-Roster](https://github.com/Yuting-Yin/We-Roster)
+## Repository
+**GitHub**: [https://github.com/Yuting-Yin/We-Roster](https://github.com/Yuting-Yin/We-Roster)
+
+---
 
 <p align="right">(<a href="#We-Roster">back to top</a>)</p>
