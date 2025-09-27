@@ -27,6 +27,20 @@ public class SwapController {
     @PostMapping
     public ResponseEntity<Map<String, Object>> createSwapRequest(@RequestBody CreateSwapRequestInput input) {
         try {
+            // Validate input
+            if (input.getRequesterId() == null || input.getRequesterId().trim().isEmpty()) {
+                throw new RuntimeException("Requester ID is required");
+            }
+            
+            if (input.getTargetUserId() == null || input.getTargetUserId().trim().isEmpty()) {
+                throw new RuntimeException("Target ID is required");
+            }
+            
+            // Check if requester and target are the same
+            if (input.getRequesterId().equals(input.getTargetUserId())) {
+                throw new RuntimeException("Cannot swap with yourself");
+            }
+            
             // Find staff members
             Staff requester = staffRepository.findById(Long.parseLong(input.getRequesterId()))
                     .orElseThrow(() -> new RuntimeException("Requester not found"));
@@ -57,7 +71,22 @@ public class SwapController {
             
             return ResponseEntity.ok(response);
             
+        } catch (RuntimeException e) {
+            System.out.println("🔍 Swap Request - Error: " + e.getMessage());
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            
+            // Check if it's a validation error (user not found, etc.) or a system error (database, etc.)
+            if (e.getMessage().contains("not found") || e.getMessage().contains("required") || 
+                e.getMessage().contains("Cannot swap") || e.getMessage().contains("could not be parsed")) {
+                return ResponseEntity.status(400).body(response);
+            } else {
+                return ResponseEntity.status(500).body(response);
+            }
         } catch (Exception e) {
+            System.out.println("🔍 Swap Request - Error: " + e.getMessage());
+            e.printStackTrace();
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("error", e.getMessage());
