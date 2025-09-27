@@ -1,29 +1,29 @@
 package com.weroster.dto;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import java.util.List;
+import java.util.ArrayList;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class CalendarDayDto {
     private String date;
-    private Boolean assignedAM;
-    private Boolean assignedPM;
-    private Boolean isToday;
+    private String dayName;
+    private boolean isToday;
+    private boolean isWeekend;
+    private boolean isHoliday;
+    private List<ShiftItem> shifts;
     
-    public CalendarDayDto() {}
-    
-    public CalendarDayDto(String date, Boolean assignedAM, Boolean assignedPM, Boolean isToday) {
+    public CalendarDayDto(String date, boolean isToday, boolean isWeekend, boolean isHoliday) {
         this.date = date;
-        this.assignedAM = assignedAM;
-        this.assignedPM = assignedPM;
         this.isToday = isToday;
+        this.isWeekend = isWeekend;
+        this.isHoliday = isHoliday;
+        this.shifts = new ArrayList<>();
     }
-    
-    public String getDate() { return date; }
-    public void setDate(String date) { this.date = date; }
-    
-    public Boolean getAssignedAM() { return assignedAM; }
-    public void setAssignedAM(Boolean assignedAM) { this.assignedAM = assignedAM; }
-    
-    public Boolean getAssignedPM() { return assignedPM; }
-    public void setAssignedPM(Boolean assignedPM) { this.assignedPM = assignedPM; }
-    
-    public Boolean getIsToday() { return isToday; }
-    public void setIsToday(Boolean isToday) { this.isToday = isToday; }
 }

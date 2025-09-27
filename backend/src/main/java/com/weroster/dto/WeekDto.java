@@ -1,19 +1,23 @@
 package com.weroster.dto;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import java.util.List;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class WeekDto {
-    private String start;
-    private String end;
+    private String weekStart;
+    private String weekEnd;
+    private List<CalendarDayDto> days;
     
-    public WeekDto() {}
-    
-    public WeekDto(String start, String end) {
-        this.start = start;
-        this.end = end;
+    public WeekDto(String weekStart, String weekEnd) {
+        this.weekStart = weekStart;
+        this.weekEnd = weekEnd;
+        this.days = new java.util.ArrayList<>();
     }
-    
-    public String getStart() { return start; }
-    public void setStart(String start) { this.start = start; }
-    
-    public String getEnd() { return end; }
-    public void setEnd(String end) { this.end = end; }
 }

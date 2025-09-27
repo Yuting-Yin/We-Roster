@@ -1,84 +1,57 @@
 package com.weroster.dto;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import java.util.List;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ShiftItem {
     private Long id;
+    private String start;
+    private String end;
+    private String date;
+    private String location;
+    private String department;
+    private String assignedTo;
+    private String status;
+    private String role;
     private String startTs;
     private String endTs;
-    private String dept;
-    private String location;
-    private String code;
+    private Boolean isActive;
+    private Integer duration;
+    private String shiftType;
+    private List<TeammateDto> teammates;
+    private String description;
     private Boolean isLead;
-    private Integer coworkers;
-    private String role;
-    private String note;
-    private List<TeammateDto> teammates; // Staff allocated to the same shift
-    private String campus; // Hospital campus name
-    private String room; // Room name
-    private String campusAddress; // Physical address of the campus
+    private String campus;
+    private String campusAddress;
     
-    public ShiftItem() {}
-    
-    public ShiftItem(Long id, String startTs, String endTs, String dept, String location, String code, 
-                    Boolean isLead, Integer coworkers, String note, List<TeammateDto> teammates, 
-                    String campus, String room, String campusAddress) {
+    public ShiftItem(Long id, String start, String end, String department, String location, String shiftCode, Boolean isLead, Integer duration, String description, List<TeammateDto> teammates, String campus, String campusAddress, String locationName) {
         this.id = id;
-        this.startTs = startTs;
-        this.endTs = endTs;
-        this.dept = dept;
+        this.start = start;
+        this.end = end;
+        this.department = department;
         this.location = location;
-        this.code = code;
+        this.shiftType = shiftCode;
         this.isLead = isLead;
-        this.coworkers = coworkers;
-        this.role = isLead ? "Lead" : "Staff";
-        this.note = note;
+        this.duration = duration;
+        this.description = description;
         this.teammates = teammates;
         this.campus = campus;
-        this.room = room;
         this.campusAddress = campusAddress;
     }
     
-    // Getters and setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    
-    public String getStartTs() { return startTs; }
-    public void setStartTs(String startTs) { this.startTs = startTs; }
-    
-    public String getEndTs() { return endTs; }
-    public void setEndTs(String endTs) { this.endTs = endTs; }
-    
-    public String getDept() { return dept; }
-    public void setDept(String dept) { this.dept = dept; }
-    
-    public String getLocation() { return location; }
-    public void setLocation(String location) { this.location = location; }
-    
-    public String getCode() { return code; }
-    public void setCode(String code) { this.code = code; }
-    
-    public Boolean getIsLead() { return isLead; }
-    public void setIsLead(Boolean isLead) { this.isLead = isLead; }
-    
-    public Integer getCoworkers() { return coworkers; }
-    public void setCoworkers(Integer coworkers) { this.coworkers = coworkers; }
-    
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
-    
-    public String getNote() { return note; }
-    public void setNote(String note) { this.note = note; }
-    
-    public List<TeammateDto> getTeammates() { return teammates; }
-    public void setTeammates(List<TeammateDto> teammates) { this.teammates = teammates; }
-    
-    public String getCampus() { return campus; }
-    public void setCampus(String campus) { this.campus = campus; }
-    
-    public String getRoom() { return room; }
-    public void setRoom(String room) { this.room = room; }
-    
-    public String getCampusAddress() { return campusAddress; }
-    public void setCampusAddress(String campusAddress) { this.campusAddress = campusAddress; }
+    public String getStartTs() { return startTs; }
+    public void setStartTs(String startTs) { this.startTs = startTs; }
+    public String getEndTs() { return endTs; }
+    public void setEndTs(String endTs) { this.endTs = endTs; }
+    public Boolean getIsLead() { return isLead; }
+    public void setIsLead(Boolean isLead) { this.isLead = isLead; }
 }

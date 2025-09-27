@@ -1,29 +1,27 @@
 package com.weroster.dto;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class TeammateDto {
-    private Long staffId;
-    private String staffName;
-    private String staffInitials;
-    private Boolean isLead;
+    private Long id;
+    private String firstName;
+    private String lastName;
+    private String email;
+    private String department;
+    private String designation;
+    private Boolean isActive;
     
-    public TeammateDto() {}
-    
-    public TeammateDto(Long staffId, String staffName, String staffInitials, Boolean isLead) {
-        this.staffId = staffId;
-        this.staffName = staffName;
-        this.staffInitials = staffInitials;
-        this.isLead = isLead;
+    public TeammateDto(Long id, String firstName, String lastName, Boolean isActive) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.isActive = isActive;
     }
-    
-    public Long getStaffId() { return staffId; }
-    public void setStaffId(Long staffId) { this.staffId = staffId; }
-    
-    public String getStaffName() { return staffName; }
-    public void setStaffName(String staffName) { this.staffName = staffName; }
-    
-    public String getStaffInitials() { return staffInitials; }
-    public void setStaffInitials(String staffInitials) { this.staffInitials = staffInitials; }
-    
-    public Boolean getIsLead() { return isLead; }
-    public void setIsLead(Boolean isLead) { this.isLead = isLead; }
 }
