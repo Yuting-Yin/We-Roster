@@ -5,3 +5,11 @@ HEAD
 frontend\node_modules
 frontend\.expo
 add-frontend
+
+# Backend build artifacts
+backend\.gradle
+backend\build
+backend\bin
+*.class
+*.jar
+*.war

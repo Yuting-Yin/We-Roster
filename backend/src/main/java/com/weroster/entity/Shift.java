@@ -42,7 +42,4 @@ public class Shift {
     
     @OneToMany(mappedBy = "shift", cascade = CascadeType.ALL)
     private List<ShiftAssignment> shiftAssignments;
-    
-    @OneToOne(mappedBy = "shift", cascade = CascadeType.ALL)
-    private OpenShift openShift;
 }

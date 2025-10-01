@@ -14,7 +14,7 @@ export type OpenShiftDto = {
   note?: string;
   paymentCents?: number;
   formattedPayment: string;
-  status: "AVAILABLE" | "READY_TO_RUN" | "CANCELLED";
+  status: "AVAILABLE" | "READY_TO_RUN" | "APPROVED_FOR_FORMAL" | "CANCELLED";
   createdAt: string;
   urgentFlag: boolean;
   createdByName?: string;

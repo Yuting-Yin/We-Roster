@@ -49,6 +49,9 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired
     private LeaveRequestRepository leaveRequestRepository;
     
+    @Autowired
+    private OpenShiftRepository openShiftRepository;
+    
     // Removed UserStaffRepository - using direct User-Staff relationship
 
     @Override
@@ -656,6 +659,19 @@ public class DataInitializer implements CommandLineRunner {
             assignmentCount += dayShifts.size() * 2; // Average 2 staff per shift
         }
         
+        // === CREATE OPEN SHIFTS ===
+        System.out.println("\n🔓 Creating open shifts...");
+        int openShiftCount = 0;
+        try {
+            openShiftCount = createOpenShifts(startDate, endDate, emergencyDept, icuDept, medicalDept, 
+                                               edRoom1, icuBed1, medWard, nurse1);
+            System.out.println("✅ Created " + openShiftCount + " open shifts successfully!");
+        } catch (Exception e) {
+            System.err.println("❌ ERROR creating open shifts: " + e.getMessage());
+            e.printStackTrace();
+            // Continue without open shifts - don't fail the entire initialization
+        }
+        
         System.out.println("✅ Mock data created successfully!");
         System.out.println("📋 Created:");
         System.out.println("   - 1 Hospital: " + hospital.getName());
@@ -678,6 +694,7 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("     • Rachel Green (nurse6@weroster.com)");
         System.out.println("   - " + shiftCount + " Shifts: All non-overlapping comprehensive shifts");
         System.out.println("   - " + assignmentCount + " Shift assignments: All comprehensive assignments");
+        System.out.println("   - " + openShiftCount + " Open Shifts: Available for pickup with varying incentives");
         System.out.println("   - All staff have user accounts with password: hello");
         System.out.println("   - Data spans: " + startDate + " to " + endDate + " (includes full current week + 2 weeks)");
         System.out.println("🔐 Login credentials for testing:");
@@ -969,5 +986,143 @@ public class DataInitializer implements CommandLineRunner {
                 ", End: " + leave.getEndTime() +
                 ", Shift ID: " + (leave.getShift() != null ? leave.getShift().getId() : "null"));
         }
+    }
+    
+    /**
+     * Create open shifts with variety for testing
+     * Mix of urgent/non-urgent shifts with varying pay incentives
+     */
+    private int createOpenShifts(LocalDate startDate, LocalDate endDate,
+                                  Department emergencyDept, Department icuDept, Department medicalDept,
+                                  Location edRoom1, Location icuBed1, Location medWard,
+                                  Staff createdByStaff) {
+        int count = 0;
+        Random random = new Random(42); // Fixed seed for consistent results
+        
+        // Create open shifts every 3-4 days across the period
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(3 + random.nextInt(2))) {
+            int shiftsToday = 1 + random.nextInt(2); // 1-2 open shifts per day
+            
+            for (int i = 0; i < shiftsToday; i++) {
+                try {
+                    // Randomly select shift type
+                    String shiftType = getRandomOpenShiftType(random);
+                    Department dept = getRandomDepartment(random, emergencyDept, icuDept, medicalDept);
+                    Location location = getLocationForDepartment(dept, edRoom1, icuBed1, medWard);
+                    
+                    // Determine if urgent (30% chance)
+                    boolean isUrgent = random.nextInt(100) < 30;
+                    
+                    // Calculate payment based on shift type and urgency
+                    int paymentCents = calculatePayment(shiftType, isUrgent, random);
+                    
+                    // Create independent open shift (NOT linked to shift table)
+                    OpenShift openShift = createOpenShiftByType(shiftType, date, dept, location, 
+                                                                 isUrgent, paymentCents, createdByStaff, random);
+                    
+                    openShiftRepository.save(openShift);
+                    count++;
+                    
+                    System.out.println("🔓 Created " + (isUrgent ? "URGENT " : "") + 
+                                       "open shift: " + date + " " + shiftType + 
+                                       " at " + dept.getName() + 
+                                       " - Payment: $" + (paymentCents / 100.0) +
+                                       " - Status: " + openShift.getStatus());
+                } catch (Exception e) {
+                    System.err.println("❌ ERROR creating individual open shift for " + date + ": " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }
+        
+        return count;
+    }
+    
+    private String getRandomOpenShiftType(Random random) {
+        String[] types = {"AM", "PM", "AH", "ON_CALL"};
+        return types[random.nextInt(types.length)];
+    }
+    
+    private Department getRandomDepartment(Random random, Department ed, Department icu, Department med) {
+        Department[] depts = {ed, icu, med};
+        return depts[random.nextInt(depts.length)];
+    }
+    
+    private Location getLocationForDepartment(Department dept, Location edRoom1, Location icuBed1, Location medWard) {
+        if (dept.getCode().equals("ED")) return edRoom1;
+        if (dept.getCode().equals("ICU")) return icuBed1;
+        return medWard;
+    }
+    
+    private OpenShift createOpenShiftByType(String type, LocalDate date, Department dept, Location location, 
+                                             boolean isUrgent, int paymentCents, Staff createdBy, Random random) {
+        LocalDateTime start, end;
+        
+        switch (type) {
+            case "AM":
+                start = date.atTime(8, 0);
+                end = date.atTime(16, 0);
+                break;
+            case "PM":
+                start = date.atTime(14, 0);
+                end = date.atTime(22, 0);
+                break;
+            case "AH":
+                start = date.atTime(22, 0);
+                end = date.plusDays(1).atTime(6, 0);
+                break;
+            case "ON_CALL":
+                start = date.atTime(20, 0);
+                end = date.plusDays(1).atTime(8, 0);
+                break;
+            default:
+                start = date.atTime(9, 0);
+                end = date.atTime(17, 0);
+        }
+        
+        return OpenShift.builder()
+                .startTs(start)
+                .endTs(end)
+                .type(determineShiftCode(start.getHour(), type.equals("ON_CALL")))
+                .department(dept)
+                .location(location)
+                .note("Open shift - " + type + " - " + date.toString())
+                .dateMade(LocalDateTime.now().minusDays(random.nextInt(7))) // Use passed random instance
+                .urgentFlag(isUrgent)
+                .extraPayCents(paymentCents)
+                .status("AVAILABLE")
+                .createdBy(createdBy)
+                .build();
+    }
+    
+    private int calculatePayment(String shiftType, boolean isUrgent, Random random) {
+        // Base payment by shift type (in cents)
+        int basePayment;
+        
+        switch (shiftType) {
+            case "AM":
+                basePayment = 20000 + random.nextInt(15000); // $200-$350
+                break;
+            case "PM":
+                basePayment = 25000 + random.nextInt(15000); // $250-$400
+                break;
+            case "AH":
+                basePayment = 40000 + random.nextInt(20000); // $400-$600
+                break;
+            case "ON_CALL":
+                basePayment = 50000 + random.nextInt(25000); // $500-$750
+                break;
+            default:
+                basePayment = 20000;
+        }
+        
+        // Add urgency bonus (50-100% more if urgent)
+        if (isUrgent) {
+            int urgencyBonus = basePayment / 2 + random.nextInt(basePayment / 2);
+            basePayment += urgencyBonus;
+        }
+        
+        // Round to nearest $50 for cleaner display
+        return (basePayment / 5000) * 5000;
     }
 }

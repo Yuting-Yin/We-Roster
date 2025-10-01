@@ -47,6 +47,48 @@ public class OpenShiftController {
     }
     
     /**
+     * Check if open shift requirements are satisfied and update status
+     * AVAILABLE → READY_TO_RUN when all designation requirements are met
+     * Does not check if status is CANCELLED or APPROVED_FOR_FORMAL
+     */
+    private void checkAndUpdateOpenShiftStatus(OpenShift openShift) {
+        // Only update if currently AVAILABLE or READY_TO_RUN
+        if ("CANCELLED".equals(openShift.getStatus()) || "APPROVED_FOR_FORMAL".equals(openShift.getStatus())) {
+            return; // Don't modify cancelled or approved shifts
+        }
+        
+        // Get requirements
+        List<OpenShiftDesignationRequirements> requirements = designationRequirementsRepository
+            .findByOpenShiftId(openShift.getId());
+        
+        // If no requirements, we can't determine READY_TO_RUN automatically
+        if (requirements.isEmpty()) {
+            return; // Keep status as is
+        }
+        
+        // Get active assignments
+        List<OpenShiftAssignment> assignments = openShiftAssignmentRepository
+            .findActiveAssignmentsByOpenShift(openShift.getId());
+        
+        // Check if all requirements are satisfied
+        boolean allSatisfied = requirements.stream().allMatch(req -> {
+            long currentCount = assignments.stream()
+                .filter(assignment -> assignment.getStaff().getDesignation() != null &&
+                        assignment.getStaff().getDesignation().getId().equals(req.getDesignation().getId()))
+                .count();
+            return currentCount >= req.getRequiredCount();
+        });
+        
+        // Update status based on requirements
+        String newStatus = allSatisfied ? "READY_TO_RUN" : "AVAILABLE";
+        if (!newStatus.equals(openShift.getStatus())) {
+            openShift.setStatus(newStatus);
+            openShiftRepository.save(openShift);
+            System.out.println("📊 Open shift " + openShift.getId() + " status updated: " + newStatus);
+        }
+    }
+    
+    /**
      * Get open shifts for a specific week
      */
     @GetMapping("/week")
@@ -61,10 +103,16 @@ public class OpenShiftController {
             
             List<OpenShift> openShifts = openShiftRepository.findByDateRange(weekStartDateTime, weekEndDateTime);
             
-            // Get current user if provided
+            // Check and update status for each open shift before returning
+            openShifts.forEach(this::checkAndUpdateOpenShiftStatus);
+            
+            // Get current user if provided - try both "test" and "staff" domains
             Staff currentStaff = null;
             if (userEmail != null) {
-                Optional<User> userOpt = userRepository.findByDomainAndEmail("staff", userEmail);
+                Optional<User> userOpt = userRepository.findByDomainAndEmail("test", userEmail);
+                if (userOpt.isEmpty()) {
+                    userOpt = userRepository.findByDomainAndEmail("staff", userEmail);
+                }
                 if (userOpt.isPresent()) {
                     try {
                         currentStaff = findStaffByUser(userOpt.get());
@@ -116,10 +164,16 @@ public class OpenShiftController {
             
             OpenShift openShift = openShiftOpt.get();
             
-            // Get current user if provided
+            // Check and update status before returning details
+            checkAndUpdateOpenShiftStatus(openShift);
+            
+            // Get current user if provided - try both "test" and "staff" domains
             Staff currentStaff = null;
             if (userEmail != null) {
-                Optional<User> userOpt = userRepository.findByDomainAndEmail("staff", userEmail);
+                Optional<User> userOpt = userRepository.findByDomainAndEmail("test", userEmail);
+                if (userOpt.isEmpty()) {
+                    userOpt = userRepository.findByDomainAndEmail("staff", userEmail);
+                }
                 if (userOpt.isPresent()) {
                     try {
                         currentStaff = findStaffByUser(userOpt.get());
@@ -154,8 +208,11 @@ public class OpenShiftController {
             @RequestParam String userEmail) {
         
         try {
-            // Find user and staff
-            Optional<User> userOpt = userRepository.findByDomainAndEmail("staff", userEmail);
+            // Find user and staff - try both "test" and "staff" domains
+            Optional<User> userOpt = userRepository.findByDomainAndEmail("test", userEmail);
+            if (userOpt.isEmpty()) {
+                userOpt = userRepository.findByDomainAndEmail("staff", userEmail);
+            }
             if (userOpt.isEmpty()) {
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("error", "User not found");
@@ -211,12 +268,31 @@ public class OpenShiftController {
     
     /**
      * Validate if staff can apply for an open shift
+     * 
+     * Status meanings:
+     * - AVAILABLE: Accepting applications
+     * - READY_TO_RUN: Requirements satisfied, still accepting applications (admin hasn't approved yet)
+     * - APPROVED_FOR_FORMAL: LOCKED - Admin approved, converting to formal shift, NO applications
+     * - CANCELLED: Cancelled, NO applications
      */
     private List<String> validateApplication(Staff staff, OpenShift openShift) {
         List<String> errors = new ArrayList<>();
         
-        // Check if open shift is available (assume all open shifts are available unless assigned)
-        // This could be enhanced with additional business logic
+        // Check if open shift status allows applications
+        // Only APPROVED_FOR_FORMAL and CANCELLED block applications
+        if ("APPROVED_FOR_FORMAL".equals(openShift.getStatus())) {
+            errors.add("This open shift has been approved and locked. It will become a formal shift soon.");
+            return errors; // Early return - no need to check further
+        }
+        
+        if ("CANCELLED".equals(openShift.getStatus())) {
+            errors.add("This open shift has been cancelled");
+            return errors; // Early return - no need to check further
+        }
+        
+        // AVAILABLE and READY_TO_RUN both allow applications
+        
+        // Check if open shift is fully assigned
         List<OpenShiftAssignment> existingAssignments = openShiftAssignmentRepository
             .findActiveAssignmentsByOpenShift(openShift.getId());
         if (!existingAssignments.isEmpty()) {
@@ -263,28 +339,27 @@ public class OpenShiftController {
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
         
-        // Get the shift details
-        Shift shift = openShift.getShift();
-        
+        // OpenShift now has its own shift details (independent from shift table)
         OpenShiftDto.OpenShiftDtoBuilder builder = OpenShiftDto.builder()
             .id(openShift.getId())
-            .startTs(shift.getStartTs())
-            .endTs(shift.getEndTs())
-            .date(shift.getStartTs().toLocalDate().format(dateFormatter))
-            .start(shift.getStartTs().format(timeFormatter))
-            .end(shift.getEndTs().format(timeFormatter))
-            .session(shift.getType())
-            .departmentName(shift.getDepartment() != null ? shift.getDepartment().getName() : null)
-            .locationName(shift.getLocation() != null ? shift.getLocation().getName() : null)
-            .type(shift.getType())
-            .note(shift.getNote())
+            .startTs(openShift.getStartTs())
+            .endTs(openShift.getEndTs())
+            .date(openShift.getStartTs().toLocalDate().format(dateFormatter))
+            .start(openShift.getStartTs().format(timeFormatter))
+            .end(openShift.getEndTs().format(timeFormatter))
+            .session(openShift.getType())
+            .departmentName(openShift.getDepartment() != null ? openShift.getDepartment().getName() : null)
+            .locationName(openShift.getLocation() != null ? openShift.getLocation().getName() : null)
+            .type(openShift.getType())
+            .note(openShift.getNote())
             .paymentCents(openShift.getExtraPayCents())
             .formattedPayment(openShift.getExtraPayCents() != null ? 
                 String.format("$%.2f", openShift.getExtraPayCents() / 100.0) : null)
-            .status("OPEN") // OpenShift doesn't have status, using default
+            .status(openShift.getStatus() != null ? openShift.getStatus() : "AVAILABLE")
             .createdAt(openShift.getDateMade())
             .urgentFlag(openShift.getUrgentFlag())
-            .createdByName(null); // OpenShift doesn't have createdBy field
+            .createdByName(openShift.getCreatedBy() != null ? 
+                openShift.getCreatedBy().getFirstName() + " " + openShift.getCreatedBy().getLastName() : null);
         
         // Get designation requirements
         List<OpenShiftDesignationRequirements> requirements = designationRequirementsRepository

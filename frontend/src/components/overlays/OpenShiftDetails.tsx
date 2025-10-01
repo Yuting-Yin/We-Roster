@@ -17,6 +17,12 @@ export type OpenShiftDetail = {
   designation: string;       // role
   theatre?: string;          // e.g. "Theatre 1"
   pay?: number;              // optional
+  urgent?: boolean;          // urgent flag
+  status?: string;           // AVAILABLE, READY_TO_RUN, etc.
+  canApply?: boolean;        // whether user can apply
+  applicationStatus?: string; // PENDING, APPROVED, etc.
+  assignedStaff?: any[];     // assigned staff list
+  requirements?: any[];      // designation requirements
 };
 
 type Props = {

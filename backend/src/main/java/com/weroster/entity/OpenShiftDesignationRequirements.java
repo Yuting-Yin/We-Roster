@@ -20,11 +20,11 @@ public class OpenShiftDesignationRequirements {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "open_shift_id", nullable = false)
     private OpenShift openShift;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "designation_id", nullable = false)
     private Designation designation;
     

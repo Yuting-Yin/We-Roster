@@ -20,11 +20,11 @@ public class OpenShiftAssignment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "open_shift_id", nullable = false)
     private OpenShift openShift;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "staff_id", nullable = false)
     private Staff staff;
     
@@ -36,7 +36,7 @@ public class OpenShiftAssignment {
     @Builder.Default
     private LocalDateTime assignedAt = LocalDateTime.now();
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "assigned_by")
     private Staff assignedBy;
     
