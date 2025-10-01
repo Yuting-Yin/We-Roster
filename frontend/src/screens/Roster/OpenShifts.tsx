@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRoute } from "@react-navigation/native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
@@ -111,7 +111,8 @@ export default function OpenShifts() {
   };
 
   // Register overlays with context for auto-close functionality
-  const { registerOverlay, unregisterOverlay } = useOverlayContext();
+  const { registerOverlay, unregisterOverlay, requestTeamMemberNav } = useOverlayContext();
+  const navigation = useNavigation<any>();
   
   React.useEffect(() => {
     registerOverlay('openshifts-filter', () => setFilterVisible(false));
@@ -134,6 +135,29 @@ export default function OpenShifts() {
     () => setToast(false),
     () => setWarningToast(false)
   ]);
+
+  // Track if we've already restored to prevent multiple restorations
+  const [hasRestored, setHasRestored] = useState(false);
+
+  // Restore overlay state when returning from team member navigation
+  const { teamMemberNavRequest, clearTeamMemberNavRequest } = useOverlayContext();
+  useEffect(() => {
+    if (teamMemberNavRequest?.overlayState && !hasRestored) {
+      const { type, event } = teamMemberNavRequest.overlayState;
+      
+      // Only restore if we're currently on the OpenShifts screen and it's an open-shift-details type
+      if (route.name === 'OPEN SHIFTS' && type === 'open-shift-details' && event) {
+        setDetailShift(event);
+        setDetailVisible(true);
+        setHasRestored(true);
+      }
+    }
+    
+    // Reset restoration flag when teamMemberNavRequest changes
+    if (!teamMemberNavRequest && hasRestored) {
+      setHasRestored(false);
+    }
+  }, [teamMemberNavRequest, route.name, hasRestored]);
 
   /* ---- Convert API data to Item format and apply filters ---- */
   const filtered = useMemo(() => {
@@ -438,6 +462,20 @@ export default function OpenShifts() {
         onApply={() => {
           if (detailShift) {
             handleApply(detailShift.id);
+          }
+        }}
+        onCoworkerPress={(coworker) => {
+          // Navigate to My Team tab and show staff details
+          const staffId = parseInt(coworker.id, 10);
+          if (!isNaN(staffId)) {
+            // Capture current overlay state to restore later
+            const overlayState = {
+              type: 'open-shift-details' as const,
+              event: detailShift,
+              date: new Date(), // OpenShifts doesn't have a specific date context
+            };
+            requestTeamMemberNav(staffId, coworker.name, coworker.initials, "Roster", overlayState);
+            navigation.navigate("My Team");
           }
         }}
       />

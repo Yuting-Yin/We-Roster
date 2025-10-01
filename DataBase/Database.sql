@@ -50,6 +50,7 @@ CREATE TABLE staff(
                       is_manager BOOLEAN NOT NULL DEFAULT FALSE,
                       type VARCHAR(50),
                       matrix VARCHAR(50),
+                      accreditation VARCHAR(200),
                       status VARCHAR(30) NOT NULL DEFAULT 'Active',
                       status_time DATETIME,
                       note TEXT,

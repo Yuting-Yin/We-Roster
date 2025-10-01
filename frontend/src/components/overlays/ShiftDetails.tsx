@@ -9,11 +9,12 @@ import Avatar from "@/components/common/Avatar";
 import { EventItem } from "@/types/roster";
 
 export default function ShiftDetails({
-  visible, onClose, onPressPlus, date, event,
+  visible, onClose, onPressPlus, onCoworkerPress, date, event,
 }: {
   visible: boolean;
   onClose: () => void;
   onPressPlus: (anchor: { x: number; y: number }) => void;
+  onCoworkerPress?: (coworker: { id: string; name: string; initials: string }) => void;
   date: Date;
   event?: EventItem;
 }) {
@@ -132,10 +133,18 @@ export default function ShiftDetails({
             </View>
 
             {event.coworkers.map((c, i) => (
-              <View key={c.id ?? i} style={{ flexDirection: "row", alignItems: "center", marginBottom: sy(10) }}>
+              <Pressable 
+                key={c.id ?? i} 
+                style={{ flexDirection: "row", alignItems: "center", marginBottom: sy(10) }}
+                onPress={() => onCoworkerPress?.(c)}
+                disabled={!onCoworkerPress}
+              >
                 <Avatar initials={c.initials ?? coworkerInitials(c.name)} />
                 <Text style={{ marginLeft: sx(10), color: COLOR.ink, fontSize: sx(14) }}>{c.name}</Text>
-              </View>
+                {onCoworkerPress && (
+                  <Ionicons name="chevron-forward" size={sx(16)} color={COLOR.label} style={{ marginLeft: "auto" }} />
+                )}
+              </Pressable>
             ))}
           </View>
         ) : null}

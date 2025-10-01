@@ -22,6 +22,7 @@ public class CurrentUserResponse {
     private String accreditation;
     private String phone;
     private String ical;
+    private Long staffId; // Add staff ID for matching with team members
     
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

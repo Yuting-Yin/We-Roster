@@ -5,7 +5,7 @@ import CollapsibleCalendar from "@/components/calendar/CollapsibleCalendar";
 import DayTimeline from "@/components/timeline/DayTimeline";
 import WeekTimeline from "@/components/timeline/WeekTimeline";
 import ShiftDetails from "@/components/overlays/ShiftDetails";
-import OpenShiftDetails, { OpenShiftDetail } from "@/components/overlays/OpenShiftDetails";
+import OpenShiftDetails, { OpenShiftDetail, Coworker } from "@/components/overlays/OpenShiftDetails";
 import RequestShift from "@/components/overlays/RequestShift";
 import RequestLeave from "@/components/overlays/RequestLeave";
 import SwapShift from "@/components/overlays/SwapShift";
@@ -215,7 +215,7 @@ export default function MyRoster() {
   const { applyForShift, submitting } = useOpenShiftApplication();
 
   // Register overlays with context for auto-close functionality
-  const { registerOverlay, unregisterOverlay } = useOverlayContext();
+  const { registerOverlay, unregisterOverlay, requestTeamMemberNav, teamMemberNavRequest, clearTeamMemberNavRequest } = useOverlayContext();
   
   React.useEffect(() => {
     registerOverlay('myroster-detail', () => setDetailVisible(false));
@@ -247,6 +247,40 @@ export default function MyRoster() {
     () => setSwapVisible(false),
     () => setToast(false)
   ]);
+
+  // Track if we've already restored to prevent multiple restorations
+  const [hasRestored, setHasRestored] = useState(false);
+
+  // Restore overlay state when returning from team member navigation
+  useEffect(() => {
+    if (teamMemberNavRequest?.overlayState && !hasRestored) {
+      const { type, event, date: overlayDate } = teamMemberNavRequest.overlayState;
+      
+      // Only restore if we're currently on the Roster screen
+      if (route.name === 'MY ROSTER') {
+        if (type === 'shift-details' && event) {
+          setDetailEvent(event);
+          setDetailVisible(true);
+          if (overlayDate) {
+            setDate(overlayDate);
+          }
+          setHasRestored(true);
+        } else if (type === 'open-shift-details' && event) {
+          setOpenShiftDetail(event);
+          setOpenShiftDetailVisible(true);
+          if (overlayDate) {
+            setDate(overlayDate);
+          }
+          setHasRestored(true);
+        }
+      }
+    }
+    
+    // Reset restoration flag when teamMemberNavRequest changes
+    if (!teamMemberNavRequest && hasRestored) {
+      setHasRestored(false);
+    }
+  }, [teamMemberNavRequest, route.name, hasRestored]);
 
   const openDetails = (ev: EventItem) => { 
     // Check if this is an open shift (has action === "plus")
@@ -442,6 +476,20 @@ export default function MyRoster() {
             setMenuVisible(true);
           });
         }}
+        onCoworkerPress={(coworker) => {
+          // Navigate to My Team tab and show staff details
+          const staffId = parseInt(coworker.id, 10);
+          if (!isNaN(staffId)) {
+            // Capture current overlay state to restore later
+            const overlayState = {
+              type: 'shift-details' as const,
+              event: detailEvent,
+              date: date,
+            };
+            requestTeamMemberNav(staffId, coworker.name, coworker.initials, "Roster", overlayState);
+            navigation.navigate("My Team");
+          }
+        }}
         date={date}
         event={detailEvent}
       />
@@ -501,6 +549,20 @@ export default function MyRoster() {
         coworkers={openShiftDetail?.assignedStaff || []}
         onClose={() => setOpenShiftDetailVisible(false)}
         onApply={handleApplyOpenShift}
+        onCoworkerPress={(coworker) => {
+          // Navigate to My Team tab and show staff details
+          const staffId = parseInt(coworker.id, 10);
+          if (!isNaN(staffId)) {
+            // Capture current overlay state to restore later
+            const overlayState = {
+              type: 'open-shift-details' as const,
+              event: openShiftDetail,
+              date: date,
+            };
+            requestTeamMemberNav(staffId, coworker.name, coworker.initials, "Roster", overlayState);
+            navigation.navigate("My Team");
+          }
+        }}
       />
 
       <SuccessToast visible={toast} text="Successfully submitted" />

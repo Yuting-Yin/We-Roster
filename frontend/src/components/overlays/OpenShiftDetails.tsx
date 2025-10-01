@@ -32,13 +32,14 @@ type Props = {
   coworkers?: Coworker[];
   onClose: () => void;
   onApply: (shift: OpenShiftDetail) => void;
+  onCoworkerPress?: (coworker: Coworker) => void;
 };
 
 const Pill = ({ children }: { children: React.ReactNode }) => (
   <View style={styles.pill}><Text style={styles.pillText}>{children}</Text></View>
 );
 
-export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], onClose, onApply }: Props) {
+export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], onClose, onApply, onCoworkerPress }: Props) {
   const durationHrs = useMemo(() => {
     if (!shift) return 0;
     const [sh, sm] = shift.start.split(":").map(Number);
@@ -123,12 +124,20 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
                 <Text style={styles.noStaffText}>Currently no staff allocated</Text>
               ) : (
                 coworkers.map(cw => (
-                  <View key={cw.id} style={styles.cwRow}>
+                  <Pressable 
+                    key={cw.id} 
+                    style={styles.cwRow}
+                    onPress={() => onCoworkerPress?.(cw)}
+                    disabled={!onCoworkerPress}
+                  >
                     <View style={styles.avatar}>
                       <Text style={styles.avatarText}>{cw.initials}</Text>
                     </View>
                     <Text style={styles.cwName}>{cw.name}</Text>
-                  </View>
+                    {onCoworkerPress && (
+                      <Ionicons name="chevron-forward" size={sx(16)} color={COLOR.label} style={{ marginLeft: "auto" }} />
+                    )}
+                  </Pressable>
                 ))
               )}
             </View>
