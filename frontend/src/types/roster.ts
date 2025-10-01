@@ -32,6 +32,18 @@ export type EventItem = {
   campus?: string;          // e.g., "PMCC"
   room?: string;            // e.g., "Theatre 1"
   campusAddress?: string;   // e.g., address of the campus
+  isTaken?: boolean;        // True if this assigned shift has a matching open shift at the same time
+  hasOpenShift?: boolean;   // True if this shift has a matching open shift merged into one card
+  openShiftInfo?: {         // Open shift details for merged events
+    location?: string;
+    role?: string;
+    teammates?: string;
+    color?: string;
+  };
+  hasDualAction?: boolean;  // True if card has both arrow (shift details) and plus (open shift) actions
+  originalOpenShift?: any;  // Store original OpenShiftDto for merged events
+  multipleOpenShifts?: number; // Number of open shifts at this time slot (if > 1, show "view more")
+  openShiftDate?: string;   // Date string for navigation to Open Shifts page
 };
 
 export type Slot = { start: string; end: string };

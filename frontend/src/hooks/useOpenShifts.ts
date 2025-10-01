@@ -117,9 +117,24 @@ export function useOpenShiftApplication() {
       const response = await applyForOpenShift(input, user.email);
       
       return { success: true, data: response };
-    } catch (err) {
-      console.error("Failed to apply for open shift:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to apply for open shift";
+    } catch (err: any) {
+      // Don't log validation errors to console - they're expected user behavior
+      // Extract error message from API response
+      let errorMessage = "Failed to apply for open shift";
+      
+      if (err?.message) {
+        try {
+          const parsed = JSON.parse(err.message);
+          if (parsed.details && Array.isArray(parsed.details) && parsed.details.length > 0) {
+            errorMessage = parsed.details[0]; // First validation error
+          } else if (parsed.error) {
+            errorMessage = parsed.error;
+          }
+        } catch {
+          errorMessage = err.message;
+        }
+      }
+      
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {

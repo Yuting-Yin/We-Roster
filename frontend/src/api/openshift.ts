@@ -10,11 +10,13 @@ export type OpenShiftDto = {
   session: "AM" | "PM" | "AH" | "ON_CALL";
   departmentName?: string;
   locationName?: string;
+  hospitalName?: string;
+  hospitalAddress?: string;
   code: string;
   note?: string;
   paymentCents?: number;
   formattedPayment: string;
-  status: "AVAILABLE" | "READY_TO_RUN" | "CANCELLED";
+  status: "AVAILABLE" | "READY_TO_RUN" | "APPROVED_FOR_FORMAL" | "CANCELLED";
   createdAt: string;
   urgentFlag: boolean;
   createdByName?: string;

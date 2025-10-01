@@ -55,10 +55,12 @@ export default function DayTimeline({
   events,
   onOpenDetails,
   onOpenRequest,
+  onViewMoreOpenShifts,
 }: {
   events: EventItem[];
   onOpenDetails: (ev: EventItem) => void;
   onOpenRequest: (ev: EventItem) => void;
+  onViewMoreOpenShifts?: (dateStr: string) => void;
 }) {
   const totalHeight = (HOUR_END - HOUR_START) * HOUR_HEIGHT;
   const scrollViewRef = useRef<ScrollView>(null);
@@ -108,6 +110,7 @@ export default function DayTimeline({
           const startMinutes = toMinutes(ev.start);
           const endMinutes = toMinutes(ev.end);
           const isOvernight = endMinutes < startMinutes;
+          const isOpenShift = ev.action === 'plus';
           
           // For overnight shifts, we'll show them as two separate visual elements
           // or adjust the rendering to handle the midnight crossover
@@ -124,6 +127,7 @@ export default function DayTimeline({
               key={ev.id}
               style={[
                 styles.card,
+                isOpenShift && styles.openShiftCard,
                 {
                   top,
                   left: TIME_GUTTER + sx(8) + appliedOffset,
@@ -140,6 +144,19 @@ export default function DayTimeline({
             >
               <View style={styles.rowBetween}>
                 <View style={styles.infoColumn}>
+                  {/* Show "taken" badge for assigned shifts that have matching open shift */}
+                  {ev.action === 'arrow' && (ev as any).hasOpenShift && (
+                    <View style={styles.takenBadge}>
+                      <Text style={styles.takenBadgeText}>taken</Text>
+                    </View>
+                  )}
+                  {/* Show "OPEN SHIFT" badge for standalone open shifts */}
+                  {isOpenShift && !(ev as any).hasOpenShift && (
+                    <View style={styles.openShiftBadge}>
+                      <Ionicons name="megaphone-outline" size={sx(10)} color={COLOR.success} style={{ marginRight: sx(4) }} />
+                      <Text style={styles.openShiftBadgeText}>OPEN SHIFT</Text>
+                    </View>
+                  )}
                   <View style={styles.infoRow}>
                     <Ionicons name="time-outline" size={sx(14)} color={COLOR.ink} style={styles.infoIcon} />
                     <Text style={styles.timeText}>{`${ev.start} - ${ev.end}`}</Text>
@@ -162,11 +179,86 @@ export default function DayTimeline({
                       <Text style={styles.meta}>{ev.teammates}</Text>
                     </View>
                   ) : null}
+                  
+                  {/* Show open shift info if this is a merged event */}
+                  {(ev as any).hasOpenShift && (ev as any).openShiftInfo && (
+                    <>
+                      <View style={styles.dividerLine} />
+                      <View style={styles.openShiftBadge}>
+                        <Ionicons name="megaphone-outline" size={sx(10)} color={COLOR.success} style={{ marginRight: sx(4) }} />
+                        <Text style={styles.openShiftBadgeText}>OPEN SHIFT AVAILABLE</Text>
+                      </View>
+                      {(ev as any).openShiftInfo.location && (
+                        <View style={styles.infoRow}>
+                          <Ionicons name="pin-outline" size={sx(14)} color={COLOR.success} style={styles.infoIcon} />
+                          <Text style={[styles.meta, { color: COLOR.success }]}>{(ev as any).openShiftInfo.location}</Text>
+                        </View>
+                      )}
+                      {(ev as any).openShiftInfo.role && (
+                        <View style={styles.infoRow}>
+                          <Ionicons name="briefcase-outline" size={sx(14)} color={COLOR.success} style={styles.infoIcon} />
+                          <Text style={[styles.meta, { color: COLOR.success }]}>{(ev as any).openShiftInfo.role}</Text>
+                        </View>
+                      )}
+                      {(ev as any).openShiftInfo.teammates && (
+                        <View style={styles.infoRow}>
+                          <Ionicons name="people-outline" size={sx(14)} color={COLOR.success} style={styles.infoIcon} />
+                          <Text style={[styles.meta, { color: COLOR.success }]}>{(ev as any).openShiftInfo.teammates}</Text>
+                        </View>
+                      )}
+                    </>
+                  )}
+                  
+                  {/* Show "view more" link for standalone open shifts when there are multiple */}
+                  {!((ev as any).hasOpenShift) && (ev as any).multipleOpenShifts > 1 && (
+                    <Pressable 
+                      onPress={() => onViewMoreOpenShifts?.((ev as any).openShiftDate)}
+                      style={styles.viewMoreRow}
+                    >
+                      <Text style={styles.viewMoreText}>
+                        View {(ev as any).multipleOpenShifts - 1} more open shift{(ev as any).multipleOpenShifts > 2 ? 's' : ''} at this time
+                      </Text>
+                      <Ionicons name="arrow-forward" size={sx(14)} color={COLOR.brand} />
+                    </Pressable>
+                  )}
+                  
+                  {/* Show "view more" link for merged events when there are multiple open shifts */}
+                  {(ev as any).hasOpenShift && (ev as any).multipleOpenShifts > 1 && (
+                    <Pressable 
+                      onPress={() => onViewMoreOpenShifts?.((ev as any).openShiftDate)}
+                      style={styles.viewMoreRow}
+                    >
+                      <Text style={styles.viewMoreText}>
+                        View {(ev as any).multipleOpenShifts - 1} more open shift{(ev as any).multipleOpenShifts > 2 ? 's' : ''} at this time
+                      </Text>
+                      <Ionicons name="arrow-forward" size={sx(14)} color={COLOR.brand} />
+                    </Pressable>
+                  )}
                 </View>
 
-                {ev.action === "arrow" ? (
+                {/* Show dual action buttons if merged event */}
+                {(ev as any).hasDualAction ? (
+                  <View style={{ gap: sy(8) }}>
+                    <Pressable onPress={() => onOpenDetails(ev)} hitSlop={10}>
+                      <Ionicons name="arrow-forward-circle" size={sx(32)} color={COLOR.brand} />
+                    </Pressable>
+                    <Pressable onPress={() => {
+                      // Click plus to open open shift details
+                      if ((ev as any).originalOpenShift) {
+                        const openShiftEvent = { ...ev, action: 'plus' as const };
+                        onOpenDetails(openShiftEvent);
+                      }
+                    }} hitSlop={10}>
+                      <Ionicons name="add-circle" size={sx(32)} color={COLOR.success} />
+                    </Pressable>
+                  </View>
+                ) : ev.action === "arrow" ? (
                   <Pressable onPress={() => onOpenDetails(ev)} hitSlop={10}>
                     <Ionicons name="arrow-forward-circle" size={sx(36)} color={COLOR.brand} />
+                  </Pressable>
+                ) : ev.action === "plus" ? (
+                  <Pressable onPress={() => onOpenDetails(ev)} hitSlop={10}>
+                    <Ionicons name="add-circle" size={sx(36)} color={COLOR.success} />
                   </Pressable>
                 ) : (
                   <Pressable onPress={() => onOpenRequest(ev)} hitSlop={10}>
@@ -196,6 +288,61 @@ const styles = StyleSheet.create({
     borderRadius: sx(8), 
     padding: sx(12),
     // Shadow removed to allow proper visual overlap blending
+  },
+  openShiftCard: {
+    backgroundColor: 'rgba(232, 245, 233, 0.85)', // Very light green with 85% opacity
+    borderColor: 'rgba(76, 175, 80, 0.15)', // Subtle green border
+  },
+  takenBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(0, 120, 212, 0.08)',
+    paddingHorizontal: sx(8),
+    paddingVertical: sy(2),
+    borderRadius: sx(4),
+    marginBottom: sy(6),
+  },
+  takenBadgeText: {
+    color: COLOR.brand,
+    fontSize: sx(10),
+    fontWeight: '400',
+    letterSpacing: 0.3,
+  },
+  openShiftBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(76, 175, 80, 0.12)',
+    paddingHorizontal: sx(6),
+    paddingVertical: sy(2),
+    borderRadius: sx(4),
+    marginBottom: sy(6),
+  },
+  openShiftBadgeText: {
+    color: COLOR.success,
+    fontSize: sx(9),
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  dividerLine: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: COLOR.divider,
+    marginVertical: sy(8),
+  },
+  viewMoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: sy(6),
+    paddingHorizontal: sx(8),
+    backgroundColor: 'rgba(0, 120, 212, 0.05)',
+    borderRadius: sx(6),
+    marginTop: sy(6),
+    gap: sx(6),
+  },
+  viewMoreText: {
+    color: COLOR.brand,
+    fontSize: sx(11),
+    fontWeight: '600',
+    flex: 1,
   },
   rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   infoColumn: { flex: 1, paddingRight: sx(8), gap: sy(4) },

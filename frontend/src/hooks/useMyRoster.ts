@@ -57,10 +57,8 @@ export function useMyRosterData(anchorDate: Date, opts: Options = {}) {
       initials: t.staffInitials
     })) : undefined;
 
-    // Location should be campus + room
-    const locationString = shift.campus && shift.room 
-      ? `${shift.campus} - ${shift.room}`
-      : shift.location || 'Location';
+    // Location should be just the room name (not campus + room)
+    const locationString = shift.room || shift.location || 'Location';
 
     return {
       id: shift.id.toString(),

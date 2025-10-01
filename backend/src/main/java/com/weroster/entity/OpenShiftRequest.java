@@ -20,11 +20,11 @@ public class OpenShiftRequest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "open_shift_id", nullable = false)
     private OpenShift openShift;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "staff_id", nullable = false)
     private Staff staff;
     
@@ -42,7 +42,7 @@ public class OpenShiftRequest {
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "reviewed_by")
     private Staff reviewedBy;
     

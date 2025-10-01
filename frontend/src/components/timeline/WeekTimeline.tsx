@@ -142,17 +142,31 @@ export default function WeekTimeline({
                 if (role) infoLines.push({ icon: "briefcase-outline", text: role });
                 const teammates = teammatesOf(ev);
                 if (teammates) infoLines.push({ icon: "people-outline", text: teammates });
+                const isOpenShift = ev.action === 'plus';
                 return (
                   <Pressable
                     key={ev.id}
-                    onPress={() => (filled ? onOpenDetails(ev) : onOpenRequest(day, slot))}
-                    style={[styles.row, filled ? styles.rowOn : styles.rowOff]}
+                    onPress={() => (filled || isOpenShift ? onOpenDetails(ev) : onOpenRequest(day, slot))}
+                    style={[styles.row, isOpenShift ? styles.rowOpenShift : filled ? styles.rowOn : styles.rowOff]}
                   >
-                    <View style={styles.badge}>
+                    <View style={[styles.badge, isOpenShift && styles.badgeOpenShift]}>
                       <Ionicons name={badge.icon} size={sx(18)} color={COLOR.brand} style={styles.badgeIcon} />
                       <Text style={styles.badgeLabel}>{badge.label}</Text>
                     </View>
                     <View style={styles.infoColumn}>
+                      {/* Show "taken" badge for assigned shifts that have matching open shift */}
+                      {ev.action === 'arrow' && (ev as any).isTaken && (
+                        <View style={styles.takenBadge}>
+                          <Text style={styles.takenBadgeText}>taken</Text>
+                        </View>
+                      )}
+                      {/* Show "OPEN SHIFT" badge for open shifts */}
+                      {isOpenShift && (
+                        <View style={styles.openShiftBadge}>
+                          <Ionicons name="megaphone-outline" size={sx(10)} color={COLOR.success} style={{ marginRight: sx(4) }} />
+                          <Text style={styles.openShiftBadgeText}>OPEN SHIFT</Text>
+                        </View>
+                      )}
                       <View style={styles.line}>
                         <Ionicons name="time-outline" size={sx(14)} color={COLOR.ink} style={styles.ic} />
                         <Text style={styles.mainText}>{`${ev.start} - ${ev.end}`}</Text>
@@ -166,9 +180,9 @@ export default function WeekTimeline({
                     </View>
 
                     <Ionicons
-                      name={filled ? "arrow-forward-circle" : "add-circle"}
+                      name={filled ? "arrow-forward-circle" : isOpenShift ? "add-circle" : "add-circle"}
                       size={sx(24)}
-                      color={COLOR.brand}
+                      color={isOpenShift ? COLOR.success : COLOR.brand}
                     />
                   </Pressable>
                 );
@@ -219,10 +233,16 @@ const styles = StyleSheet.create({
     borderRadius: sx(12),
     borderWidth: 1,
     marginBottom: sy(10),
-    height: sy(100), // fixed height
+    minHeight: sy(120), // Increased height for better readability
+    paddingVertical: sy(10),
   },
   rowOn: { backgroundColor: "#F6FAFF", borderColor: "#DCE9F9" },
   rowOff: { backgroundColor: "#F8FBFF", borderColor: "#E6EEF8" },
+  rowOpenShift: { 
+    backgroundColor: "rgba(232, 245, 233, 0.5)", // Very light green
+    borderColor: "rgba(76, 175, 80, 0.3)", // Subtle green border
+    borderStyle: 'dashed', // Dashed border to indicate open shift
+  },
   badge: {
     width: sx(52),
     height: sy(58),
@@ -233,6 +253,37 @@ const styles = StyleSheet.create({
     marginRight: sx(10),
     paddingVertical: sy(6),
     gap: sy(4),
+  },
+  badgeOpenShift: {
+    backgroundColor: "rgba(76, 175, 80, 0.15)", // Light green for open shifts
+  },
+  takenBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(0, 120, 212, 0.08)',
+    paddingHorizontal: sx(6),
+    paddingVertical: sy(2),
+    borderRadius: sx(4),
+    marginBottom: sy(4),
+  },
+  takenBadgeText: {
+    color: COLOR.brand,
+    fontSize: sx(9),
+    fontWeight: '400',
+  },
+  openShiftBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(76, 175, 80, 0.12)',
+    paddingHorizontal: sx(6),
+    paddingVertical: sy(2),
+    borderRadius: sx(4),
+    marginBottom: sy(4),
+  },
+  openShiftBadgeText: {
+    color: COLOR.success,
+    fontSize: sx(9),
+    fontWeight: '700',
   },
   badgeIcon: { marginBottom: sy(2) },
   badgeLabel: { color: COLOR.ink, fontSize: sx(11), fontWeight: "700" },

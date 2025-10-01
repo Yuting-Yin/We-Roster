@@ -23,6 +23,8 @@ public class OpenShiftDto {
     private String session; // AM, PM, AH, ON_CALL
     private String departmentName;
     private String locationName;
+    private String hospitalName; // Hospital name
+    private String hospitalAddress; // Hospital physical address
     private String type; // Shift type: AM, PM, AH, ON_CALL
     private String note;
     private Integer paymentCents;

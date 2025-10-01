@@ -152,11 +152,66 @@ CREATE TABLE shift_swap(
 ) ENGINE = InnoDB;
 
 CREATE TABLE open_shift(
-                           shift_id BIGINT PRIMARY KEY,
+                           id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                           start_ts DATETIME NOT NULL,
+                           end_ts DATETIME NOT NULL,
+                           dept_id BIGINT NULL,
+                           location_id BIGINT NULL,
+                           type VARCHAR(50),
+                           note TEXT,
                            date_made DATETIME NOT NULL,
                            urgent_flag TINYINT(1) NULL,
                            extra_pay_cents INT NULL,
-                           CONSTRAINT fk_open_shift_shift FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE
+                           status VARCHAR(30) DEFAULT 'AVAILABLE',
+                           created_by BIGINT NULL,
+                           total_staff_needed INT NOT NULL DEFAULT 1,
+                           CONSTRAINT fk_open_shift_dept FOREIGN KEY (dept_id) REFERENCES dept(id),
+                           CONSTRAINT fk_open_shift_location FOREIGN KEY (location_id) REFERENCES location(id),
+                           CONSTRAINT fk_open_shift_created_by FOREIGN KEY (created_by) REFERENCES staff(id),
+                           CONSTRAINT chk_open_shift_time CHECK (end_ts > start_ts),
+                           CONSTRAINT chk_open_shift_status CHECK (status IN ('AVAILABLE', 'READY_TO_RUN', 'APPROVED_FOR_FORMAL', 'CANCELLED'))
+) ENGINE = InnoDB;
+
+CREATE TABLE open_shift_designation_requirements (
+                                                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                                      open_shift_id BIGINT NOT NULL,
+                                                      designation_id BIGINT NOT NULL,
+                                                      required_count INT NOT NULL DEFAULT 1,
+                                                      CONSTRAINT fk_osdr_open_shift FOREIGN KEY (open_shift_id) REFERENCES open_shift(id) ON DELETE CASCADE,
+                                                      CONSTRAINT fk_osdr_designation FOREIGN KEY (designation_id) REFERENCES designation(id)
+) ENGINE = InnoDB;
+
+CREATE TABLE open_shift_request (
+                                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                     open_shift_id BIGINT NOT NULL,
+                                     staff_id BIGINT NOT NULL,
+                                     message TEXT,
+                                     status VARCHAR(30) DEFAULT 'PENDING',
+                                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                     reviewed_by BIGINT NULL,
+                                     reviewed_at DATETIME NULL,
+                                     review_notes TEXT,
+                                     CONSTRAINT fk_osr_open_shift FOREIGN KEY (open_shift_id) REFERENCES open_shift(id) ON DELETE CASCADE,
+                                     CONSTRAINT fk_osr_staff FOREIGN KEY (staff_id) REFERENCES staff(id),
+                                     CONSTRAINT fk_osr_reviewed_by FOREIGN KEY (reviewed_by) REFERENCES staff(id),
+                                     CONSTRAINT chk_osr_status CHECK (status IN ('PENDING', 'APPROVED', 'DECLINED', 'WITHDRAWN')),
+                                     UNIQUE KEY uq_open_shift_staff (open_shift_id, staff_id)
+) ENGINE = InnoDB;
+
+CREATE TABLE open_shift_assignment (
+                                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                        open_shift_id BIGINT NOT NULL,
+                                        staff_id BIGINT NOT NULL,
+                                        is_lead BOOLEAN NOT NULL DEFAULT FALSE,
+                                        assigned_by BIGINT NULL,
+                                        assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                        status VARCHAR(30) DEFAULT 'ACTIVE',
+                                        note TEXT,
+                                        CONSTRAINT fk_osa_open_shift FOREIGN KEY (open_shift_id) REFERENCES open_shift(id) ON DELETE CASCADE,
+                                        CONSTRAINT fk_osa_staff FOREIGN KEY (staff_id) REFERENCES staff(id),
+                                        CONSTRAINT fk_osa_assigned_by FOREIGN KEY (assigned_by) REFERENCES staff(id),
+                                        CONSTRAINT chk_osa_status CHECK (status IN ('ACTIVE', 'WITHDRAWN', 'CANCELLED')),
+                                        UNIQUE KEY uq_open_shift_assignment (open_shift_id, staff_id)
 ) ENGINE = InnoDB;
 
 -- Database schema for WeRoster application
