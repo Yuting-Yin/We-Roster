@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,9 @@ public class TeamController {
     
     @Autowired
     private StaffRepository staffRepository;
+    
+    @Autowired
+    private com.weroster.repository.ShiftAssignmentRepository shiftAssignmentRepository;
     
     /**
      * Get all team members (active staff with user accounts)
@@ -61,6 +65,52 @@ public class TeamController {
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to fetch team members: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+    
+    /**
+     * Get shifts for a specific staff member for the calendar view
+     * Returns a map of date -> shift types (e.g., "2025-10-01" -> ["AM", "PM"])
+     */
+    @GetMapping("/members/{staffId}/shifts")
+    public ResponseEntity<Map<String, Object>> getStaffShifts(
+            @PathVariable Long staffId,
+            @RequestParam String startDate,
+            @RequestParam(defaultValue = "2") int months) {
+        try {
+            // Validate staff exists
+            Staff staff = staffRepository.findById(staffId)
+                    .orElseThrow(() -> new RuntimeException("Staff not found with ID: " + staffId));
+            
+            // Parse date range
+            java.time.LocalDate start = java.time.LocalDate.parse(startDate);
+            java.time.LocalDateTime startDateTime = start.atStartOfDay();
+            java.time.LocalDateTime endDateTime = startDateTime.plusMonths(months);
+            
+            // Get all shift assignments for this staff in the date range
+            List<com.weroster.entity.ShiftAssignment> assignments = shiftAssignmentRepository
+                    .findByStaffAndDateRange(staffId, startDateTime, endDateTime);
+            
+            // Build shift map: date -> list of shift types
+            Map<String, List<String>> shiftMap = new HashMap<>();
+            for (com.weroster.entity.ShiftAssignment assignment : assignments) {
+                String date = assignment.getShift().getStartTs().toLocalDate().toString();
+                String shiftType = assignment.getShift().getType();
+                
+                shiftMap.computeIfAbsent(date, k -> new ArrayList<>()).add(shiftType);
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("staffId", staffId);
+            response.put("staffName", staff.getFirstName() + " " + staff.getLastName());
+            response.put("shiftMap", shiftMap);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to fetch staff shifts: " + e.getMessage());
             return ResponseEntity.status(500).body(errorResponse);
         }
     }
