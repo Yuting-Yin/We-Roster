@@ -155,8 +155,8 @@ public class AuthController {
                 builder.designation(staff.getDesignation().getName());
             }
             
-            // Staff entity doesn't have accreditation field
-            builder.accreditation(null);
+            // Get accreditation from staff
+            builder.accreditation(staff.getAccreditation());
         }
         
         return builder.build();
