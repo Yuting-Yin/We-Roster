@@ -164,6 +164,7 @@ CREATE TABLE open_shift(
                            extra_pay_cents INT NULL,
                            status VARCHAR(30) DEFAULT 'AVAILABLE',
                            created_by BIGINT NULL,
+                           total_staff_needed INT NOT NULL DEFAULT 1,
                            CONSTRAINT fk_open_shift_dept FOREIGN KEY (dept_id) REFERENCES dept(id),
                            CONSTRAINT fk_open_shift_location FOREIGN KEY (location_id) REFERENCES location(id),
                            CONSTRAINT fk_open_shift_created_by FOREIGN KEY (created_by) REFERENCES staff(id),
