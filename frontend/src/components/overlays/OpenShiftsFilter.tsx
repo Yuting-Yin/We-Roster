@@ -55,8 +55,8 @@ export default memo(function OpenShiftsFilter({
 
   return (
     <Modal visible={visible} animationType="none" transparent onRequestClose={onClose}>
-      <View style={styles.mask}>
-        <View style={styles.panel}>
+      <Pressable style={styles.mask} onPress={onClose}>
+        <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
           {/* 顶部栏 */}
           <View style={styles.topbar}>
             <Pressable onPress={onClear} hitSlop={10}><Text style={styles.clear}>Clear all</Text></Pressable>
@@ -104,8 +104,8 @@ export default memo(function OpenShiftsFilter({
               </View>
             </Section>
           </ScrollView>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 });
