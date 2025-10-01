@@ -33,6 +33,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useMyRosterData } from "@/hooks/useMyRoster";
 import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
 import { useOverlayContext } from "@/contexts/OverlayContext";
+import { useOpenShiftsWeek } from "@/hooks/useOpenShiftsWeek";
 import { fmt } from "@/lib/date";
 
 export default function Dashboard() {
@@ -72,8 +73,8 @@ export default function Dashboard() {
   const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
   const { leaves, loading: leavesLoading, error: leavesError, refresh: refreshLeaves } = useMyLeaves(currentMonth, { mock: false });
   
-  // Mock data for other sections
-  const { duty, openShifts, leaves: mockLeaves, loading, error, refresh } =
+  // Mock data for "Who's on duty" section (not implemented yet)
+  const { duty, loading, error, refresh } =
   useDashboardData({ mock: true, delayMs: 500, amplifyTimes: 2 });
 
   // Refresh data once when dashboard screen comes into focus
@@ -236,6 +237,49 @@ export default function Dashboard() {
     return weekShifts;
   }, [weekEvents, weekStartDate]);
 
+  // Get open shifts for the current week (real data from backend)
+  const { openShifts: openShiftsData, loading: openShiftsLoading, error: openShiftsError, refresh: refreshOpenShifts } = 
+    useOpenShiftsWeek(weekStartDate, user?.email);
+
+  // Convert open shifts to display format and sort by date (Monday to Sunday)
+  const openShiftsFormatted = useMemo(() => {
+    // First, sort the shifts by date chronologically
+    const sortedShifts = [...openShiftsData].sort((a, b) => {
+      // Compare dates, then start times
+      const dateCompare = a.date.localeCompare(b.date);
+      if (dateCompare !== 0) return dateCompare;
+      return a.start.localeCompare(b.start);
+    });
+    
+    return sortedShifts.map(shift => {
+      const dateObj = new Date(shift.date + 'T00:00:00');
+      const formattedDate = fmt(dateObj, { 
+        weekday: 'short', 
+        day: 'numeric', 
+        month: 'short' 
+      });
+      
+      return {
+        id: shift.id.toString(),
+        date: formattedDate,
+        time: `${shift.start} - ${shift.end}`,
+        site: shift.hospitalName || 'Unknown Hospital',
+        dept: shift.designationRequirements.length > 0 
+          ? shift.designationRequirements.map(r => r.designationName).join(", ")
+          : "Any designation",
+        teammates: shift.assignedStaff.length > 0 
+          ? `${shift.assignedStaff.length} staff assigned`
+          : "Currently no staff assigned",
+        bonus: shift.formattedPayment,
+        urgent: shift.urgentFlag,
+        // Store original shift data
+        originalShift: shift,
+        eventDate: shift.date,
+        shiftId: shift.id // Store shift ID for navigation
+      };
+    });
+  }, [openShiftsData]);
+
   const [dutyIdx, setDutyIdx] = useState(0);
   const [myShiftIdx, setMyShiftIdx] = useState(0);
   const [openShiftIdx, setOpenShiftIdx] = useState(0);
@@ -243,8 +287,21 @@ export default function Dashboard() {
 
   const dutySnap = useHorizontalSnapProps<DutyItem>(setDutyIdx);
   const myShiftSnap = useHorizontalSnapProps<ShiftItem>(setMyShiftIdx);
-  const openShiftSnap = useHorizontalSnapProps<ShiftItem>(setOpenShiftIdx);
+  const openShiftSnap = useHorizontalSnapProps<any>(setOpenShiftIdx);
   const leaveSnap = useHorizontalSnapProps<LeaveItem>(setLeaveIdx);
+
+  // Handle open shift card press - navigate to OpenShifts tab with the specific date
+  const handleOpenShiftPress = (shift: any) => {
+    // Navigate to Roster tab and OPEN SHIFTS screen with the shift's date
+    // Note: The screen name is "OPEN SHIFTS" (uppercase with space) as defined in Roster/index.tsx
+    navigation.navigate('Roster', { 
+      screen: 'OPEN SHIFTS',
+      params: {
+        selectedDate: shift.eventDate, // Pass the shift date
+        highlightShiftId: shift.shiftId // Pass the shift ID to highlight
+      }
+    });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -282,14 +339,15 @@ export default function Dashboard() {
           footer={<PaginationDots count={Math.max(myShifts.length, weekLoading ? 3 : 0)} index={myShiftIdx} />}
         />
 
-        {/* TODO: Connect "Open shifts" section to backend - not implemented yet */}
-        <Section title={`Open shifts this week (${openShifts.length})`} actionLabel="View All" onAction={() => console.log("view all")}
-          data={loading && openShifts.length === 0 ? placeholderArray<ShiftItem>(3) : openShifts}
+        {/* Real data: Available open shifts this week */}
+        <Section title={`Open shifts this week (${openShiftsFormatted.length})`} actionLabel="View All" 
+          onAction={() => navigation.navigate('Roster', { screen: 'OPEN SHIFTS' })}
+          data={openShiftsLoading && openShiftsFormatted.length === 0 ? placeholderArray<any>(3) : openShiftsFormatted}
           keyExtractor={(i, idx) => (i?.id ?? `openshift-skel-${idx}`)}
           contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
-          renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => console.log("shift", item.id)} /> : <ShiftCardSkeleton />)}
+          renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => handleOpenShiftPress(item)} /> : <ShiftCardSkeleton />)}
           flatListProps={openShiftSnap}
-          footer={<PaginationDots count={Math.max(openShifts.length, loading ? 3 : 0)} index={openShiftIdx} />}
+          footer={<PaginationDots count={Math.max(openShiftsFormatted.length, openShiftsLoading ? 3 : 0)} index={openShiftIdx} />}
         />
 
         {/* Real data: Current user's leave requests this month */}

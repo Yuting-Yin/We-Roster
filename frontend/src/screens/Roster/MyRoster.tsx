@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { View, StyleSheet, Text } from "react-native";
-import { useRoute } from "@react-navigation/native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import CollapsibleCalendar from "@/components/calendar/CollapsibleCalendar";
 import DayTimeline from "@/components/timeline/DayTimeline";
 import WeekTimeline from "@/components/timeline/WeekTimeline";
 import ShiftDetails from "@/components/overlays/ShiftDetails";
+import OpenShiftDetails, { OpenShiftDetail } from "@/components/overlays/OpenShiftDetails";
 import RequestShift from "@/components/overlays/RequestShift";
 import RequestLeave from "@/components/overlays/RequestLeave";
 import SwapShift from "@/components/overlays/SwapShift";
@@ -18,8 +19,12 @@ import { fmt } from "@/lib/date";
 import { getAvailableUsers, type ApiUser } from "@/api/user";
 import { useMyRosterData } from "@/hooks/useMyRoster";
 import { useRosterData } from "@/hooks/useRoster";
+import { useOpenShiftsWeek } from "@/hooks/useOpenShiftsWeek";
+import { useOpenShiftApplication } from "@/hooks/useOpenShifts";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
 import { useOverlayContext } from "@/contexts/OverlayContext";
+import type { OpenShiftDto } from "@/api/openshift";
 
 // user infos that only used for UI/SwapShift
 type UIUser = { id: string; name: string; initials: string };
@@ -28,6 +33,17 @@ export default function MyRoster() {
   const rootRef = useRef<View>(null);
   const [mode, setMode] = useState<"day" | "week">("day");
   const route = useRoute<any>();
+  const navigation = useNavigation<any>();
+
+  // Helper function to get start of week (Monday)
+  const startOfWeekMon = (d: Date) => {
+    const r = new Date(d);
+    const day = r.getDay(); // 0..6
+    const diff = day === 0 ? -6 : 1 - day;
+    r.setDate(r.getDate() + diff);
+    r.setHours(0, 0, 0, 0);
+    return r;
+  };
 
   // Use navigation param if provided, otherwise default to today
   const [date, setDate] = useState(() => {
@@ -39,16 +55,119 @@ export default function MyRoster() {
     return finalDate;
   });
   
+  // Get current user for open shifts
+  const { user } = useCurrentUser();
+  
   // Use useRosterData for calendar dots (shiftMap) - loads data for entire month range
   const { shiftMap, getEventsForDate: getCalendarEvents, refresh: refreshRoster, loading: calendarLoading, error: calendarError } = useRosterData(date, { mock: false, months: 2 });
   
   // Use useMyRosterData for timeline events - loads data for specific day
   const { getEventsForDate, loading: timelineLoading, error: timelineError } = useMyRosterData(date, { mock: false });
-  const events = useMemo(() => getEventsForDate(date), [getEventsForDate, date]);
+  const myShifts = useMemo(() => getEventsForDate(date), [getEventsForDate, date]);
+  
+  // Get open shifts for the current week
+  const weekStartDate = useMemo(() => startOfWeekMon(date), [date]);
+  const { openShifts: openShiftsData, loading: openShiftsLoading, error: openShiftsError, refresh: refreshOpenShifts } = useOpenShiftsWeek(weekStartDate, user?.email);
+  
+  // Convert open shifts to EventItem format and filter for current date
+  const openShiftEvents = useMemo(() => {
+    const dateKey = date.toISOString().split('T')[0];
+    return openShiftsData
+      .filter(shift => shift.date === dateKey)
+      .map(shift => ({
+        id: `openshift-${shift.id}`,
+        start: shift.start,
+        end: shift.end,
+        title: `Open Shift - ${shift.departmentName || 'Available'}`,
+        type: shift.session,
+        location: shift.locationName || 'Room', // Use room/location name, not hospital name
+        role: shift.designationRequirements.length > 0 
+          ? shift.designationRequirements.map(r => r.designationName).join(", ")
+          : "Any designation",
+        teammates: shift.assignedStaff.length > 0 
+          ? `${shift.assignedStaff.length} staff assigned`
+          : "Currently no staff assigned",
+        action: 'plus' as const,
+        color: shift.urgentFlag ? COLOR.warn : COLOR.success,
+        // Store original shift data for details
+        originalOpenShift: shift,
+      }));
+  }, [openShiftsData, date]);
+  
+  // Combine regular shifts and open shifts
+  // If an open shift has the same time as a regular shift, merge them into ONE card
+  // If multiple open shifts have the same time, show only one with a "view more" link
+  const events = useMemo(() => {
+    const merged: EventItem[] = [];
+    const usedOpenShiftIds = new Set<string>();
+    
+    // Group open shifts by time interval
+    const openShiftsByTime = new Map<string, typeof openShiftEvents>();
+    openShiftEvents.forEach(os => {
+      const timeKey = `${os.start}-${os.end}`;
+      if (!openShiftsByTime.has(timeKey)) {
+        openShiftsByTime.set(timeKey, []);
+      }
+      openShiftsByTime.get(timeKey)!.push(os);
+    });
+    
+    // Process regular shifts first
+    myShifts.forEach(shift => {
+      const timeKey = `${shift.start}-${shift.end}`;
+      const matchingOpenShifts = openShiftsByTime.get(timeKey) || [];
+      
+      if (matchingOpenShifts.length > 0) {
+        // Use first open shift for display
+        const firstOpenShift = matchingOpenShifts[0];
+        matchingOpenShifts.forEach(os => usedOpenShiftIds.add(os.id));
+        
+        merged.push({
+          ...shift,
+          hasOpenShift: true,
+          openShiftInfo: {
+            location: firstOpenShift.location,
+            role: firstOpenShift.role,
+            teammates: firstOpenShift.teammates,
+            color: firstOpenShift.color,
+          },
+          originalOpenShift: (firstOpenShift as any).originalOpenShift,
+          multipleOpenShifts: matchingOpenShifts.length,
+          openShiftDate: ((firstOpenShift as any).originalOpenShift?.date) || date.toISOString().split('T')[0],
+          hasDualAction: true,
+        });
+      } else {
+        merged.push(shift);
+      }
+    });
+    
+    // Add remaining open shifts that didn't match any regular shift
+    // Group them by time and show only one per time slot
+    const remainingByTime = new Map<string, typeof openShiftEvents>();
+    openShiftEvents.forEach(os => {
+      if (!usedOpenShiftIds.has(os.id)) {
+        const timeKey = `${os.start}-${os.end}`;
+        if (!remainingByTime.has(timeKey)) {
+          remainingByTime.set(timeKey, []);
+        }
+        remainingByTime.get(timeKey)!.push(os);
+      }
+    });
+    
+    remainingByTime.forEach(shifts => {
+      const firstShift = shifts[0];
+      merged.push({
+        ...firstShift,
+        multipleOpenShifts: shifts.length,
+        openShiftDate: ((firstShift as any).originalOpenShift?.date) || date.toISOString().split('T')[0],
+      });
+    });
+    
+    return merged.sort((a, b) => a.start.localeCompare(b.start));
+  }, [myShifts, openShiftEvents, date]);
   
   // Combine loading states and errors
-  const loading = calendarLoading || timelineLoading;
-  const error = calendarError || timelineError;
+  const loading = calendarLoading || timelineLoading || openShiftsLoading;
+  const error = calendarError || timelineError || openShiftsError;
 
   // ===== avaliable users for wsap (api original data) =====
   const [availableUsers, setAvailableUsers] = useState<ApiUser[]>([]);
@@ -72,14 +191,6 @@ export default function MyRoster() {
   }, []);
 
   // —— Week related —— //
-  const startOfWeekMon = (d: Date) => {
-    const r = new Date(d);
-    const day = r.getDay(); // 0..6
-    const diff = day === 0 ? -6 : 1 - day;
-    r.setDate(r.getDate() + diff);
-    r.setHours(0, 0, 0, 0);
-    return r;
-  };
   const weekStart = React.useMemo(() => startOfWeekMon(date), [date]);
 
   // overlays
@@ -87,6 +198,9 @@ export default function MyRoster() {
   const [detailEvent, setDetailEvent] = React.useState<EventItem | undefined>();
   const [menuVisible, setMenuVisible] = React.useState(false);
   const [menuAnchor, setMenuAnchor] = React.useState<{ x: number; y: number } | null>(null);
+
+  const [openShiftDetailVisible, setOpenShiftDetailVisible] = React.useState(false);
+  const [openShiftDetail, setOpenShiftDetail] = React.useState<OpenShiftDetail | undefined>();
 
   const [reqVisible, setReqVisible] = React.useState(false);
   const [reqSlot, setReqSlot] = React.useState<{ start: string; end: string } | undefined>();
@@ -96,12 +210,16 @@ export default function MyRoster() {
 
   const [toast, setToast] = React.useState(false);
   const showToast = () => { setToast(true); setTimeout(() => setToast(false), 1800); };
+  
+  // Open shift application
+  const { applyForShift, submitting } = useOpenShiftApplication();
 
   // Register overlays with context for auto-close functionality
   const { registerOverlay, unregisterOverlay } = useOverlayContext();
   
   React.useEffect(() => {
     registerOverlay('myroster-detail', () => setDetailVisible(false));
+    registerOverlay('myroster-openshift-detail', () => setOpenShiftDetailVisible(false));
     registerOverlay('myroster-menu', () => setMenuVisible(false));
     registerOverlay('myroster-request', () => setReqVisible(false));
     registerOverlay('myroster-leave', () => setLeaveVisible(false));
@@ -110,6 +228,7 @@ export default function MyRoster() {
     
     return () => {
       unregisterOverlay('myroster-detail');
+      unregisterOverlay('myroster-openshift-detail');
       unregisterOverlay('myroster-menu');
       unregisterOverlay('myroster-request');
       unregisterOverlay('myroster-leave');
@@ -121,6 +240,7 @@ export default function MyRoster() {
   // Auto-close overlays when navigating to other tabs
   useAutoCloseOverlays([
     () => setDetailVisible(false),
+    () => setOpenShiftDetailVisible(false),
     () => setMenuVisible(false),
     () => setReqVisible(false),
     () => setLeaveVisible(false),
@@ -128,10 +248,58 @@ export default function MyRoster() {
     () => setToast(false)
   ]);
 
-  const openDetails = (ev: EventItem) => { setDetailEvent(ev); setDetailVisible(true); };
+  const openDetails = (ev: EventItem) => { 
+    // Check if this is an open shift (has action === "plus")
+    if (ev.action === 'plus' && (ev as any).originalOpenShift) {
+      const shift = (ev as any).originalOpenShift as OpenShiftDto;
+      const detail: OpenShiftDetail = {
+        id: shift.id.toString(),
+        date: shift.date,
+        start: shift.start,
+        end: shift.end,
+        session: shift.session,
+        location: shift.locationName || "Unknown",
+        hospitalName: shift.hospitalName || "Hospital",
+        address: shift.hospitalAddress || "Address not available",
+        designation: shift.designationRequirements.length > 0 
+          ? shift.designationRequirements.map(r => r.designationName).join(", ")
+          : "Any",
+        theatre: shift.locationName,
+        pay: shift.paymentCents ? shift.paymentCents / 100 : 0,
+        urgent: shift.urgentFlag,
+        status: shift.status,
+        canApply: shift.canApply !== false,
+        applicationStatus: shift.applicationStatus,
+        assignedStaff: shift.assignedStaff || [],
+        requirements: shift.designationRequirements || [],
+      };
+      setOpenShiftDetail(detail);
+      setOpenShiftDetailVisible(true);
+    } else {
+      setDetailEvent(ev); 
+      setDetailVisible(true); 
+    }
+  };
+  
   const closeDetails = () => { setDetailVisible(false); setMenuVisible(false); };
 
   const openRequest = (ev: EventItem) => { setReqSlot({ start: ev.start, end: ev.end }); setReqVisible(true); };
+  
+  // Apply for open shift
+  const handleApplyOpenShift = async () => {
+    if (!openShiftDetail || !user?.email) return;
+    
+    const result = await applyForShift({ openShiftId: parseInt(openShiftDetail.id), message: "" });
+    
+    if (result.success) {
+      showToast();
+      setOpenShiftDetailVisible(false);
+      refreshOpenShifts(); // Refresh open shifts data
+    } else if (result.error) {
+      // Show error toast or handle error
+      console.error("Failed to apply for open shift:", result.error);
+    }
+  };
 
   // —— API User → UI User —— //
   const initialsOf = (fullName: string) => {
@@ -155,6 +323,13 @@ export default function MyRoster() {
     setDate(new Date(day));
     setReqSlot(slot);
     setReqVisible(true);
+  };
+  
+  // Navigate to Open Shifts page with specific date
+  const handleViewMoreOpenShifts = (dateStr: string) => {
+    navigation.navigate('OPEN SHIFTS', {
+      selectedDate: dateStr,
+    });
   };
 
   return (
@@ -185,6 +360,7 @@ export default function MyRoster() {
           rightAction={{ icon: "refresh", onPress: () => {
             setLoadingUsers(true);
             refreshRoster();
+            refreshOpenShifts();
             getAvailableUsers()
               .then((users) => setAvailableUsers(users))
               .catch((e) => setUserErr(e?.message ?? "Failed to load users"))
@@ -194,12 +370,64 @@ export default function MyRoster() {
       </View>
 
       {mode === "day" ? (
-        <DayTimeline events={events} onOpenDetails={openDetails} onOpenRequest={openRequest} />
+        <DayTimeline 
+          events={events} 
+          onOpenDetails={openDetails} 
+          onOpenRequest={openRequest}
+          onViewMoreOpenShifts={handleViewMoreOpenShifts}
+        />
       ) : (
         <WeekTimeline
           weekStart={weekStart}
           selectedDate={date}
-          getEventsFor={(d) => getEventsForDate(d)}
+          getEventsFor={(d) => {
+            // Combine regular shifts and open shifts for the week view
+            const regularShifts = getEventsForDate(d);
+            const dateKey = d.toISOString().split('T')[0];
+            const openShifts = openShiftsData
+              .filter(shift => shift.date === dateKey)
+              .map(shift => ({
+                id: `openshift-${shift.id}`,
+                start: shift.start,
+                end: shift.end,
+                title: `Open Shift - ${shift.departmentName || 'Available'}`,
+                type: shift.session,
+                location: shift.locationName || 'Room', // Use room/location name, not hospital name
+                role: shift.designationRequirements.length > 0 
+                  ? shift.designationRequirements.map(r => r.designationName).join(", ")
+                  : "Any designation",
+                teammates: shift.assignedStaff.length > 0 
+                  ? `${shift.assignedStaff.length} staff assigned`
+                  : "Currently no staff assigned",
+                action: 'plus' as const,
+                color: shift.urgentFlag ? COLOR.warn : COLOR.success,
+                originalOpenShift: shift,
+              }));
+            
+            // Mark regular shifts as "taken" if there's a matching open shift
+            const combined: EventItem[] = [];
+            regularShifts.forEach(shift => {
+              const matchingOpenShift = openShifts.find(os => 
+                os.start === shift.start && os.end === shift.end
+              );
+              combined.push({
+                ...shift,
+                isTaken: !!matchingOpenShift,
+              });
+            });
+            
+            // Add all open shifts
+            combined.push(...openShifts);
+            
+            return combined.sort((a, b) => {
+              const timeCompare = a.start.localeCompare(b.start);
+              if (timeCompare !== 0) return timeCompare;
+              // Show assigned shifts (arrow) before open shifts (plus) for same time
+              if (a.action === 'arrow' && b.action === 'plus') return -1;
+              if (a.action === 'plus' && b.action === 'arrow') return 1;
+              return 0;
+            });
+          }}
           onOpenDetails={openDetails}
           onOpenRequest={openRequestFromWeek}
         />
@@ -264,6 +492,15 @@ export default function MyRoster() {
         availableUsers={availableUIUsers}
         // loading={loadingUsers}
         // error={userErr}
+      />
+
+      {/* Open Shift Details Overlay */}
+      <OpenShiftDetails
+        visible={openShiftDetailVisible}
+        shift={openShiftDetail}
+        coworkers={openShiftDetail?.assignedStaff || []}
+        onClose={() => setOpenShiftDetailVisible(false)}
+        onApply={handleApplyOpenShift}
       />
 
       <SuccessToast visible={toast} text="Successfully submitted" />

@@ -497,8 +497,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 6,
     elevation: 1,
+    alignItems: "center", // Vertically center all items in the row
   },
-  sessionCol: { width: sx(52), marginRight: sx(10) },
+  sessionCol: { 
+    width: sx(52), 
+    marginRight: sx(10),
+    alignItems: "center",
+    justifyContent: "center", // Center the badge vertically
+  },
   sessionBadge: {
     alignItems: "center",
     justifyContent: "center",
@@ -511,7 +517,11 @@ const styles = StyleSheet.create({
   },
   sessionText: { color: COLOR.brand, fontWeight: "700", fontSize: sx(11), textAlign: "center", lineHeight: sy(14) },
 
-  mainCol: { flex: 1, gap: sy(6) },
+  mainCol: { 
+    flex: 1, 
+    gap: sy(6),
+    justifyContent: "center", // Vertically center content
+  },
   row: { flexDirection: "row", alignItems: "center", gap: sx(6) },
   time: { color: COLOR.ink, fontWeight: "700" },
   meta: { color: COLOR.ink },
@@ -528,7 +538,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  actionCol: { justifyContent: "center" },
+  actionCol: { 
+    justifyContent: "center",
+    alignItems: "center",
+  },
   roundBtn: {
     width: sx(40),
     height: sy(40),
