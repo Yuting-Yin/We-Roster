@@ -13,6 +13,7 @@ export type OpenShiftDetail = {
   end: string;               // "13:00"
   session: "AM" | "PM" | "AH" | "ON_CALL";
   location: string;          // e.g. PMCC
+  hospitalName?: string;     // hospital name
   address?: string;          // detial adress
   designation: string;       // role
   theatre?: string;          // e.g. "Theatre 1"
@@ -81,14 +82,27 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
             <View style={styles.block}>
               <View style={styles.line}>
                 <Ionicons name="business-outline" size={sx(16)} color={COLOR.label} />
-                <Text style={styles.mainText}>  {shift.location}</Text>
+                <Text style={styles.mainText}>  {shift.hospitalName || shift.location}</Text>
               </View>
               {!!shift.address && <Text style={styles.addrText}>{shift.address}</Text>}
 
               <View style={styles.line}>
                 <Ionicons name="medkit-outline" size={sx(16)} color={COLOR.label} />
-                <Text style={styles.subText}>  {shift.designation}</Text>
+                <Text style={styles.subText}>  Designation Requirements</Text>
               </View>
+              {shift.requirements && shift.requirements.length > 0 ? (
+                shift.requirements.map((req, idx) => (
+                  <View key={idx} style={[styles.line, { marginLeft: sx(22), marginTop: sy(4) }]}>
+                    <Text style={styles.requirementText}>
+                      • {req.designationName}
+                    </Text>
+                  </View>
+                ))
+              ) : (
+                <View style={[styles.line, { marginLeft: sx(22), marginTop: sy(4) }]}>
+                  <Text style={styles.requirementText}>• Any designation</Text>
+                </View>
+              )}
               {!!shift.theatre && (
                 <View style={styles.line}>
                   <Ionicons name="key-outline" size={sx(16)} color={COLOR.label} />
@@ -105,14 +119,18 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
                 <Ionicons name="people-outline" size={sx(16)} color={COLOR.label} />
                 <Text style={styles.mainText}>  Working with</Text>
               </View>
-              {coworkers.map(cw => (
-                <View key={cw.id} style={styles.cwRow}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{cw.initials}</Text>
+              {coworkers.length === 0 ? (
+                <Text style={styles.noStaffText}>Currently no staff allocated</Text>
+              ) : (
+                coworkers.map(cw => (
+                  <View key={cw.id} style={styles.cwRow}>
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{cw.initials}</Text>
+                    </View>
+                    <Text style={styles.cwName}>{cw.name}</Text>
                   </View>
-                  <Text style={styles.cwName}>{cw.name}</Text>
-                </View>
-              ))}
+                ))
+              )}
             </View>
 
             <View style={styles.divider} />
@@ -185,6 +203,8 @@ const styles = StyleSheet.create({
   mainText: { color: COLOR.ink, fontWeight: "600" },
   subText: { color: COLOR.ink },
   addrText: { color: COLOR.brand, marginLeft: sx(22), marginBottom: sy(6) },
+  requirementText: { color: COLOR.ink, fontSize: sx(13) },
+  requirementCount: { color: COLOR.label, fontSize: sx(12), fontStyle: "italic" },
 
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: COLOR.divider, marginVertical: sy(8) },
 
@@ -196,6 +216,7 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: COLOR.brand, fontWeight: "700", fontSize: sx(10) },
   cwName: { color: COLOR.ink },
+  noStaffText: { color: COLOR.label, fontSize: sx(13), fontStyle: "italic" },
 
   payCard: {
     borderWidth: 1, borderColor: COLOR.divider, borderRadius: sx(12),

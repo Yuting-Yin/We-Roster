@@ -51,6 +51,10 @@ public class OpenShift {
     @Column(name = "status", length = 30)
     private String status; // AVAILABLE, READY_TO_RUN, APPROVED_FOR_FORMAL, CANCELLED
     
+    @Column(name = "total_staff_needed", nullable = false)
+    @Builder.Default
+    private Integer totalStaffNeeded = 1;
+    
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "created_by")
     private Staff createdBy;

@@ -48,8 +48,15 @@ public class OpenShiftController {
     
     /**
      * Check if open shift requirements are satisfied and update status
-     * AVAILABLE → READY_TO_RUN when all designation requirements are met
-     * Does not check if status is CANCELLED or APPROVED_FOR_FORMAL
+     * AVAILABLE → READY_TO_RUN when requirements are met
+     * 
+     * Three scenarios:
+     * 1. No designation requirements: Check total APPROVED requests >= totalStaffNeeded
+     * 2. Has designation requirements: Check each designation requirement is met by APPROVED requests
+     * 3. Mixed: Check designation requirements AND total count
+     * 
+     * Note: Only APPROVED requests count (not PENDING)
+     * Since we don't have admin interface, requests stay PENDING, so status won't auto-update in practice
      */
     private void checkAndUpdateOpenShiftStatus(OpenShift openShift) {
         // Only update if currently AVAILABLE or READY_TO_RUN
@@ -57,34 +64,45 @@ public class OpenShiftController {
             return; // Don't modify cancelled or approved shifts
         }
         
-        // Get requirements
-        List<OpenShiftDesignationRequirements> requirements = designationRequirementsRepository
+        // Get designation requirements
+        List<OpenShiftDesignationRequirements> designationReqs = designationRequirementsRepository
             .findByOpenShiftId(openShift.getId());
         
-        // If no requirements, we can't determine READY_TO_RUN automatically
-        if (requirements.isEmpty()) {
-            return; // Keep status as is
+        // Get APPROVED requests (not assignments - assignments come after admin approval)
+        List<OpenShiftRequest> approvedRequests = openShiftRequestRepository
+            .findByOpenShiftIdOrderByCreatedAtDesc(openShift.getId()).stream()
+            .filter(req -> "APPROVED".equals(req.getStatus()))
+            .collect(java.util.stream.Collectors.toList());
+        
+        boolean requirementsMet = false;
+        
+        if (designationReqs.isEmpty()) {
+            // Scenario 1: No designation requirements, just check total count
+            requirementsMet = approvedRequests.size() >= openShift.getTotalStaffNeeded();
+        } else {
+            // Scenario 2 & 3: Has designation requirements
+            // Check each designation requirement is satisfied
+            boolean allDesignationsMet = designationReqs.stream().allMatch(req -> {
+                long approvedCount = approvedRequests.stream()
+                    .filter(request -> request.getStaff().getDesignation() != null &&
+                            request.getStaff().getDesignation().getId().equals(req.getDesignation().getId()))
+                    .count();
+                return approvedCount >= req.getRequiredCount();
+            });
+            
+            // Also check total staff count
+            boolean totalCountMet = approvedRequests.size() >= openShift.getTotalStaffNeeded();
+            
+            requirementsMet = allDesignationsMet && totalCountMet;
         }
         
-        // Get active assignments
-        List<OpenShiftAssignment> assignments = openShiftAssignmentRepository
-            .findActiveAssignmentsByOpenShift(openShift.getId());
-        
-        // Check if all requirements are satisfied
-        boolean allSatisfied = requirements.stream().allMatch(req -> {
-            long currentCount = assignments.stream()
-                .filter(assignment -> assignment.getStaff().getDesignation() != null &&
-                        assignment.getStaff().getDesignation().getId().equals(req.getDesignation().getId()))
-                .count();
-            return currentCount >= req.getRequiredCount();
-        });
-        
-        // Update status based on requirements
-        String newStatus = allSatisfied ? "READY_TO_RUN" : "AVAILABLE";
+        // Update status
+        String newStatus = requirementsMet ? "READY_TO_RUN" : "AVAILABLE";
         if (!newStatus.equals(openShift.getStatus())) {
             openShift.setStatus(newStatus);
             openShiftRepository.save(openShift);
-            System.out.println("📊 Open shift " + openShift.getId() + " status updated: " + newStatus);
+            System.out.println("📊 Open shift " + openShift.getId() + " status updated: " + newStatus + 
+                               " (Approved: " + approvedRequests.size() + "/" + openShift.getTotalStaffNeeded() + ")");
         }
     }
     
@@ -340,6 +358,17 @@ public class OpenShiftController {
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
         
         // OpenShift now has its own shift details (independent from shift table)
+        // Get hospital name and address from location or department
+        String hospitalName = null;
+        String hospitalAddress = null;
+        if (openShift.getLocation() != null && openShift.getLocation().getHospital() != null) {
+            hospitalName = openShift.getLocation().getHospital().getName();
+            hospitalAddress = openShift.getLocation().getHospital().getAddress();
+        } else if (openShift.getDepartment() != null && openShift.getDepartment().getHospital() != null) {
+            hospitalName = openShift.getDepartment().getHospital().getName();
+            hospitalAddress = openShift.getDepartment().getHospital().getAddress();
+        }
+        
         OpenShiftDto.OpenShiftDtoBuilder builder = OpenShiftDto.builder()
             .id(openShift.getId())
             .startTs(openShift.getStartTs())
@@ -350,6 +379,8 @@ public class OpenShiftController {
             .session(openShift.getType())
             .departmentName(openShift.getDepartment() != null ? openShift.getDepartment().getName() : null)
             .locationName(openShift.getLocation() != null ? openShift.getLocation().getName() : null)
+            .hospitalName(hospitalName)
+            .hospitalAddress(hospitalAddress)
             .type(openShift.getType())
             .note(openShift.getNote())
             .paymentCents(openShift.getExtraPayCents())
@@ -365,15 +396,18 @@ public class OpenShiftController {
         List<OpenShiftDesignationRequirements> requirements = designationRequirementsRepository
             .findByOpenShiftId(openShift.getId());
         
+        // Get APPROVED requests (these are the staff approved for this open shift)
+        List<OpenShiftRequest> approvedRequests = openShiftRequestRepository
+            .findByOpenShiftIdOrderByCreatedAtDesc(openShift.getId()).stream()
+            .filter(req -> "APPROVED".equals(req.getStatus()))
+            .collect(Collectors.toList());
+        
         List<DesignationRequirementDto> requirementDtos = requirements.stream()
             .map(req -> {
-                // Count current assignments for this designation
-                List<OpenShiftAssignment> assignments = openShiftAssignmentRepository
-                    .findActiveAssignmentsByOpenShift(openShift.getId());
-                
-                long currentCount = assignments.stream()
-                    .filter(assignment -> assignment.getStaff().getDesignation() != null &&
-                            assignment.getStaff().getDesignation().getId().equals(req.getDesignation().getId()))
+                // Count APPROVED requests for this designation
+                long currentCount = approvedRequests.stream()
+                    .filter(request -> request.getStaff().getDesignation() != null &&
+                            request.getStaff().getDesignation().getId().equals(req.getDesignation().getId()))
                     .count();
                 
                 return DesignationRequirementDto.builder()
@@ -387,13 +421,10 @@ public class OpenShiftController {
         
         builder.designationRequirements(requirementDtos);
         
-        // Get assigned staff (coworkers)
-        List<OpenShiftAssignment> assignments = openShiftAssignmentRepository
-            .findActiveAssignmentsByOpenShift(openShift.getId());
-        
-        List<CoworkerDto> coworkerDtos = assignments.stream()
-            .map(assignment -> {
-                Staff staff = assignment.getStaff();
+        // Get assigned staff from APPROVED requests (representing staff approved for this open shift)
+        List<CoworkerDto> coworkerDtos = approvedRequests.stream()
+            .map(request -> {
+                Staff staff = request.getStaff();
                 String initials = (staff.getFirstName().substring(0, 1) + staff.getLastName().substring(0, 1)).toUpperCase();
                 
                 return CoworkerDto.builder()
@@ -401,7 +432,7 @@ public class OpenShiftController {
                     .name(staff.getFirstName() + " " + staff.getLastName())
                     .initials(initials)
                     .designationName(staff.getDesignation() != null ? staff.getDesignation().getName() : null)
-                    .isLead(assignment.getIsLead() != null ? assignment.getIsLead() : false)
+                    .isLead(false) // No lead designation for open shifts yet
                     .build();
             })
             .collect(Collectors.toList());

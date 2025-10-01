@@ -1,13 +1,15 @@
 // src/screens/Roster/OpenShifts.tsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRoute } from "@react-navigation/native";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
 import { useOverlayContext } from "@/contexts/OverlayContext";
 import { useOpenShiftsData, useOpenShiftDetails, useOpenShiftApplication } from "@/hooks/useOpenShifts";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useFilterMetadata } from "@/hooks/useFilterMetadata";
 import { fmt } from "@/lib/date";
 import type { OpenShiftDto } from "@/api/openshift";
 
@@ -46,20 +48,33 @@ type Item = {
   session: Session;      // "AM" | "PM" | "AH" | "ON_CALL"
   start: string;         // "08:00"
   end: string;           // "13:00"
-  location: string;      // e.g. "PMCC"
-  designation: string;   // e.g. "Anaes Coordinator"
+  location: string;      // e.g. "ED Room 1"
+  hospitalName: string;  // e.g. "WeRoster General Hospital"
+  designation: string;   // e.g. "Registered Nurse" or "Any"
   payment?: string;      // e.g. "$500"
   urgent?: boolean;      // Urgent flag
   status?: string;       // AVAILABLE, READY_TO_RUN, etc.
+  hospitalAddress?: string; // Hospital physical address
 };
 
 /* ================= Component ================= */
 export default function OpenShifts() {
   /* ---- Week navigation ---- */
+  const route = useRoute<any>();
   const today = new Date();
   const currentWeek = startOfWeekMon(today);
+  
   const [weekStart, setWeekStart] = useState<Date>(currentWeek);
   const maxWeekStart = addMonths(currentWeek, 2);
+  
+  // Update week when navigation params change
+  useEffect(() => {
+    if (route.params?.selectedDate) {
+      const selectedDate = new Date(route.params.selectedDate + 'T00:00:00');
+      const newWeekStart = startOfWeekMon(selectedDate);
+      setWeekStart(newWeekStart);
+    }
+  }, [route.params?.selectedDate]);
 
   const canGoPrev = weekStart.getTime() > currentWeek.getTime();
   const canGoNext = weekStart.getTime() < maxWeekStart.getTime();
@@ -67,11 +82,11 @@ export default function OpenShifts() {
   /* ---- Load data from API ---- */
   const { user } = useCurrentUser();
   const { openShifts, loading, error, refresh } = useOpenShiftsData(weekStart);
+  const { metadata: filterMetadata, loading: metadataLoading } = useFilterMetadata();
 
   /* ---- Filter overlay ---- */
   const [filterVisible, setFilterVisible] = useState(false);
   const [filter, setFilter] = useState<FilterValue>({
-    preset: "Preset",
     sessions: [],
     locations: [],
     designations: [],
@@ -133,12 +148,14 @@ export default function OpenShifts() {
           start: shift.start,
           end: shift.end,
           location: shift.locationName || "Unknown",
+          hospitalName: shift.hospitalName || "Unknown",
           designation: shift.designationRequirements.length > 0 
             ? shift.designationRequirements.map(r => r.designationName).join(", ")
             : "Any",
           payment: shift.formattedPayment,
           urgent: shift.urgentFlag,
           status: shift.status,
+          hospitalAddress: shift.hospitalAddress,
         });
       });
     });
@@ -146,7 +163,7 @@ export default function OpenShifts() {
     // Apply filters
     let arr = allItems;
     if (filter.sessions.length) arr = arr.filter(i => filter.sessions.includes(i.session));
-    if (filter.locations.length) arr = arr.filter(i => filter.locations.includes(i.location));
+    if (filter.locations.length) arr = arr.filter(i => filter.locations.includes(i.hospitalName));
     if (filter.designations.length) arr = arr.filter(i => filter.designations.some(d => i.designation.includes(d)));
 
     arr.sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
@@ -168,12 +185,35 @@ export default function OpenShifts() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const toggleDay = (k: string) => setCollapsed(s => ({ ...s, [k]: !s[k] }));
 
+  /* ---- Handle navigation to specific shift ---- */
+  const highlightShiftId = route.params?.highlightShiftId;
+  
+  // Automatically open details for the highlighted shift
+  useEffect(() => {
+    if (highlightShiftId && !loading && filtered.length > 0) {
+      // Find the shift by ID
+      const shift = filtered.find(it => it.id === highlightShiftId.toString());
+      if (shift) {
+        // Small delay to ensure the list has rendered
+        const timeoutId = setTimeout(() => {
+          openDetailsFor(shift);
+          // Clear the highlight param to prevent reopening on next navigation
+        }, 500);
+        
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [highlightShiftId, loading, filtered]);
+
   /* ---- Card action: open details ---- */
   const { applyForShift, submitting } = useOpenShiftApplication();
   
   const openDetailsFor = (it: Item) => {
-    // For now, use the data we already have from the list
-    // In a full implementation, you'd fetch full details from API
+    // Find the full OpenShiftDto from the API data to get all details
+    const fullShift = Object.values(openShifts)
+      .flat()
+      .find(s => s.id.toString() === it.id);
+    
     const detail: OpenShiftDetail = {
       id: it.id,
       date: it.date,
@@ -181,15 +221,17 @@ export default function OpenShifts() {
       end: it.end,
       session: it.session,
       location: it.location,
-      address: "305 Grattan St, Melbourne VIC 3000, Australia", // TODO: Get from backend
+      hospitalName: fullShift?.hospitalName || "Hospital",
+      address: fullShift?.hospitalAddress || "Address not available",
       designation: it.designation,
       theatre: it.location,
       pay: it.payment ? parseFloat(it.payment.replace('$', '')) : 0,
       urgent: it.urgent,
       status: it.status,
-      // TODO: Fetch these from API when detail modal opens
-      canApply: true,
-      assignedStaff: [],
+      canApply: fullShift?.canApply !== false,
+      applicationStatus: fullShift?.applicationStatus,
+      assignedStaff: fullShift?.assignedStaff || [],
+      requirements: fullShift?.designationRequirements || [],
     };
     setDetailShift(detail);
     setDetailVisible(true);
@@ -381,8 +423,10 @@ export default function OpenShifts() {
         value={filter}
         onChange={setFilter}
         onApply={() => setFilterVisible(false)}
-        onClear={() => setFilter({ preset: "Preset", sessions: [], locations: [], designations: [] })}
+        onClear={() => setFilter({ sessions: [], locations: [], designations: [] })}
         onClose={() => setFilterVisible(false)}
+        locationOptions={filterMetadata.hospitals}
+        designationOptions={filterMetadata.designations}
       />
 
       {/* Details Overlay */}

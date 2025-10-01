@@ -25,7 +25,7 @@ public class Location {
     @Column(name = "code", length = 50, unique = true)
     private String code;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "hospital_id", nullable = false)
     private Hospital hospital;
     

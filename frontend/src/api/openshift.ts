@@ -10,6 +10,8 @@ export type OpenShiftDto = {
   session: "AM" | "PM" | "AH" | "ON_CALL";
   departmentName?: string;
   locationName?: string;
+  hospitalName?: string;
+  hospitalAddress?: string;
   code: string;
   note?: string;
   paymentCents?: number;
