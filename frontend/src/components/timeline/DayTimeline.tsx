@@ -8,6 +8,7 @@ import { sx, sy, W } from "@/theme/metrics";
 import { COLOR } from "@/theme/colors";
 
 const HOUR_START = 0, HOUR_END = 24, HOUR_HEIGHT = sy(72), TIME_GUTTER = sx(52);
+const OVERLAP_OFFSET = sx(8); // Horizontal offset for overlapping cards
 const toMinutes = (t: string) => { const [h,m]=t.split(":").map(Number); return h*60+m; };
 const yFromTime = (t: string) => ((toMinutes(t)-HOUR_START*60)/60)*HOUR_HEIGHT;
 const hFromRange = (s: string, e: string) => {
@@ -17,6 +18,38 @@ const hFromRange = (s: string, e: string) => {
   const duration = endMinutes < startMinutes ? (24*60 - startMinutes + endMinutes) : (endMinutes - startMinutes);
   return (duration/60)*HOUR_HEIGHT;
 };
+
+// Detect if two events overlap in time
+const eventsOverlap = (ev1: EventItem, ev2: EventItem): boolean => {
+  const start1 = toMinutes(ev1.start);
+  const end1 = toMinutes(ev1.end);
+  const start2 = toMinutes(ev2.start);
+  const end2 = toMinutes(ev2.end);
+  
+  // Handle overnight shifts
+  const duration1 = end1 < start1 ? (24*60 - start1 + end1) : (end1 - start1);
+  const duration2 = end2 < start2 ? (24*60 - start2 + end2) : (end2 - start2);
+  const actualEnd1 = start1 + duration1;
+  const actualEnd2 = start2 + duration2;
+  
+  return start1 < actualEnd2 && actualEnd1 > start2;
+};
+
+// Calculate stagger offset for overlapping events
+const calculateStaggerOffset = (events: EventItem[], currentIndex: number): number => {
+  const currentEvent = events[currentIndex];
+  let offset = 0;
+  
+  // Count how many previous events this one overlaps with
+  for (let i = 0; i < currentIndex; i++) {
+    if (eventsOverlap(events[i], currentEvent)) {
+      offset += OVERLAP_OFFSET;
+    }
+  }
+  
+  return offset;
+};
+
 
 export default function DayTimeline({
   events,
@@ -71,7 +104,7 @@ export default function DayTimeline({
           );
         })}
 
-        {events.map((ev) => {
+        {events.map((ev, index) => {
           const startMinutes = toMinutes(ev.start);
           const endMinutes = toMinutes(ev.end);
           const isOvernight = endMinutes < startMinutes;
@@ -81,6 +114,11 @@ export default function DayTimeline({
           const top = yFromTime(ev.start);
           const height = hFromRange(ev.start, ev.end);
           
+          // Calculate horizontal offset for overlapping cards
+          const staggerOffset = calculateStaggerOffset(events, index);
+          const maxOffset = OVERLAP_OFFSET * 2; // Limit maximum stagger to prevent overflow
+          const appliedOffset = Math.min(staggerOffset, maxOffset);
+          
           return (
             <View
               key={ev.id}
@@ -88,13 +126,15 @@ export default function DayTimeline({
                 styles.card,
                 {
                   top,
-                  left: TIME_GUTTER + sx(8),
+                  left: TIME_GUTTER + sx(8) + appliedOffset,
                   height: Math.min(height, totalHeight - top), // Ensure card doesn't extend beyond timeline
-                  width: W - TIME_GUTTER - sx(16),
+                  width: W - TIME_GUTTER - sx(16) - appliedOffset, // Reduce width to maintain right edge
                   borderTopColor: ev.color ?? COLOR.brand,
                   // Add visual indicator for overnight shifts
                   borderLeftWidth: isOvernight ? sx(4) : 0,
                   borderLeftColor: isOvernight ? COLOR.warn : 'transparent',
+                  // Increase z-index based on array index so later events appear on top
+                  zIndex: index,
                 },
               ]}
             >
@@ -148,9 +188,14 @@ const styles = StyleSheet.create({
   hourText: { position: "absolute", left: sx(8), top: -sy(8), width: sx(44), color: COLOR.label, fontSize: sx(10) },
   hourLine: { position: "absolute", left: sx(52), right: 0, top: 0, height: 1, backgroundColor: COLOR.line },
   card: {
-    position: "absolute", backgroundColor: `${COLOR.card}80`,
-    borderTopWidth: sx(3), borderRadius: sx(8), padding: sx(12),
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 1,
+    position: "absolute", 
+    backgroundColor: 'rgba(247, 250, 255, 0.85)', // Very light blue with 85% opacity
+    borderTopWidth: sx(3), 
+    borderWidth: 1,
+    borderColor: 'rgba(0, 120, 212, 0.1)', // Very subtle border
+    borderRadius: sx(8), 
+    padding: sx(12),
+    // Shadow removed to allow proper visual overlap blending
   },
   rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   infoColumn: { flex: 1, paddingRight: sx(8), gap: sy(4) },

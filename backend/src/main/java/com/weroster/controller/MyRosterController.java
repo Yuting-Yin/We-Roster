@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
@@ -42,6 +41,19 @@ public class MyRosterController {
             .filter(staff -> staff.getUser() != null && staff.getUser().getId().equals(user.getId()))
             .findFirst()
             .orElseThrow(() -> new RuntimeException("No staff linked to user"));
+    }
+    
+    /**
+     * Get priority for shift type sorting (higher = more important)
+     */
+    private int getPriority(String shiftCode) {
+        switch (shiftCode) {
+            case "ON_CALL": return 4;
+            case "AH": return 3;
+            case "PM": return 2;
+            case "AM": return 1;
+            default: return 0;
+        }
     }
     
     @GetMapping("/day")
@@ -89,7 +101,7 @@ public class MyRosterController {
                         System.out.println("🔄 Processing shift: " + shift.getId() + " at " + shift.getStartTs());
                         System.out.println("🔄 Shift department: " + (shift.getDepartment() != null ? shift.getDepartment().getName() : "NULL"));
                         System.out.println("🔄 Shift location: " + (shift.getLocation() != null ? shift.getLocation().getName() : "NULL"));
-                        System.out.println("🔄 Shift code: " + shift.getCode());
+                        System.out.println("🔄 Shift type: " + shift.getType());
                         
                         // Get all assignments for this shift to count coworkers and build teammates
                         List<ShiftAssignment> allAssignments = shiftAssignmentRepository.findByShiftId(shift.getId());
@@ -128,7 +140,7 @@ public class MyRosterController {
                                 shift.getEndTs().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
                                 shift.getDepartment() != null ? shift.getDepartment().getName() : "",
                                 shift.getLocation() != null ? shift.getLocation().getName() : "",
-                                shift.getCode(),
+                                shift.getType(),
                                 assignment.getIsLead(),
                                 allAssignments.size(),
                                 shift.getNote(),
@@ -188,7 +200,7 @@ public class MyRosterController {
                 shiftInfo.put("id", shift.getId());
                 shiftInfo.put("startTs", shift.getStartTs().toString());
                 shiftInfo.put("endTs", shift.getEndTs().toString());
-                shiftInfo.put("code", shift.getCode());
+                shiftInfo.put("type", shift.getType());
                 shiftInfo.put("department", shift.getDepartment() != null ? shift.getDepartment().getName() : "NULL");
                 shiftInfo.put("location", shift.getLocation() != null ? shift.getLocation().getName() : "NULL");
                 return shiftInfo;
@@ -355,25 +367,20 @@ public class MyRosterController {
             
             // Process each date
             assignmentsByDate.forEach((dateStr, dateAssignments) -> {
-                // Determine shift type for dots - use actual shift types directly
-                Set<String> shiftCodes = dateAssignments.stream()
-                    .map(sa -> sa.getShift().getCode())
-                    .collect(Collectors.toSet());
+                // Collect all unique shift types for this day (support multiple shifts per day)
+                List<String> shiftTypes = dateAssignments.stream()
+                    .map(sa -> sa.getShift().getType())
+                    .distinct()
+                    .sorted((a, b) -> {
+                        // Sort by priority: ON_CALL > AH > PM > AM
+                        int priorityA = getPriority(a);
+                        int priorityB = getPriority(b);
+                        return Integer.compare(priorityB, priorityA); // Reverse order (higher priority first)
+                    })
+                    .collect(Collectors.toList());
                 
-                String shiftType;
-                if (shiftCodes.contains("ON_CALL")) {
-                    shiftType = "ON_CALL"; // ○●
-                } else if (shiftCodes.contains("AH")) {
-                    shiftType = "AH"; // ○●
-                } else if (shiftCodes.contains("PM")) {
-                    shiftType = "PM"; // ○●
-                } else if (shiftCodes.contains("AM")) {
-                    shiftType = "AM"; // ●○
-                } else {
-                    shiftType = "unallocated"; // ○○
-                }
-                
-                shiftMap.put(dateStr, shiftType);
+                // Store all shift types for this date (as array for frontend)
+                shiftMap.put(dateStr, shiftTypes);
                 
                 // Build events for this date
                 List<Map<String, Object>> dateEvents = dateAssignments.stream()
@@ -416,7 +423,7 @@ public class MyRosterController {
                         event.put("endTs", shift.getEndTs().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
                         event.put("dept", shift.getDepartment() != null ? shift.getDepartment().getName() : "");
                         event.put("location", shift.getLocation() != null ? shift.getLocation().getName() : "");
-                        event.put("code", shift.getCode());
+                        event.put("type", shift.getType());
                         event.put("isLead", assignment.getIsLead());
                         event.put("coworkers", allAssignments.size());
                         event.put("note", shift.getNote());
@@ -511,7 +518,7 @@ public class MyRosterController {
                                 shift.getEndTs().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
                                 shift.getDepartment() != null ? shift.getDepartment().getName() : "",
                                 shift.getLocation() != null ? shift.getLocation().getName() : "",
-                                shift.getCode(),
+                                shift.getType(),
                                 assignments.stream().anyMatch(ShiftAssignment::getIsLead),
                                 assignments.size(),
                                 shift.getNote(),

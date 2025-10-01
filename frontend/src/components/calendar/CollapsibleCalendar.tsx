@@ -1,5 +1,5 @@
 // src/components/calendar/CollapsibleCalendar.tsx
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, Pressable, StyleSheet, Animated, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
@@ -75,9 +75,9 @@ function buildMonths(anchor: Date, count = 2) {
 type Action = { icon: "menu" | "refresh"; onPress: () => void };
 
 type Props = {
-  value: Date;                          // Currently selected date (controlled)
-  onChange: (d: Date) => void;          // Selection change callback
-  shiftMap?: Record<string, ShiftType>; // YYYY-MM-DD -> shift type (undefined = no shifts)
+  value: Date;                                        // Currently selected date (controlled)
+  onChange: (d: Date) => void;                        // Selection change callback
+  shiftMap?: Record<string, ShiftType | ShiftType[]>; // YYYY-MM-DD -> shift type(s) (undefined = no shifts)
   /** The title placed in the center of the header (default: "Mon, May 12, 2025") */
   title?: string;
   /** Icon button on the left side of the head (menu) */
@@ -87,24 +87,54 @@ type Props = {
 };
 
 /* =================== Visual helpers =================== */
-// AM: ●○   PM/AH/ON_CALL: ○●   not-working/unallocated: ○○
+// Left dot filled: AM or AH   Right dot filled: PM   not-working/unallocated: ○○
 const dotStyles = StyleSheet.create({
   filled: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, backgroundColor: "#000" },
   hollow: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, borderWidth: 1.5, borderColor: "#BDBDBD", backgroundColor: "transparent" },
 });
 
-function visualOf(type: ShiftType | undefined) {
-  // Handle actual shift types
-  if (type === "AM") return { dots: ["filled", "hollow"] as const };      // ●○ AM shift
-  if (type === "PM") return { dots: ["hollow", "filled"] as const };      // ○● PM shift  
-  if (type === "AH") return { dots: ["hollow", "filled"] as const };      // ○● After Hours
-  if (type === "ON_CALL") return { dots: ["hollow", "filled"] as const }; // ○● On Call
-  // No shifts = blank dots
-  return { dots: ["hollow", "hollow"] as const }; // ○○ No shifts
+/**
+ * Combine multiple shift types into a single visual representation
+ * Rules:
+ * - Left dot: filled if has AM or AH shift
+ * - Right dot: filled if has PM shift
+ * - Labels: Show "AH" if has AH, "On Call" if has ON_CALL (can show both)
+ */
+function visualOf(types: ShiftType | ShiftType[] | undefined) {
+  // Normalize to array
+  const typeArray = types ? (Array.isArray(types) ? types : [types]) : [];
+  
+  // Debug log for ON_CALL shifts
+  if (typeArray.includes("ON_CALL")) {
+    console.log("🔍 Calendar: ON_CALL shift detected in types:", typeArray);
+  }
+  
+  if (typeArray.length === 0) {
+    return { dots: ["hollow", "hollow"] as const, labels: [] };
+  }
+  
+  // Determine dots based on shift types present
+  const hasAH = typeArray.includes("AH");
+  const hasPM = typeArray.includes("PM");
+  const hasAM = typeArray.includes("AM");
+  const hasOnCall = typeArray.includes("ON_CALL");
+  
+  const leftDot = (hasAM || hasAH) ? "filled" : "hollow";
+  const rightDot = hasPM ? "filled" : "hollow";
+  
+  // Determine labels to show
+  const labels: string[] = [];
+  if (hasAH) labels.push("AH");
+  if (hasOnCall) labels.push("On Call");
+  
+  return { 
+    dots: [leftDot, rightDot] as const, 
+    labels 
+  };
 }
 
-/** Get shift type for a date, returns undefined if no shifts */
-function getShiftTypeForDate(d: Date, shiftMap?: Props["shiftMap"]): ShiftType | undefined {
+/** Get shift type(s) for a date, returns undefined if no shifts */
+function getShiftTypeForDate(d: Date, shiftMap?: Props["shiftMap"]): ShiftType | ShiftType[] | undefined {
   const key = dayKey(d);
   const result = shiftMap?.[key];
   return result;
@@ -123,6 +153,27 @@ export default function CollapsibleCalendar({
 }: Props) {
   const selectedDate = value;
   const [expanded, setExpanded] = useState(false);
+  
+  // Debug: Log ON_CALL shifts in shiftMap
+  useEffect(() => {
+    if (shiftMap) {
+      const onCallDays = Object.entries(shiftMap).filter(([_, type]) => {
+        if (Array.isArray(type)) {
+          return type.includes("ON_CALL");
+        }
+        return type === "ON_CALL";
+      });
+      if (onCallDays.length > 0) {
+        console.log("🔍 Calendar: ON_CALL shifts found in shiftMap:", onCallDays);
+      }
+      
+      // Also log days with multiple shift types
+      const multiShiftDays = Object.entries(shiftMap).filter(([_, type]) => Array.isArray(type) && type.length > 1);
+      if (multiShiftDays.length > 0) {
+        console.log("🔍 Calendar: Days with multiple shift types:", multiShiftDays);
+      }
+    }
+  }, [shiftMap]);
 
   // Lock the start month of the expansion window (set when expanding for the first time)
   const [expandBase, setExpandBase] = useState<Date | null>(null);
@@ -230,6 +281,13 @@ export default function CollapsibleCalendar({
                       onPress={() => onChange?.(item.fullDate)}
                       style={[styles.dateContainer, isSelected && { borderColor: COLOR.brand, borderWidth: 1 }, isToday && { backgroundColor: COLOR.card }]}
                     >
+                      {v.labels.length > 0 && (
+                        <View style={styles.labelsContainer}>
+                          {v.labels.map((label, i) => (
+                            <Text key={i} style={styles.shiftLabel}>{label}</Text>
+                          ))}
+                        </View>
+                      )}
                       <Text style={styles.dateText}>{item.date}</Text>
                       <TwoDots left={v.dots[0]} right={v.dots[1]} />
                     </Pressable>
@@ -299,6 +357,13 @@ export default function CollapsibleCalendar({
                           }}
                         >
                           <View style={[styles.gridCellContentExpanded, (selected || isToday) && { backgroundColor: isToday ? COLOR.card : "#E9F4FF", borderWidth: selected ? 1 : 0, borderColor: selected ? COLOR.brand : "transparent" }]}>
+                            {v.labels.length > 0 && (
+                              <View style={styles.labelsContainer}>
+                                {v.labels.map((label, idx) => (
+                                  <Text key={idx} style={styles.shiftLabel}>{label}</Text>
+                                ))}
+                              </View>
+                            )}
                             <Text style={[styles.gridText, selected && styles.gridTextSelected]}>
                               {d.getDate()}
                             </Text>
@@ -390,8 +455,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     borderWidth: 0,
     borderColor: "transparent",
+    position: "relative",
   },
   dateText: { fontSize: sx(12), color: COLOR.ink },
+  labelsContainer: {
+    position: "absolute",
+    top: sx(1),
+    right: sx(1),
+    alignItems: "flex-end",
+    gap: sx(1),
+  },
+  shiftLabel: {
+    fontSize: sx(9),
+    fontWeight: "600",
+    color: COLOR.brand,
+    lineHeight: sx(10),
+    textAlign: "right",
+  },
 
   // Floating arrow: positioned on weekCard
   weekFooter: {
@@ -483,6 +563,7 @@ const styles = StyleSheet.create({
     width: sx(40),
     height: sx(48),
     borderRadius: sx(8),
+    position: "relative",
   },
 
   gridText: { fontSize: sx(14), color: COLOR.ink },

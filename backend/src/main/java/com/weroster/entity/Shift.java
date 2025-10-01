@@ -34,8 +34,8 @@ public class Shift {
     @JoinColumn(name = "location_id")
     private Location location;
     
-    @Column(name = "code", length = 50)
-    private String code;
+    @Column(name = "type", length = 50)
+    private String type;
     
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;

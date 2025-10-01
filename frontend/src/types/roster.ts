@@ -1,4 +1,14 @@
-// Actual shift types (when staff is working)
+/**
+ * Shift Type Definitions (based on start time):
+ * 
+ * - AM: Shifts that START between 8:00-13:00
+ * - PM: Shifts that START between 13:00-18:00
+ * - AH: After Hours - Shifts that START outside 8:00-18:00 range
+ * - ON_CALL: Standby shifts (can start anytime)
+ * 
+ * Note: The shift type is determined by when the shift STARTS, not when it ends.
+ * For example, a shift starting at 16:00 and ending at 00:00 is a PM shift.
+ */
 export type ShiftType = "AM" | "PM" | "AH" | "ON_CALL";
 
 // Legacy alias for backward compatibility
