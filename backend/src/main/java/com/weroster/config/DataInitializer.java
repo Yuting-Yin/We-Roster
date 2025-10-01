@@ -2,6 +2,7 @@ package com.weroster.config;
 
 import com.weroster.entity.*;
 import com.weroster.repository.*;
+import com.weroster.entity.Notification;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -57,6 +58,9 @@ public class DataInitializer implements CommandLineRunner {
     
     @Autowired
     private OpenShiftRequestRepository openShiftRequestRepository;
+    
+    @Autowired
+    private NotificationRepository notificationRepository;
     
     // Removed UserStaffRepository - using direct User-Staff relationship
 
@@ -702,6 +706,9 @@ public class DataInitializer implements CommandLineRunner {
             System.err.println("❌ ERROR creating approved requests: " + e.getMessage());
             e.printStackTrace();
         }
+        
+        // === CREATE TEST NOTIFICATIONS ===
+        createTestNotifications();
         
         System.out.println("✅ Mock data created successfully!");
         System.out.println("📋 Created:");
@@ -1528,5 +1535,134 @@ public class DataInitializer implements CommandLineRunner {
         
         // Round to nearest $50 for cleaner display
         return (basePayment / 5000) * 5000;
+    }
+    
+    // === CREATE TEST NOTIFICATIONS ===
+    private void createTestNotifications() {
+        System.out.println("\n🔔 Creating test notifications...");
+        
+        try {
+            // Get test users
+            User testUser = userRepository.findByDomainAndEmail("test", "test@example.com")
+                .orElseThrow(() -> new RuntimeException("Test user not found"));
+            
+            // Use an existing staff user as the "admin" for notifications
+            // Find Dr. Emily Rodriguez (manager) to use as the notification sender
+            User managerUser = userRepository.findByDomainAndEmail("staff", "emily.rodriguez@weroster.com")
+                .orElseThrow(() -> new RuntimeException("Manager user not found"));
+            
+            // Get staff members (for validation)
+            staffRepository.findByUserId(testUser.getId())
+                .orElseThrow(() -> new RuntimeException("Test staff not found"));
+            
+            staffRepository.findByUserId(managerUser.getId())
+                .orElseThrow(() -> new RuntimeException("Manager staff not found"));
+            
+            // Create test notifications
+            List<Notification> testNotifications = List.of(
+                // Event assignment notification
+                Notification.builder()
+                    .recipient(testUser)
+                    .type("EVENT_ASSIGNMENT")
+                    .title("Event Assignment")
+                    .message("Event Urology on Tue, 20 May 2025 - PM has been assigned to you by Floor Coordinators NURSE")
+                    .isRead(false)
+                    .createdAt(LocalDateTime.now().minusMinutes(15))
+                    .relatedEntityType("shift_assignment")
+                    .relatedEntityId(1L)
+                    .triggeredBy(managerUser)
+                    .build(),
+                
+                // Leave approval notification
+                Notification.builder()
+                    .recipient(testUser)
+                    .type("LEAVE_APPROVAL")
+                    .title("Leave Approved")
+                    .message("Your leave on Fri, 16 May 2025 - PM has been approved by RM")
+                    .isRead(false)
+                    .createdAt(LocalDateTime.parse("2025-05-13T17:00:00"))
+                    .relatedEntityType("leave_request")
+                    .relatedEntityId(1L)
+                    .triggeredBy(managerUser)
+                    .build(),
+                
+                // Swap request declined notification
+                Notification.builder()
+                    .recipient(testUser)
+                    .type("SWAP_DECLINED")
+                    .title("Swap Request Declined")
+                    .message("Your swap request on Wed, 14 May 2025 - PM has been declined by MJ")
+                    .isRead(true)
+                    .createdAt(LocalDateTime.parse("2025-05-10T08:00:00"))
+                    .readAt(LocalDateTime.parse("2025-05-10T08:30:00"))
+                    .relatedEntityType("shift_swap")
+                    .relatedEntityId(1L)
+                    .triggeredBy(managerUser)
+                    .build(),
+                
+                // Leave swap request notification
+                Notification.builder()
+                    .recipient(testUser)
+                    .type("LEAVE_SWAP_REQUEST")
+                    .title("Leave Swap Request")
+                    .message("Leave swap request for your shift on Mon, 19 May 2025 - AM from Sarah Johnson")
+                    .isRead(false)
+                    .createdAt(LocalDateTime.now().minusHours(2))
+                    .relatedEntityType("leave_request")
+                    .relatedEntityId(2L)
+                    .triggeredBy(managerUser)
+                    .build(),
+                
+                // Open shift approved notification
+                Notification.builder()
+                    .recipient(testUser)
+                    .type("OPEN_SHIFT_APPROVED")
+                    .title("Open Shift Approved")
+                    .message("Your application for open shift on Thu, 15 May 2025 - PM has been approved by Manager")
+                    .isRead(false)
+                    .createdAt(LocalDateTime.now().minusDays(1))
+                    .relatedEntityType("open_shift_request")
+                    .relatedEntityId(1L)
+                    .triggeredBy(managerUser)
+                    .build(),
+                
+                // Event assignment notification (read)
+                Notification.builder()
+                    .recipient(testUser)
+                    .type("EVENT_ASSIGNMENT")
+                    .title("Event Assignment")
+                    .message("Event Emergency on Mon, 12 May 2025 - AM has been assigned to you by Coordinator")
+                    .isRead(true)
+                    .createdAt(LocalDateTime.now().minusDays(3))
+                    .readAt(LocalDateTime.now().minusDays(2))
+                    .relatedEntityType("shift_assignment")
+                    .relatedEntityId(2L)
+                    .triggeredBy(managerUser)
+                    .build(),
+                
+                // Swap request notification
+                Notification.builder()
+                    .recipient(testUser)
+                    .type("SWAP_REQUEST")
+                    .title("Swap Request")
+                    .message("Swap request on Tue, 13 May 2025 - PM from Mike Wilson")
+                    .isRead(true)
+                    .createdAt(LocalDateTime.now().minusDays(4))
+                    .readAt(LocalDateTime.now().minusDays(3))
+                    .relatedEntityType("shift_swap")
+                    .relatedEntityId(2L)
+                    .triggeredBy(managerUser)
+                    .build()
+            );
+            
+            // Save notifications
+            notificationRepository.saveAll(testNotifications);
+            
+            System.out.println("✅ Created " + testNotifications.size() + " test notifications successfully!");
+            
+        } catch (Exception e) {
+            System.err.println("❌ ERROR creating test notifications: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }

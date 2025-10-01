@@ -5,6 +5,7 @@ import com.weroster.entity.ShiftSwap;
 import com.weroster.entity.Staff;
 import com.weroster.repository.ShiftSwapRepository;
 import com.weroster.repository.StaffRepository;
+import com.weroster.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +24,9 @@ public class SwapController {
     
     @Autowired
     private StaffRepository staffRepository;
+    
+    @Autowired
+    private NotificationService notificationService;
     
     @PostMapping
     public ResponseEntity<Map<String, Object>> createSwapRequest(@RequestBody CreateSwapRequestInput input) {
@@ -64,6 +68,9 @@ public class SwapController {
                     .build();
             
             ShiftSwap saved = shiftSwapRepository.save(swapRequest);
+            
+            // Create notification for the target staff member
+            notificationService.createSwapRequestNotification(saved);
             
             Map<String, Object> response = new HashMap<>();
             response.put("id", saved.getId().toString());

@@ -3,11 +3,14 @@ package com.weroster.controller;
 import com.weroster.dto.CreateLeaveRequestInput;
 import com.weroster.entity.LeaveRequest;
 import com.weroster.entity.Shift;
+import com.weroster.entity.ShiftAssignment;
 import com.weroster.entity.Staff;
 import com.weroster.entity.User;
 import com.weroster.repository.LeaveRequestRepository;
+import com.weroster.repository.ShiftAssignmentRepository;
 import com.weroster.repository.ShiftRepository;
 import com.weroster.repository.UserRepository;
+import com.weroster.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,6 +35,12 @@ public class LeaveController {
     
     @Autowired
     private ShiftRepository shiftRepository;
+    
+    @Autowired
+    private ShiftAssignmentRepository shiftAssignmentRepository;
+    
+    @Autowired
+    private NotificationService notificationService;
     
     @PostMapping
     public ResponseEntity<Map<String, Object>> createLeaveRequest(@RequestBody CreateLeaveRequestInput input) {
@@ -191,6 +200,20 @@ public class LeaveController {
             System.out.println("🔍 Leave Request - Start Time: " + saved.getStartTime());
             System.out.println("🔍 Leave Request - End Time: " + saved.getEndTime());
             System.out.println("🔍 Leave Request - Created At: " + saved.getCreatedAt());
+            
+            // Create notification for leave swap request if this is for a specific shift
+            if (saved.getShift() != null) {
+                // Find who is currently assigned to this shift
+                List<ShiftAssignment> currentAssignments = shiftAssignmentRepository.findAll().stream()
+                    .filter(sa -> sa.getShift().getId().equals(saved.getShift().getId()))
+                    .filter(sa -> !sa.getStaff().getId().equals(saved.getStaff().getId())) // Exclude the requester
+                    .toList();
+                
+                // Notify all current shift holders about the leave swap request
+                for (ShiftAssignment assignment : currentAssignments) {
+                    notificationService.createLeaveSwapRequestNotification(saved, assignment.getStaff());
+                }
+            }
             
             Map<String, Object> response = new HashMap<>();
             response.put("id", saved.getId().toString());

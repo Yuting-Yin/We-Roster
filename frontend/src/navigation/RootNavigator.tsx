@@ -9,10 +9,12 @@ import Login from "@/screens/Login";
 import AppTabs from "@/navigation/AppTabs";   // 里面包含 Dashboard 等 Tab 页
 import Profile from "@/screens/Profile/index";
 import Settings from "@/screens/Settings";
+import Notifications from "@/screens/Notifications";
 
 // 主题色（给 Profile / EditProfile 的头部用）
 import { COLOR } from "@/theme/colors";
 import { OverlayProvider } from "@/contexts/OverlayContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 
 /** ====== 顶层 Stack 的参数类型 ====== */
 export type RootStackParamList = {
@@ -21,6 +23,7 @@ export type RootStackParamList = {
   AppTabs: undefined;
   Profile: undefined;
   Settings: undefined;
+  Notifications: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -36,9 +39,11 @@ export default function RootNavigator() {
         <Stack.Screen name="Login" component={Login} />
         <Stack.Screen name="AppTabs">
           {() => (
-            <OverlayProvider>
-              <AppTabs />
-            </OverlayProvider>
+            <NotificationProvider>
+              <OverlayProvider>
+                <AppTabs />
+              </OverlayProvider>
+            </NotificationProvider>
           )}
         </Stack.Screen>
 
@@ -64,6 +69,19 @@ export default function RootNavigator() {
             headerTintColor:"#fff",
           }}
        />
+
+        <Stack.Screen 
+          name="Notifications" 
+          options={{
+            headerShown: false, // We handle our own header in the component
+          }}
+        >
+          {() => (
+            <NotificationProvider>
+              <Notifications />
+            </NotificationProvider>
+          )}
+        </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );
