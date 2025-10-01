@@ -270,6 +270,9 @@ public class OpenShiftController {
             
             request = openShiftRequestRepository.save(request);
             
+            // Note: Notification for open shift application approval/decline will be created
+            // when the application status is updated by a manager/admin
+            
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Application submitted successfully");
             response.put("requestId", request.getId());

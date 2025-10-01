@@ -35,6 +35,7 @@ import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
 import { useOverlayContext } from "@/contexts/OverlayContext";
 import { useOpenShiftsWeek } from "@/hooks/useOpenShiftsWeek";
 import { fmt } from "@/lib/date";
+import { useNotificationContext } from "@/contexts/NotificationContext";
 
 export default function Dashboard() {
   const navigation = useNavigation<any>();
@@ -241,6 +242,9 @@ export default function Dashboard() {
   const { openShifts: openShiftsData, loading: openShiftsLoading, error: openShiftsError, refresh: refreshOpenShifts } = 
     useOpenShiftsWeek(weekStartDate, user?.email);
 
+  // Get notification unread count for bell icon
+  const { unreadCount } = useNotificationContext();
+
   // Convert open shifts to display format and sort by date (Monday to Sunday)
   const openShiftsFormatted = useMemo(() => {
     // First, sort the shifts by date chronologically
@@ -308,7 +312,8 @@ export default function Dashboard() {
       <Header
         name={firstName}
         onHelloPress={() => setSideVisible(true)}
-        onBellPress={() => console.log("notifications")}
+        onBellPress={() => navigation.navigate("Notifications")}
+        unreadCount={unreadCount}
       />
 
       <ScrollView

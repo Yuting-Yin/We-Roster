@@ -215,6 +215,29 @@ CREATE TABLE open_shift_assignment (
                                         UNIQUE KEY uq_open_shift_assignment (open_shift_id, staff_id)
 ) ENGINE = InnoDB;
 
+CREATE TABLE notification (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    recipient_id BIGINT NOT NULL,
+    type VARCHAR(50) NOT NULL, -- 'EVENT_ASSIGNMENT', 'LEAVE_APPROVAL', 'LEAVE_DECLINED', 'SWAP_REQUEST', 'SWAP_APPROVED', 'SWAP_DECLINED', 'OPEN_SHIFT_APPROVED', 'OPEN_SHIFT_DECLINED', 'LEAVE_SWAP_REQUEST'
+    title VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    read_at DATETIME NULL,
+    
+    -- Optional: Reference to the related entity
+    related_entity_type VARCHAR(50) NULL, -- 'shift_assignment', 'leave_request', 'shift_swap', 'open_shift_request', etc.
+    related_entity_id BIGINT NULL,
+    
+    -- Optional: Who triggered this notification
+    triggered_by_id BIGINT NULL,
+    
+    CONSTRAINT fk_notification_recipient FOREIGN KEY (recipient_id) REFERENCES Users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_notification_triggered_by FOREIGN KEY (triggered_by_id) REFERENCES Users(id),
+    INDEX idx_notification_recipient_read (recipient_id, is_read),
+    INDEX idx_notification_created_at (created_at)
+) ENGINE = InnoDB;
+
 -- Database schema for WeRoster application
 -- All data population is handled by DataInitializer.java
 
@@ -224,4 +247,5 @@ CREATE TABLE open_shift_assignment (
 -- - Removed redundant test data (DataInitializer.java handles all data)
 -- - Added user_id foreign key to staff table
 -- - Added missing columns to open_shift table
+-- - Added notification table for user notifications
 

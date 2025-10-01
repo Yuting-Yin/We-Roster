@@ -13,6 +13,8 @@ import StaffDetails, { StaffMember } from "@/components/overlays/StaffDetails";
 import type { TeamMember } from "@/api/team";
 import { getStaffShifts } from "@/api/team";
 import { useNavigation } from "@react-navigation/native";
+import NotificationBell from "@/components/common/NotificationBell";
+import { useNotificationContext } from "@/contexts/NotificationContext";
 
 export default function MyTeam() {
   const { members, loading, error, refresh } = useTeamMembers();
@@ -20,6 +22,7 @@ export default function MyTeam() {
   const { registerOverlay, unregisterOverlay, teamMemberNavRequest, clearTeamMemberNavRequest } = useOverlayContext();
   const { user: currentUser } = useCurrentUser();
   const navigation = useNavigation<any>();
+  const { unreadCount } = useNotificationContext();
   
   const [searchQuery, setSearchQuery] = useState("");
   const [filterVisible, setFilterVisible] = useState(false);
@@ -195,9 +198,12 @@ export default function MyTeam() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Team</Text>
-        <Pressable onPress={() => {}} hitSlop={8}>
-          <Ionicons name="notifications-outline" size={sx(24)} color="#fff" />
-        </Pressable>
+        <NotificationBell
+          onPress={() => navigation.navigate("Notifications")}
+          unreadCount={unreadCount}
+          size={24}
+          color="#fff"
+        />
       </View>
 
       {/* Toolbar with filter and search */}

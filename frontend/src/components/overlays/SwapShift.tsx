@@ -9,6 +9,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type { EventItem } from "@/types/roster";
 import { getMockShiftForUser } from "@/lib/fakeData";
 import { createSwapRequest } from "@/api/swap";
+import { useNotificationContext } from "@/contexts/NotificationContext";
 
 type User = { id: string; name: string; initials: string; title?: string };
 
@@ -32,6 +33,7 @@ export default function SwapShift({
   getShiftForUser,
 }: SwapShiftProps) {
   const { user, displayName, initials, designation } = useCurrentUser({ mock: true });
+  const { refreshUnreadCount } = useNotificationContext();
 
   const [message, setMessage] = React.useState("");
   const [query, setQuery] = React.useState("");
@@ -69,6 +71,9 @@ export default function SwapShift({
         createdAt: new Date().toISOString(),
       } as const;
       await createSwapRequest(payload as any);
+      
+      // Refresh notification count after successful submission
+      refreshUnreadCount();
       onSubmitted?.({ message, targetUserId: selected });
     } catch (e) {
       onSubmitted?.({ message, targetUserId: selected });

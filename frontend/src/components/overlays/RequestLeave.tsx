@@ -8,6 +8,7 @@ import Chip from "@/components/common/Chip";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { createLeaveRequest } from "@/api/leave";
 import SuccessToast from "@/components/overlays/SuccessToast";
+import { useNotificationContext } from "@/contexts/NotificationContext";
 import FailToast from "@/components/overlays/FailToast";
 import WarningToast from "@/components/overlays/WarningToast";
 
@@ -22,6 +23,7 @@ export default function RequestLeave({
   shiftId?: string; // ID of the shift this leave request is for
 }) {
   const { user, loading, error } = useCurrentUser({ mock: false });
+  const { refreshUnreadCount } = useNotificationContext();
   
   // Debug logging for user data
   React.useEffect(() => {
@@ -133,6 +135,9 @@ export default function RequestLeave({
       } else {
         showSuccessToast('Successfully submitted');
       }
+      
+      // Refresh notification count after successful submission
+      refreshUnreadCount();
       onSubmitted?.();
     } catch (e: any) {
       console.error('🔍 Leave Request - Error:', e);
