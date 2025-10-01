@@ -506,71 +506,150 @@ public class DataInitializer implements CommandLineRunner {
         
         // Always create test data for current month to ensure frontend can find shifts
         LocalDate currentDate = LocalDate.now();
-        LocalDate startDate = currentDate.withDayOfMonth(1); // Start of current month
+        
+        // Calculate the start of the current week (Monday) to ensure full week coverage
+        int dayOfWeek = currentDate.getDayOfWeek().getValue(); // Monday = 1, Sunday = 7
+        LocalDate currentWeekMonday = currentDate.minusDays(dayOfWeek - 1);
+        
+        // Start from either the Monday of current week or the 1st of the month, whichever is earlier
+        LocalDate monthStart = currentDate.withDayOfMonth(1);
+        LocalDate startDate = currentWeekMonday.isBefore(monthStart) ? currentWeekMonday : monthStart;
         LocalDate endDate = currentDate.plusDays(14); // Current date + 2 weeks
+        
+        System.out.println("📅 Data range: " + startDate + " to " + endDate + " (includes full current week)");
         
         int shiftCount = 0;
         int assignmentCount = 0;
         
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            // Create non-overlapping shifts using distinct time slots
+            // Create shifts using new shift type definitions:
+            // AM: starts 8:00-13:00 | PM: starts 13:00-18:00 | AH: starts outside 8:00-18:00 | ON_CALL: standby
             List<Shift> dayShifts = new ArrayList<>();
             
-            // AM shift: 8:00-16:00 (8 hours)
-            Shift amShift = Shift.builder()
+            // === AM SHIFTS (start 8:00-13:00) ===
+            
+            // AM shift: 8:00-16:00 - Emergency Department
+            Shift amShift1 = Shift.builder()
                     .startTs(date.atTime(8, 0))
                     .endTs(date.atTime(16, 0))
-                    .code("AM")
+                    .type(determineShiftCode(8, false))
                     .department(emergencyDept)
                     .location(edRoom1)
-                    .note("Morning shift - " + date.toString())
+                    .note("Early morning shift ED - " + date.toString())
                     .build();
-            amShift = shiftRepository.save(amShift);
-            dayShifts.add(amShift);
+            amShift1 = shiftRepository.save(amShift1);
+            dayShifts.add(amShift1);
             shiftCount++;
             
-            // PM shift: 16:00-00:00 (8 hours, next day)
-            Shift pmShift = Shift.builder()
-                    .startTs(date.atTime(16, 0))
-                    .endTs(date.plusDays(1).atTime(0, 0))
-                    .code("PM")
+            // AM shift: 9:00-17:00 - ICU Department
+            Shift amShift2 = Shift.builder()
+                    .startTs(date.atTime(9, 0))
+                    .endTs(date.atTime(17, 0))
+                    .type(determineShiftCode(9, false))
                     .department(icuDept)
                     .location(icuBed1)
-                    .note("Evening shift - " + date.toString())
+                    .note("Morning shift ICU - " + date.toString())
                     .build();
-            pmShift = shiftRepository.save(pmShift);
-            dayShifts.add(pmShift);
+            amShift2 = shiftRepository.save(amShift2);
+            dayShifts.add(amShift2);
             shiftCount++;
             
-            // AH shift: 00:00-08:00 (8 hours, overnight) - every other day
-            if (date.getDayOfMonth() % 2 == 0) {
-                Shift ahShift = Shift.builder()
-                        .startTs(date.atTime(0, 0))
-                        .endTs(date.atTime(8, 0))
-                        .code("AH")
-                        .department(medicalDept)
-                        .location(medWard)
-                        .note("After hours shift - " + date.toString())
-                        .build();
-                ahShift = shiftRepository.save(ahShift);
-                dayShifts.add(ahShift);
-                shiftCount++;
-            }
+            // AM shift: 10:00-18:00 - Medical Ward
+            Shift amShift3 = Shift.builder()
+                    .startTs(date.atTime(10, 0))
+                    .endTs(date.atTime(18, 0))
+                    .type(determineShiftCode(10, false))
+                    .department(medicalDept)
+                    .location(medWard)
+                    .note("Mid-morning shift Medical - " + date.toString())
+                    .build();
+            amShift3 = shiftRepository.save(amShift3);
+            dayShifts.add(amShift3);
+            shiftCount++;
             
-            // ON_CALL shift: 20:00-04:00 (8 hours, late night) - every 3rd day
-            if (date.getDayOfMonth() % 3 == 0) {
-                Shift onCallShift = Shift.builder()
-                        .startTs(date.atTime(20, 0))
-                        .endTs(date.plusDays(1).atTime(4, 0))
-                        .code("ON_CALL")
-                        .department(emergencyDept)
-                        .location(edRoom1)
-                        .note("On-call shift - " + date.toString())
-                        .build();
-                onCallShift = shiftRepository.save(onCallShift);
-                dayShifts.add(onCallShift);
-                shiftCount++;
-            }
+            // === PM SHIFTS (start 13:00-18:00) ===
+            
+            // PM shift: 14:00-22:00 - Emergency Department
+            Shift pmShift1 = Shift.builder()
+                    .startTs(date.atTime(14, 0))
+                    .endTs(date.atTime(22, 0))
+                    .type(determineShiftCode(14, false))
+                    .department(emergencyDept)
+                    .location(edRoom1)
+                    .note("Afternoon shift ED - " + date.toString())
+                    .build();
+            pmShift1 = shiftRepository.save(pmShift1);
+            dayShifts.add(pmShift1);
+            shiftCount++;
+            
+            // PM shift: 16:00-00:00 - ICU Department
+            Shift pmShift2 = Shift.builder()
+                    .startTs(date.atTime(16, 0))
+                    .endTs(date.plusDays(1).atTime(0, 0))
+                    .type(determineShiftCode(16, false))
+                    .department(icuDept)
+                    .location(icuBed1)
+                    .note("Evening shift ICU - " + date.toString())
+                    .build();
+            pmShift2 = shiftRepository.save(pmShift2);
+            dayShifts.add(pmShift2);
+            shiftCount++;
+            
+            // === AH SHIFTS (start outside 8:00-18:00) ===
+            
+            // AH shift: 22:00-06:00 - Emergency Department
+            Shift ahShift1 = Shift.builder()
+                    .startTs(date.atTime(22, 0))
+                    .endTs(date.plusDays(1).atTime(6, 0))
+                    .type(determineShiftCode(22, false))
+                    .department(emergencyDept)
+                    .location(edRoom1)
+                    .note("Night shift ED - " + date.toString())
+                    .build();
+            ahShift1 = shiftRepository.save(ahShift1);
+            dayShifts.add(ahShift1);
+            shiftCount++;
+            
+            // AH shift: 00:00-08:00 - Medical Ward
+            Shift ahShift2 = Shift.builder()
+                    .startTs(date.atTime(0, 0))
+                    .endTs(date.atTime(8, 0))
+                    .type(determineShiftCode(0, false))
+                    .department(medicalDept)
+                    .location(medWard)
+                    .note("Overnight shift Medical - " + date.toString())
+                    .build();
+            ahShift2 = shiftRepository.save(ahShift2);
+            dayShifts.add(ahShift2);
+            shiftCount++;
+            
+            // AH shift: 18:30-02:30 - ICU Department
+            Shift ahShift3 = Shift.builder()
+                    .startTs(date.atTime(18, 30))
+                    .endTs(date.plusDays(1).atTime(2, 30))
+                    .type(determineShiftCode(18, false))
+                    .department(icuDept)
+                    .location(icuBed1)
+                    .note("Late evening shift ICU - " + date.toString())
+                    .build();
+            ahShift3 = shiftRepository.save(ahShift3);
+            dayShifts.add(ahShift3);
+            shiftCount++;
+            
+            // === ON_CALL SHIFTS (standby, can start anytime) ===
+            
+            // ON_CALL shift: 20:00-08:00 - Emergency (standby)
+            Shift onCallShift = Shift.builder()
+                    .startTs(date.atTime(20, 0))
+                    .endTs(date.plusDays(1).atTime(8, 0))
+                    .type(determineShiftCode(20, true))
+                    .department(emergencyDept)
+                    .location(edRoom1)
+                    .note("On-call standby shift - " + date.toString())
+                    .build();
+            onCallShift = shiftRepository.save(onCallShift);
+            dayShifts.add(onCallShift);
+            shiftCount++;
             
             // Assign staff to shifts with variety for swap testing
             assignStaffToShifts(dayShifts, allStaff, date, shiftAssignmentRepository);
@@ -600,16 +679,29 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("   - " + shiftCount + " Shifts: All non-overlapping comprehensive shifts");
         System.out.println("   - " + assignmentCount + " Shift assignments: All comprehensive assignments");
         System.out.println("   - All staff have user accounts with password: hello");
-        System.out.println("   - Data spans: " + startDate + " to " + endDate + " (2+ months)");
+        System.out.println("   - Data spans: " + startDate + " to " + endDate + " (includes full current week + 2 weeks)");
         System.out.println("🔐 Login credentials for testing:");
         System.out.println("   - test@example.com / hello (original test user)");
         System.out.println("   - Any staff email / hello (e.g., sarah.johnson@weroster.com)");
-        System.out.println("📅 Non-Overlapping Shift System:");
-        System.out.println("   - AM: 8:00-16:00 (3 staff per shift)");
-        System.out.println("   - PM: 16:00-00:00 (2 staff per shift)");
-        System.out.println("   - AH: 00:00-08:00 (2 staff per shift, every other day)");
-        System.out.println("   - ON_CALL: 20:00-04:00 (1 staff per shift, every 3rd day)");
+        System.out.println("📅 Comprehensive Shift System (New Definitions):");
+        System.out.println("   Shift Type Definitions:");
+        System.out.println("     • AM: Shifts that START between 8:00-13:00");
+        System.out.println("     • PM: Shifts that START between 13:00-18:00");
+        System.out.println("     • AH: Shifts that START outside 8:00-18:00 range");
+        System.out.println("     • ON_CALL: Standby shifts (can start anytime)");
+        System.out.println("   Daily Shifts Created:");
+        System.out.println("     • 3 AM shifts: 8:00-16:00 (ED), 9:00-17:00 (ICU), 10:00-18:00 (Medical)");
+        System.out.println("     • 2 PM shifts: 14:00-22:00 (ED), 16:00-00:00 (ICU)");
+        System.out.println("     • 3 AH shifts: 22:00-06:00 (ED), 00:00-08:00 (Medical), 18:30-02:30 (ICU)");
+        System.out.println("     • 1 ON_CALL shift: 20:00-08:00 (ED standby)");
+        System.out.println("   - Total: 9 shifts per day across all departments");
         System.out.println("🔄 Perfect for swap testing with diverse staff assignments!");
+        System.out.println("👤 Test User (test@example.com / Sarah Johnson) Shift Pattern:");
+        System.out.println("   • AM shifts: Every 3 days (day 3, 6, 9, 12, ...)");
+        System.out.println("   • PM shifts: Every 3 days (day 1, 4, 7, 10, ...)");
+        System.out.println("   • AH shifts: Every 4 days (day 4, 8, 12, 16, ...)");
+        System.out.println("   • ON_CALL shifts: Every 3 days (day 2, 5, 8, 11, 14, ...) + every 8th day");
+        System.out.println("   • Multiple shifts per day: Days 8, 16, 24 (AH + ON_CALL)");
         
         // Verify the user-staff link exists using direct relationship
         if (nurse1.getUser() != null) {
@@ -631,18 +723,43 @@ public class DataInitializer implements CommandLineRunner {
         
         for (Shift shift : shifts) {
             // Determine how many staff to assign based on shift type
-            int staffCount = getStaffCountForShift(shift.getCode());
+            int staffCount = getStaffCountForShift(shift.getType());
             
             // Get available staff for this shift (avoid overlaps)
             List<Staff> availableStaff = getAvailableStaffForShift(shift, allStaff, date);
             
-            // Shuffle and select staff
+            // Prioritize test user for ON_CALL shifts (move to front if available)
             List<Staff> shuffledStaff = new ArrayList<>(availableStaff);
-            for (int i = shuffledStaff.size() - 1; i > 0; i--) {
-                int j = random.nextInt(i + 1);
-                Staff temp = shuffledStaff.get(i);
-                shuffledStaff.set(i, shuffledStaff.get(j));
-                shuffledStaff.set(j, temp);
+            if (shift.getType().equals("ON_CALL")) {
+                Staff testUser = shuffledStaff.stream()
+                    .filter(s -> s.getEmail().equals("sarah.johnson@weroster.com"))
+                    .findFirst()
+                    .orElse(null);
+                if (testUser != null) {
+                    shuffledStaff.remove(testUser);
+                    shuffledStaff.add(0, testUser); // Put test user first
+                    System.out.println("📌 Prioritized test user for ON_CALL on " + date);
+                }
+            } else {
+                // Shuffle other shift types normally
+                for (int i = shuffledStaff.size() - 1; i > 0; i--) {
+                    int j = random.nextInt(i + 1);
+                    Staff temp = shuffledStaff.get(i);
+                    shuffledStaff.set(i, shuffledStaff.get(j));
+                    shuffledStaff.set(j, temp);
+                }
+            }
+            
+            // Debug logging for ON_CALL shifts
+            if (shift.getType().equals("ON_CALL")) {
+                System.out.println("🔍 DEBUG ON_CALL: Date=" + date + ", DayOfYear=" + date.getDayOfYear() + 
+                                   ", Available staff count=" + shuffledStaff.size() + 
+                                   ", Needed=" + staffCount);
+                if (shuffledStaff.size() > 0) {
+                    for (Staff s : shuffledStaff) {
+                        System.out.println("   → Available: " + s.getFirstName() + " " + s.getLastName() + " (" + s.getEmail() + ")");
+                    }
+                }
             }
             
             // Assign staff to shift
@@ -655,10 +772,34 @@ public class DataInitializer implements CommandLineRunner {
                         .staff(staff)
                         .isLead(isLead)
                         .assignedAt(LocalDateTime.now())
-                        .note(shift.getCode() + " shift assignment - " + staff.getFirstName() + " " + staff.getLastName())
+                        .note(shift.getType() + " shift assignment - " + staff.getFirstName() + " " + staff.getLastName())
                         .build();
                 shiftAssignmentRepository.save(assignment);
+                
+                // Extra logging for ON_CALL assignments
+                if (shift.getType().equals("ON_CALL")) {
+                    System.out.println("✅ Assigned ON_CALL to: " + staff.getFirstName() + " " + staff.getLastName() + " on " + date);
+                }
             }
+        }
+    }
+    
+    /**
+     * Determine shift code based on start time according to new shift type definitions:
+     * - AM: shifts that start between 8:00-13:00
+     * - PM: shifts that start between 13:00-18:00
+     * - AH: shifts that start outside 8:00-18:00 range
+     * - ON_CALL: standby shifts (can start anytime, but marked explicitly)
+     */
+    private String determineShiftCode(int startHour, boolean isOnCall) {
+        if (isOnCall) {
+            return "ON_CALL";
+        } else if (startHour >= 8 && startHour < 13) {
+            return "AM";
+        } else if (startHour >= 13 && startHour < 18) {
+            return "PM";
+        } else {
+            return "AH";
         }
     }
     
@@ -688,7 +829,7 @@ public class DataInitializer implements CommandLineRunner {
         
         // Use a deterministic pattern based on date and shift type to ensure consistency
         int dayOfYear = date.getDayOfYear();
-        int shiftTypeHash = shift.getCode().hashCode();
+        int shiftTypeHash = shift.getType().hashCode();
         
         for (int i = 0; i < allStaff.size(); i++) {
             Staff staff = allStaff.get(i);
@@ -704,29 +845,43 @@ public class DataInitializer implements CommandLineRunner {
             boolean isAvailable = true;
             
             if (isTestUser) {
-                // Test user gets assignments on specific days for testing
-                if (shift.getCode().equals("AM") && dayOfYear % 7 == 0) {
-                    isAvailable = true; // Test user gets AM shifts every 7 days
-                } else if (shift.getCode().equals("PM") && dayOfYear % 7 == 3) {
-                    isAvailable = true; // Test user gets PM shifts every 7 days
-                } else if (shift.getCode().equals("AH") && dayOfYear % 14 == 6) {
-                    isAvailable = true; // Test user gets AH shifts every 14 days
-                } else if (shift.getCode().equals("ON_CALL") && dayOfYear % 21 == 9) {
-                    isAvailable = true; // Test user gets ON_CALL shifts every 21 days
+                // Test user gets regular assignments for testing
+                // Give test user shifts more frequently for better testing experience
+                if (shift.getType().equals("AM") && dayOfYear % 3 == 0) {
+                    isAvailable = true; // Test user gets AM shifts every 3 days
+                } else if (shift.getType().equals("PM") && dayOfYear % 3 == 1) {
+                    isAvailable = true; // Test user gets PM shifts every 3 days
+                } else if (shift.getType().equals("AH") && dayOfYear % 4 == 0) {
+                    isAvailable = true; // Test user gets AH shifts every 4 days
+                } else if (shift.getType().equals("ON_CALL") && dayOfYear % 3 == 2) {
+                    isAvailable = true; // Test user gets ON_CALL shifts every 3 days (day 2, 5, 8, 11, 14, ...)
                 } else {
                     isAvailable = false; // Test user doesn't get other shifts
+                }
+                
+                // Special case: Also assign ON_CALL on days when test user has AH (for testing multiple shifts per day)
+                // This creates days with both AH and ON_CALL shifts
+                if (shift.getType().equals("ON_CALL") && dayOfYear % 8 == 0) {
+                    isAvailable = true; // ON_CALL on every 8th day (some overlap with AH on day 8, 16, 24, ...)
+                }
+                
+                // Debug logging for test user ON_CALL availability
+                if (shift.getType().equals("ON_CALL")) {
+                    System.out.println("🧪 Test user ON_CALL check: Date=" + date + ", DayOfYear=" + dayOfYear + 
+                                       ", dayOfYear%3=" + (dayOfYear % 3) + ", dayOfYear%8=" + (dayOfYear % 8) + 
+                                       ", isAvailable=" + isAvailable);
                 }
             } else {
                 // Other staff get distributed assignments
                 int staffHash = (staff.getId().intValue() + dayOfYear + shiftTypeHash) % 7;
                 
-                if (shift.getCode().equals("AM") && staffHash < 4) {
+                if (shift.getType().equals("AM") && staffHash < 4) {
                     isAvailable = true; // 4 out of 7 staff available for AM
-                } else if (shift.getCode().equals("PM") && staffHash < 3) {
+                } else if (shift.getType().equals("PM") && staffHash < 3) {
                     isAvailable = true; // 3 out of 7 staff available for PM
-                } else if (shift.getCode().equals("AH") && staffHash < 2) {
+                } else if (shift.getType().equals("AH") && staffHash < 2) {
                     isAvailable = true; // 2 out of 7 staff available for AH
-                } else if (shift.getCode().equals("ON_CALL") && staffHash < 1) {
+                } else if (shift.getType().equals("ON_CALL") && staffHash < 1) {
                     isAvailable = true; // 1 out of 7 staff available for ON_CALL
                 } else {
                     isAvailable = false;
@@ -771,33 +926,35 @@ public class DataInitializer implements CommandLineRunner {
         // Create test leave requests
         List<LeaveRequest> testLeaves = new ArrayList<>();
         
-        // 1. Month Leave request with status "REJECTED" (Declined) - Fixed dates to avoid conflicts
+        // 1. Month Leave request with status "REJECTED" (Declined) - Current month for visibility
+        LocalDate today = LocalDate.now();
         LeaveRequest monthLeave = LeaveRequest.builder()
             .staff(testStaff)
             .shift(null) // Month leave is not tied to a specific shift
-            .startTime(LocalDateTime.of(2025, 10, 1, 0, 0)) // Fixed date: Oct 1, 2025
-            .endTime(LocalDateTime.of(2025, 10, 31, 23, 59)) // Fixed date: Oct 31, 2025
+            .startTime(today.withDayOfMonth(1).atStartOfDay()) // First day of current month
+            .endTime(today.withDayOfMonth(today.lengthOfMonth()).atTime(23, 59)) // Last day of current month
             .requestType("Month Leave")
             .reason("Family vacation")
             .status("REJECTED")
             .createdAt(LocalDateTime.now().minusDays(5))
             .build();
         testLeaves.add(monthLeave);
-        System.out.println("🔍 DataInitializer - Created Month Leave request (REJECTED)");
+        System.out.println("🔍 DataInitializer - Created Month Leave request (REJECTED) for " + today.getMonth());
         
-        // 2. Week Leave request with status "APPROVED" - Fixed dates to avoid conflicts
+        // 2. Week Leave request with status "APPROVED" - Next week for visibility
+        LocalDate nextWeekStart = today.plusWeeks(1);
         LeaveRequest weekLeave = LeaveRequest.builder()
             .staff(testStaff)
             .shift(null) // Week leave is not tied to a specific shift
-            .startTime(LocalDateTime.of(2025, 11, 1, 0, 0)) // Fixed date: Nov 1, 2025
-            .endTime(LocalDateTime.of(2025, 11, 7, 23, 59)) // Fixed date: Nov 7, 2025
+            .startTime(nextWeekStart.atStartOfDay()) // Next week start
+            .endTime(nextWeekStart.plusDays(6).atTime(23, 59)) // Next week end (7 days)
             .requestType("Week Leave")
             .reason("Medical treatment")
             .status("APPROVED")
             .createdAt(LocalDateTime.now().minusDays(3))
             .build();
         testLeaves.add(weekLeave);
-        System.out.println("🔍 DataInitializer - Created Week Leave request (APPROVED)");
+        System.out.println("🔍 DataInitializer - Created Week Leave request (APPROVED) for " + nextWeekStart + " to " + nextWeekStart.plusDays(6));
         
         // Save all test leave requests
         leaveRequestRepository.saveAll(testLeaves);

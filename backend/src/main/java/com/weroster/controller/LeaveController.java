@@ -250,9 +250,10 @@ public class LeaveController {
             System.out.println("🔍 My Leaves - Month: " + targetMonth);
             System.out.println("🔍 My Leaves - Date range: " + monthStart + " to " + monthEnd);
             
-            // Find leave requests for the staff created in the specified month
+            // Find leave requests for the staff where the leave occurs in the specified month
+            // Use startTime/endTime instead of createdAt to show leaves that actually happen this month
             System.out.println("🔍 My Leaves - Querying database for leave requests...");
-            List<LeaveRequest> leaveRequests = leaveRequestRepository.findByStaffAndCreatedDateRange(
+            List<LeaveRequest> leaveRequests = leaveRequestRepository.findByStaffAndDateRange(
                 staff.getId(), monthStart, monthEnd);
             
             System.out.println("🔍 My Leaves - Found " + leaveRequests.size() + " leave requests");

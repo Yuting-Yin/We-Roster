@@ -156,8 +156,8 @@ export default function Dashboard() {
                 start: startTime,
                 end: endTime,
                 isOvernight: isOvernight, // Add flag for overnight shifts
-                title: `${shift.code} Shift - ${shift.dept}`,
-                type: shift.code,
+                title: `${shift.type} Shift - ${shift.dept}`,
+                type: shift.type,
                 location: `${shift.location}`,
                 role: shift.role,
                 teammates: shift.teammates && shift.teammates.length > 0 

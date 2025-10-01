@@ -99,7 +99,7 @@ CREATE TABLE shift (
                        end_ts DATETIME NOT NULL,
                        dept_id BIGINT NULL,
                        location_id BIGINT NULL,
-                       code VARCHAR(50),
+                       type VARCHAR(50),
                        note TEXT,
                        CONSTRAINT fk_shift_dept FOREIGN KEY (dept_id) REFERENCES dept(id),
                        CONSTRAINT fk_shift_location FOREIGN KEY (location_id) REFERENCES location(id),
