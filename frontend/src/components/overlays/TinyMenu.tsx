@@ -7,7 +7,7 @@ import { COLOR } from "@/theme/colors";
 
 export default function TinyMenu({
   visible,
-  anchor, // { x, y } — 传的是“容器坐标”
+  anchor, // { x, y } — container coordinates
   onClose,
   onRequestLeave,
   onSwapShift,

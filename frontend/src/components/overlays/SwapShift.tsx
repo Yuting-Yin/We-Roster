@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, ScrollView, StyleSheet, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import Avatar from "@/components/common/Avatar";
@@ -34,6 +35,7 @@ export default function SwapShift({
 }: SwapShiftProps) {
   const { user, displayName, initials, designation } = useCurrentUser({ mock: true });
   const { refreshUnreadCount } = useNotificationContext();
+  const navigation = useNavigation();
 
   const [message, setMessage] = React.useState("");
   const [query, setQuery] = React.useState("");
@@ -74,6 +76,7 @@ export default function SwapShift({
       
       // Refresh notification count after successful submission
       refreshUnreadCount();
+      
       onSubmitted?.({ message, targetUserId: selected });
     } catch (e) {
       onSubmitted?.({ message, targetUserId: selected });

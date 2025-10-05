@@ -74,6 +74,7 @@ export function useMyRosterData(anchorDate: Date, opts: Options = {}) {
       campus: shift.campus,
       room: shift.room,
       campusAddress: shift.campusAddress,
+      shiftName: shift.shiftName,
     };
   }, []);
 

@@ -17,6 +17,7 @@ export interface ShiftItemDto {
   code: string; // AM, PM, AH
   isLead: boolean;
   coworkers: number;
+  shiftName?: string; // e.g., "Emergency PFY"
 }
 
 export interface DayViewDto {

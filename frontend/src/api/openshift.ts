@@ -13,6 +13,7 @@ export type OpenShiftDto = {
   hospitalName?: string;
   hospitalAddress?: string;
   code: string;
+  name?: string; // Shift name
   note?: string;
   paymentCents?: number;
   formattedPayment: string;

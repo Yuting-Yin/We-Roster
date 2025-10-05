@@ -207,6 +207,7 @@ function assignmentToEvent(assignment: ShiftAssignment): EventItem {
 		campus,
 		room,
 		campusAddress,
+		shiftName: assignment.shiftName,
 	};
 }
 
