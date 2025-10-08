@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { sx, sy } from "@/theme/metrics";
 import { COLOR } from "@/theme/colors";
 import { hoursBetween, fmt, dayKey } from "@/lib/date";
+import { isDateInPast } from "@/lib/dateValidation";
 import Chip from "@/components/common/Chip";
 import Avatar from "@/components/common/Avatar";
 import { EventItem } from "@/types/roster";
@@ -48,15 +49,25 @@ export default function ShiftDetails({
 
   const duration = `${hoursBetween(event.start, event.end)} hours`;
   
-  // Check if the date has an approved leave
+  // Check if the date has an approved leave or is in the past
   const dateKey = dayKey(date);
   const hasApprovedLeave = leaveMap[dateKey] === true;
-  const isDisabled = hasApprovedLeave;
+  const isPastDate = isDateInPast(date);
+  const isDisabled = hasApprovedLeave || isPastDate;
   
   const measurePlus = () => {
     // Check if the date has an approved leave
     if (hasApprovedLeave) {
       showWarningToast("Cannot submit requests for dates with approved leave. You already have an approved leave request for this date.");
+      return;
+    }
+    
+    // Check if the date is in the past
+    if (isPastDate) {
+      const today = new Date();
+      const todayStr = today.toLocaleDateString();
+      const dateStr = date.toLocaleDateString();
+      showWarningToast(`Cannot submit requests for past dates. Selected date: ${dateStr}, Today: ${todayStr}`);
       return;
     }
     

@@ -63,7 +63,7 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
     }
     
     // Check if the date is in the past
-    if (isDateStringInPast(shift.date)) {
+    if (isPastDate) {
       const errorMessage = getPastDateErrorMessage(shift.date);
       console.log('🔍 OpenShiftDetails - Past date detected:', shift.date, 'Error message:', errorMessage);
       showWarningToast(errorMessage);
@@ -73,9 +73,10 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
     onApply(shift);
   };
 
-  // Check if the date has an approved leave
+  // Check if the date has an approved leave or is in the past
   const hasApprovedLeave = shift ? leaveMap[shift.date] === true : false;
-  const isDisabled = hasApprovedLeave || isDateStringInPast(shift?.date || '');
+  const isPastDate = shift ? isDateStringInPast(shift.date) : false;
+  const isDisabled = hasApprovedLeave || isPastDate;
   const durationHrs = useMemo(() => {
     if (!shift) return 0;
     const [sh, sm] = shift.start.split(":").map(Number);
