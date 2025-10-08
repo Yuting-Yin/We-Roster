@@ -85,6 +85,7 @@ export default function RequestShift({
       
       <WarningToast visible={warningToast} message={toastMessage} />
     </View>
+  );
 }
 
 function Row({ icon, label, right }: { icon: any; label: string; right: React.ReactNode }) {
