@@ -537,7 +537,7 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("🔍 DataInitializer - Creating user for: " + staff.getFirstName() + " " + staff.getLastName());
             
             User user = User.builder()
-                    .domain("staff")
+                    .domain("test") // Use "test" domain for all users to match login attempts
                     .email(staff.getEmail())
                     .passwordHash("5d41402abc4b2a76b9719d911017c592") // "hello" in MD5
                     .salt("")
