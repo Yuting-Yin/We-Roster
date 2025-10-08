@@ -74,19 +74,20 @@ public class DataInitializer implements CommandLineRunner {
             return;
         }
         
-        // Only initialize if database is empty (production ready)
+        // Only initialize if database is empty (first-time setup only)
         if (userRepository.count() == 0) {
-            System.out.println("🔍 DataInitializer - Database is empty, creating initial data...");
+            System.out.println("🔍 DataInitializer - Database is empty, performing first-time setup...");
             createMockData();
+            
+            // Create test data only during initial setup
+            System.out.println("🔍 DataInitializer - Creating test data for initial setup...");
+            createTestLeaveRequests();
+            createTestSwapRequests();
+            
+            System.out.println("🔍 DataInitializer - First-time database setup completed successfully!");
         } else {
             System.out.println("🔍 DataInitializer - Database already has data, skipping initialization");
         }
-        
-        // Always create test leave requests (for testing purposes)
-        createTestLeaveRequests();
-        
-        // Always create test swap requests (for testing purposes)
-        createTestSwapRequests();
     }
     
     private void createMockData() {
