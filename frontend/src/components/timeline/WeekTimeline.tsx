@@ -132,7 +132,12 @@ export default function WeekTimeline({
                   {fmt(day, { weekday: "short" })} {fmt(day, { day: "2-digit", month: "short" })}
                 </Text>
               </View>
-              {events.map((ev) => {
+              {events.length === 0 ? (
+                <View style={styles.noShiftsContainer}>
+                  <Text style={styles.noShiftsText}>No shifts scheduled</Text>
+                </View>
+              ) : (
+                events.map((ev) => {
                 const filled = ev.action === "arrow";
                 const slot = slotFromEvent(ev);
                 const badge = badgeMetaFor(ev);
@@ -203,7 +208,8 @@ export default function WeekTimeline({
                     />
                   </Pressable>
                 );
-              })}
+                })
+              )}
             </View>
           );
         })}
@@ -314,4 +320,22 @@ const styles = StyleSheet.create({
   subText: { color: COLOR.ink, fontSize: sx(12) },
   fabWrap: { position: "absolute", right: sx(16), bottom: sy(20) },
   todayBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: sx(22), paddingHorizontal: sx(14), paddingVertical: sy(10), shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 8 },
+  noShiftsContainer: {
+    backgroundColor: "#F8F9FA",
+    borderRadius: sx(12),
+    paddingHorizontal: sx(16),
+    paddingVertical: sy(20),
+    marginBottom: sy(10),
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
+    borderStyle: "dashed",
+  },
+  noShiftsText: {
+    color: COLOR.label,
+    fontSize: sx(14),
+    fontWeight: "500",
+    textAlign: "center",
+  },
 });
