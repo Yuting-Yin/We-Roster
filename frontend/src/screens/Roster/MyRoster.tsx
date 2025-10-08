@@ -515,6 +515,7 @@ export default function MyRoster() {
           leftAction={{ icon: "menu", onPress: () => setMode((m) => (m === "day" ? "week" : "day")) }}
           rightAction={{ 
             icon: "refresh", 
+            animated: isRefreshing,
             onPress: async () => {
               if (isRefreshing) return; // Prevent multiple simultaneous refreshes
               
@@ -539,15 +540,6 @@ export default function MyRoster() {
             }
           }}
         />
-        
-        {/* Animated refresh overlay */}
-        {isRefreshing && (
-          <View style={styles.refreshOverlay}>
-            <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
-              <Ionicons name="refresh" size={sx(18)} color={COLOR.brand} />
-            </Animated.View>
-          </View>
-        )}
       </View>
 
       {mode === "day" ? (
@@ -721,16 +713,5 @@ export default function MyRoster() {
 
 const styles = StyleSheet.create({
   calendarStack: { position: "relative", zIndex: 2, elevation: 4 },
-  refreshOverlay: {
-    position: "absolute",
-    top: sx(8),
-    right: sx(50),
-    width: sx(32),
-    height: sx(32),
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 10,
-    elevation: 10,
-  },
 });
 

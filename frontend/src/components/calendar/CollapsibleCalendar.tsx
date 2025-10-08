@@ -72,7 +72,7 @@ function buildMonths(anchor: Date, count = 2) {
 /* =================== Types =================== */
 // Use ShiftType for actual shifts, undefined for no shifts
 
-type Action = { icon: "menu" | "refresh"; onPress: () => void };
+type Action = { icon: "menu" | "refresh"; onPress: () => void; animated?: boolean };
 
 type Props = {
   value: Date;                                        // Currently selected date (controlled)
@@ -155,6 +155,31 @@ export default function CollapsibleCalendar({
 }: Props) {
   const selectedDate = value;
   const [expanded, setExpanded] = useState(false);
+  
+  // Animation for refresh icon
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  
+  // Start/stop animation based on rightAction.animated
+  useEffect(() => {
+    if (rightAction?.animated) {
+      rotateAnim.setValue(0);
+      Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        })
+      ).start();
+    } else {
+      rotateAnim.stopAnimation();
+      rotateAnim.setValue(0);
+    }
+  }, [rightAction?.animated, rotateAnim]);
+  
+  const rotateInterpolate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
   
   // Debug: Log ON_CALL shifts in shiftMap
   useEffect(() => {
@@ -251,7 +276,13 @@ export default function CollapsibleCalendar({
         <View style={[styles.headerSide, { alignItems: "flex-end" }]}>
           {rightAction ? (
             <Pressable onPress={rightAction.onPress} hitSlop={10}>
-              <Ionicons name={iconFor(rightAction.icon)} size={sx(20)} color={COLOR.ink} />
+              {rightAction.animated ? (
+                <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
+                  <Ionicons name={iconFor(rightAction.icon)} size={sx(20)} color={COLOR.ink} />
+                </Animated.View>
+              ) : (
+                <Ionicons name={iconFor(rightAction.icon)} size={sx(20)} color={COLOR.ink} />
+              )}
             </Pressable>
           ) : null}
         </View>
