@@ -15,7 +15,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate  # Production ready - validate schema matches entities
+      ddl-auto: update  # Update schema without dropping existing data
     show-sql: false  # Disable SQL logging
     properties:
       hibernate:
@@ -23,9 +23,9 @@ spring:
         format_sql: false
     open-in-view: false
 
-# Data initialization disabled - use database management tools for data
+# Temporarily enable data initialization to ensure data exists
 spring.sql.init.mode: never
-com.weroster.config.DataInitializer.enabled: false
+com.weroster.config.DataInitializer.enabled: true
 
 # Logging configuration
 logging:
