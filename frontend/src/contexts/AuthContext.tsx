@@ -18,9 +18,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Load token from storage on app start
     loadToken();
-    
-    // Set up auth token getter for API calls
-    setAuthTokenGetter(() => token);
+  }, []);
+
+  useEffect(() => {
+    // Set up auth token getter for API calls - this will always get the current token
+    console.log('🔍 AuthContext - Setting auth token getter, current token:', token ? 'Token present' : 'No token');
+    setAuthTokenGetter(() => {
+      // Get the current token value from state
+      console.log('🔍 AuthContext - AuthTokenGetter called, returning:', token ? 'Token present' : 'No token');
+      return token;
+    });
   }, [token]);
 
   const loadToken = async () => {

@@ -35,6 +35,9 @@ export async function fetchJson<T>(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   const token = authTokenGetter?.();
+  console.log('🔍 fetchJson - Token retrieved:', token ? 'Token present' : 'No token');
+  console.log('🔍 fetchJson - AuthTokenGetter available:', !!authTokenGetter);
+  
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       method,
