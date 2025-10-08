@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import jakarta.persistence.EntityManager;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @Component
 @Profile("!test")
@@ -65,6 +66,9 @@ public class DataInitializer implements CommandLineRunner {
     
     @Autowired
     private EntityManager entityManager;
+    
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
     
     @Autowired
     private ShiftSwapRepository shiftSwapRepository;
@@ -1963,7 +1967,7 @@ public class DataInitializer implements CommandLineRunner {
     
     private void resetAutoIncrementCounters() {
         try {
-            // Use EntityManager to execute native SQL for resetting AUTO_INCREMENT
+            // Use JdbcTemplate to execute DDL statements for resetting AUTO_INCREMENT
             System.out.println("🔍 DataInitializer - Resetting AUTO_INCREMENT for all tables...");
             
             // Reset AUTO_INCREMENT for all tables in dependency order
@@ -1986,10 +1990,12 @@ public class DataInitializer implements CommandLineRunner {
             
             for (String query : resetQueries) {
                 try {
-                    entityManager.createNativeQuery(query).executeUpdate();
+                    // Use JdbcTemplate to execute DDL statements
+                    jdbcTemplate.execute(query);
                     System.out.println("✅ Reset AUTO_INCREMENT: " + query);
                 } catch (Exception e) {
                     System.out.println("⚠️ Could not reset AUTO_INCREMENT for query: " + query + " - " + e.getMessage());
+                    // Continue with other tables even if one fails
                 }
             }
             
