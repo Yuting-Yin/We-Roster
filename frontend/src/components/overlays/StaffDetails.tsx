@@ -7,7 +7,7 @@ import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { ShiftType } from "@/types/roster";
 import { useOverlayContext } from "@/contexts/OverlayContext";
-import CollapsibleCalendar from "@/components/calendar/CollapsibleCalendar";
+import ExpandedCalendar from "@/components/calendar/ExpandedCalendar";
 import { useApprovedLeaves } from "@/hooks/useApprovedLeaves";
 import { fmt } from "@/lib/date";
 
@@ -181,7 +181,7 @@ export default function StaffDetails({ visible, staff, shiftMap, onClose, return
             </View>
           ) : (
             <View style={styles.scheduleWrapper}>
-              <CollapsibleCalendar
+              <ExpandedCalendar
                 value={date}
                 onChange={setDate}
                 shiftMap={shiftMap}
