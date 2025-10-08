@@ -5,6 +5,7 @@ import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { isDateStringInPast, getPastDateErrorMessage } from "@/lib/dateValidation";
 import WarningToast from "@/components/overlays/WarningToast";
+import { useApprovedLeaves } from "@/hooks/useApprovedLeaves";
 
 export type Coworker = { id: string; name: string; initials: string };
 
@@ -44,6 +45,7 @@ const Pill = ({ children }: { children: React.ReactNode }) => (
 export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], onClose, onApply, onCoworkerPress }: Props) {
   const [warningToast, setWarningToast] = React.useState(false);
   const [toastMessage, setToastMessage] = React.useState("");
+  const { leaveMap } = useApprovedLeaves();
   
   const showWarningToast = (message: string) => { 
     setToastMessage(message); 
@@ -64,6 +66,10 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
     
     onApply(shift);
   };
+
+  // Check if the date has an approved leave
+  const hasApprovedLeave = shift ? leaveMap[shift.date] === true : false;
+  const isDisabled = hasApprovedLeave || isDateStringInPast(shift?.date || '');
   const durationHrs = useMemo(() => {
     if (!shift) return 0;
     const [sh, sm] = shift.start.split(":").map(Number);
@@ -180,11 +186,12 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
 
           {/* Apply */}
           <Pressable
-            style={styles.applyBtn}
-            onPress={handleApply}
-            android_ripple={{ color: "#e6f0fb", borderless: true }}
+            style={[styles.applyBtn, isDisabled && styles.applyBtnDisabled]}
+            onPress={isDisabled ? undefined : handleApply}
+            android_ripple={isDisabled ? undefined : { color: "#e6f0fb", borderless: true }}
+            disabled={isDisabled}
           >
-            <Text style={styles.applyText}>Apply</Text>
+            <Text style={[styles.applyText, isDisabled && styles.applyTextDisabled]}>Apply</Text>
           </Pressable>
         </View>
       </View>
@@ -271,5 +278,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  applyBtnDisabled: {
+    backgroundColor: COLOR.brand + "40", // Reduced saturation (25% opacity)
+  },
   applyText: { color: "#fff", fontWeight: "700" },
+  applyTextDisabled: { color: "#fff" + "80", fontWeight: "700" }, // Reduced text opacity
 });
