@@ -151,7 +151,6 @@ export default function SwapShift({
             <View style={{ marginLeft: sx(10), flex: 1 }}>
               <Text style={{ color: COLOR.ink, fontSize: sx(14), fontWeight: "700" }}>{displayName} (You)</Text>
               <Text style={{ color: COLOR.ink, fontSize: sx(12), marginTop: sy(2) }}>
-                {fmt(date, { weekday: "short" })}, {fmt(date, { day: "2-digit", month: "short", year: "numeric" })}{"  "}
                 {timeLabel}
               </Text>
               {!!designation && <Text style={styles.dim}>{designation}</Text>}
@@ -208,9 +207,13 @@ export default function SwapShift({
                 const active = selected === p.id;
                 const resolver = getShiftForUser ?? getMockShiftForUser;
                 const otherShift = resolver(p.id, date, slot);
-                const campus = campusOf(otherShift);
-                const room = roomOf(otherShift);
                 const isUnallocated = !otherShift;
+                
+                // Get shift information for display
+                const shiftTime = otherShift ? `${otherShift.start}-${otherShift.end}` : null;
+                const shiftCampus = otherShift?.campus || null;
+                const shiftRoom = otherShift?.room || null;
+                
                 return (
                   <Pressable
                     key={p.id}
@@ -227,17 +230,20 @@ export default function SwapShift({
                       <Avatar initials={p.initials} />
                       <View style={{ marginLeft: sx(10), flex: 1, justifyContent: "center" }}>
                         <Text style={{ color: COLOR.ink, fontSize: sx(14), fontWeight: "600" }}>{p.name}</Text>
-                        <Text style={{ color: COLOR.brandAlt, fontSize: sx(12), marginTop: sy(2) }}>
-                          {fmt(date, { weekday: "short" })}, {fmt(date, { day: "2-digit", month: "short", year: "numeric" })}{"  "}
-                          {timeLabel}
-                        </Text>
-                        {!!p.title && <Text style={styles.dim}>{p.title}</Text>}
                         {isUnallocated ? (
-                          <Text style={styles.dimStrong}>Unallocated</Text>
+                          <Text style={{ color: COLOR.brandAlt, fontSize: sx(12), marginTop: sy(2) }}>
+                            Unallocated
+                          </Text>
                         ) : (
                           <>
-                            <Text style={styles.dimStrong}>{campus}</Text>
-                            <Text style={styles.dim}>{room}</Text>
+                            {shiftTime && (
+                              <Text style={{ color: COLOR.brandAlt, fontSize: sx(12), marginTop: sy(2) }}>
+                                {shiftTime}
+                              </Text>
+                            )}
+                            {!!p.title && <Text style={styles.dim}>{p.title}</Text>}
+                            {shiftCampus && <Text style={styles.dimStrong}>{shiftCampus}</Text>}
+                            {shiftRoom && <Text style={styles.dim}>{shiftRoom}</Text>}
                           </>
                         )}
                       </View>
