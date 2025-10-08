@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import jakarta.persistence.EntityManager;
 
 @Component
 @Profile("!test")
@@ -63,6 +64,9 @@ public class DataInitializer implements CommandLineRunner {
     private NotificationRepository notificationRepository;
     
     @Autowired
+    private EntityManager entityManager;
+    
+    @Autowired
     private ShiftSwapRepository shiftSwapRepository;
     
     // Removed UserStaffRepository - using direct User-Staff relationship
@@ -92,6 +96,10 @@ public class DataInitializer implements CommandLineRunner {
         designationRepository.deleteAll();
         departmentRepository.deleteAll();
         hospitalRepository.deleteAll();
+        
+        // Reset AUTO_INCREMENT counters to start from 1
+        System.out.println("🔍 DataInitializer - Resetting AUTO_INCREMENT counters...");
+        resetAutoIncrementCounters();
         
         System.out.println("🔍 DataInitializer - All existing data cleared, creating fresh data...");
         createMockData();
@@ -1949,6 +1957,46 @@ public class DataInitializer implements CommandLineRunner {
             
         } catch (Exception e) {
             System.err.println("❌ ERROR creating test notifications: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    private void resetAutoIncrementCounters() {
+        try {
+            // Use EntityManager to execute native SQL for resetting AUTO_INCREMENT
+            System.out.println("🔍 DataInitializer - Resetting AUTO_INCREMENT for all tables...");
+            
+            // Reset AUTO_INCREMENT for all tables in dependency order
+            String[] resetQueries = {
+                "ALTER TABLE notification AUTO_INCREMENT = 1",
+                "ALTER TABLE shift_swap AUTO_INCREMENT = 1", 
+                "ALTER TABLE open_shift_request AUTO_INCREMENT = 1",
+                "ALTER TABLE shift_designation_requirements AUTO_INCREMENT = 1",
+                "ALTER TABLE shift_assignment AUTO_INCREMENT = 1",
+                "ALTER TABLE open_shift AUTO_INCREMENT = 1",
+                "ALTER TABLE shift AUTO_INCREMENT = 1",
+                "ALTER TABLE leave_request AUTO_INCREMENT = 1",
+                "ALTER TABLE staff AUTO_INCREMENT = 1",
+                "ALTER TABLE users AUTO_INCREMENT = 1",
+                "ALTER TABLE location AUTO_INCREMENT = 1",
+                "ALTER TABLE designation AUTO_INCREMENT = 1",
+                "ALTER TABLE dept AUTO_INCREMENT = 1",
+                "ALTER TABLE hospital AUTO_INCREMENT = 1"
+            };
+            
+            for (String query : resetQueries) {
+                try {
+                    entityManager.createNativeQuery(query).executeUpdate();
+                    System.out.println("✅ Reset AUTO_INCREMENT: " + query);
+                } catch (Exception e) {
+                    System.out.println("⚠️ Could not reset AUTO_INCREMENT for query: " + query + " - " + e.getMessage());
+                }
+            }
+            
+            System.out.println("🔍 DataInitializer - AUTO_INCREMENT reset completed!");
+            
+        } catch (Exception e) {
+            System.err.println("❌ ERROR resetting AUTO_INCREMENT counters: " + e.getMessage());
             e.printStackTrace();
         }
     }
