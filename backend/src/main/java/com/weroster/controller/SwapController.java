@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -52,9 +53,21 @@ public class SwapController {
             Staff target = staffRepository.findById(Long.parseLong(input.getTargetUserId()))
                     .orElseThrow(() -> new RuntimeException("Target user not found"));
             
-            // Parse times
-            LocalDateTime fromTime = LocalDateTime.parse(input.getCreatedAt());
-            LocalDateTime toTime = fromTime.plusHours(8); // Default 8-hour shift
+            // Check for existing swap request between these two users for the same time
+            // Parse the actual shift date and time, not the creation time
+            LocalDateTime fromTime = LocalDateTime.parse(input.getDate() + "T" + input.getStart());
+            LocalDateTime toTime = LocalDateTime.parse(input.getDate() + "T" + input.getEnd());
+            
+            // Check if there's already a pending swap request between these users for the same time
+            List<ShiftSwap> existingSwaps = shiftSwapRepository.findByStaffId(requester.getId());
+            boolean duplicateExists = existingSwaps.stream()
+                .anyMatch(swap -> swap.getTarget().getId().equals(target.getId()) &&
+                          swap.getStatus().equals("AWAITING") &&
+                          swap.getFromTime().isEqual(fromTime));
+            
+            if (duplicateExists) {
+                throw new RuntimeException("A swap request already exists between you and this user for this time");
+            }
             
             // Create swap request
             ShiftSwap swapRequest = ShiftSwap.builder()
@@ -63,7 +76,7 @@ public class SwapController {
                     .fromTime(fromTime)
                     .toTime(toTime)
                     .message(input.getMessage())
-                    .status("PENDING")
+                    .status("AWAITING")
                     .dateMade(LocalDateTime.now())
                     .build();
             

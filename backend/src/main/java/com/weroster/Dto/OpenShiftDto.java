@@ -26,6 +26,7 @@ public class OpenShiftDto {
     private String hospitalName; // Hospital name
     private String hospitalAddress; // Hospital physical address
     private String type; // Shift type: AM, PM, AH, ON_CALL
+    private String name; // Shift name
     private String note;
     private Integer paymentCents;
     private String formattedPayment;

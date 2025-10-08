@@ -41,5 +41,5 @@ public class ShiftSwap {
     
     @Column(name = "status", length = 30)
     @Builder.Default
-    private String status = "PENDING";
+    private String status = "AWAITING";
 }

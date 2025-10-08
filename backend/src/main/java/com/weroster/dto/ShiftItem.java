@@ -25,6 +25,7 @@ public class ShiftItem {
     private Boolean isActive;
     private Integer duration;
     private String shiftType;
+    private String shiftName;
     private List<TeammateDto> teammates;
     private String description;
     private Boolean isLead;

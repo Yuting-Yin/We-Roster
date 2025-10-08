@@ -264,7 +264,7 @@ public class OpenShiftController {
                 .openShift(openShift)
                 .staff(staff)
                 .message(input.getMessage())
-                .status("PENDING")
+                .status("AWAITING")
                 .createdAt(LocalDateTime.now())
                 .build();
             
@@ -385,6 +385,7 @@ public class OpenShiftController {
             .hospitalName(hospitalName)
             .hospitalAddress(hospitalAddress)
             .type(openShift.getType())
+            .name(openShift.getName())
             .note(openShift.getNote())
             .paymentCents(openShift.getExtraPayCents())
             .formattedPayment(openShift.getExtraPayCents() != null ? 

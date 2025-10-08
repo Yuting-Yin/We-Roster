@@ -15,3 +15,4 @@ backend/out/
 *.jar
 *.war
 !gradle-wrapper.jar
+.config/
