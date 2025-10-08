@@ -13,6 +13,7 @@ import Notifications from "@/screens/Notifications";
 
 // 主题色（给 Profile / EditProfile 的头部用）
 import { COLOR } from "@/theme/colors";
+import { sx } from "@/theme/metrics";
 import { OverlayProvider } from "@/contexts/OverlayContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 
@@ -65,8 +66,19 @@ export default function RootNavigator() {
           options={{
             headerShown: true, 
             title: "Settings",
-            headerStyle:{ backgroundColor: COLOR.brand }, 
-            headerTintColor:"#fff",
+            headerStyle: { 
+              backgroundColor: COLOR.brand,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.12,
+              shadowRadius: 6,
+              elevation: 4,
+            }, 
+            headerTintColor: "#fff",
+            headerTitleStyle: {
+              fontSize: sx(20),
+              fontWeight: "normal",
+            },
           }}
        />
 
