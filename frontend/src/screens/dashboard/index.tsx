@@ -181,6 +181,9 @@ export default function Dashboard() {
         }>(`/api/v1/myroster/roster?${params.toString()}`);
 
 
+        console.log('🔍 API response events keys:', res.events ? Object.keys(res.events) : 'No events');
+        console.log('🔍 API response events data:', res.events);
+        
         // Filter events to only include the current week
         const weekData: Record<string, any[]> = {};
         console.log('🔍 Dashboard loading week data for dates:');
@@ -240,6 +243,9 @@ export default function Dashboard() {
           }
         }
         
+        console.log('🔍 Final weekData keys:', Object.keys(weekData));
+        console.log('🔍 Final weekData:', weekData);
+        
         setWeekEvents(weekData);
       } catch (error) {
         console.error('Failed to load week data:', error);
@@ -263,6 +269,8 @@ export default function Dashboard() {
     weekEndDate.setDate(weekStartDate.getDate() + 6);
     
     console.log('🔍 Processing myShifts for range:', weekStartDate.toDateString(), 'to', weekEndDate.toDateString());
+    console.log('🔍 weekEvents keys:', Object.keys(weekEvents));
+    console.log('🔍 weekEvents data:', weekEvents);
     
     for (let i = 0; i < 7; i++) {
       const date = new Date(weekStartDate);
@@ -284,6 +292,8 @@ export default function Dashboard() {
             month: 'short' 
           });
           
+          console.log(`🔍 Adding shift: ${formattedDate} (${dateKey}) - ${event.start} to ${event.end}`);
+          
           weekShifts.push({
             id: event.id,
             date: formattedDate,
@@ -301,6 +311,10 @@ export default function Dashboard() {
       });
       } // Close the if statement for date validation
     }
+    
+    console.log(`🔍 Final myShifts count: ${weekShifts.length}`);
+    console.log('🔍 Final myShifts:', weekShifts.map(s => `${s.date} (${s.eventDate})`));
+    
     return weekShifts;
   }, [weekEvents, weekStartDate]);
 
