@@ -6,6 +6,7 @@ import com.weroster.entity.*;
 import com.weroster.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -116,6 +117,7 @@ public class RequestController {
      * Get awaiting requests for a user (IN ACTION tab)
      */
     @GetMapping("/awaiting")
+    @Transactional(readOnly = true)
     public ResponseEntity<RequestsResponseDto> getAwaitingRequests(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(value = "month", required = false) Integer month,
@@ -183,6 +185,7 @@ public class RequestController {
      * Get history requests for a user (HISTORY tab)
      */
     @GetMapping("/history")
+    @Transactional(readOnly = true)
     public ResponseEntity<RequestsResponseDto> getHistoryRequests(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(value = "month", required = false) Integer month,
@@ -260,6 +263,30 @@ public class RequestController {
             timeRange = formatTimeRange(leave.getStartTime(), leave.getEndTime());
         }
         
+        // Safely access nested properties to avoid lazy loading issues
+        String shiftId = null;
+        String location = null;
+        String address = null;
+        
+        try {
+            if (leave.getShift() != null) {
+                shiftId = leave.getShift().getId().toString();
+                
+                // Safely access location
+                if (leave.getShift().getLocation() != null) {
+                    location = leave.getShift().getLocation().getName();
+                    
+                    // Safely access hospital address
+                    if (leave.getShift().getLocation().getHospital() != null) {
+                        address = leave.getShift().getLocation().getHospital().getAddress();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("🔍 RequestController - Error accessing shift details: " + e.getMessage());
+            // Continue with null values for shift details
+        }
+        
         return RequestCardDto.builder()
             .id(leave.getId().toString())
             .status(status)
@@ -272,9 +299,9 @@ public class RequestController {
             .reviewedAt(leave.getApprovedAt())
             .reviewedBy(leave.getApprovedBy() != null ? leave.getApprovedBy().getFirstName() + " " + leave.getApprovedBy().getLastName() : null)
             .reason(leave.getReason())
-            .shiftId(leave.getShift() != null ? leave.getShift().getId().toString() : null)
-            .location(leave.getShift() != null ? leave.getShift().getLocation().getName() : null)
-            .address(leave.getShift() != null ? leave.getShift().getLocation().getHospital().getAddress() : null)
+            .shiftId(shiftId)
+            .location(location)
+            .address(address)
             .build();
     }
     
@@ -326,8 +353,34 @@ public class RequestController {
         String requestType = "Open Shift Request";
         String requestSubType = "Open Shift Request"; // Open shift requests don't have sub-types
         
-        String date = formatDate(openShiftRequest.getOpenShift().getShift().getStartTs().toLocalDate());
-        String timeRange = formatTimeRange(openShiftRequest.getOpenShift().getShift().getStartTs(), openShiftRequest.getOpenShift().getShift().getEndTs());
+        // Safely access nested properties to avoid lazy loading issues
+        String date = null;
+        String timeRange = null;
+        String shiftId = null;
+        String location = null;
+        String address = null;
+        
+        try {
+            if (openShiftRequest.getOpenShift() != null && openShiftRequest.getOpenShift().getShift() != null) {
+                Shift shift = openShiftRequest.getOpenShift().getShift();
+                date = formatDate(shift.getStartTs().toLocalDate());
+                timeRange = formatTimeRange(shift.getStartTs(), shift.getEndTs());
+                shiftId = openShiftRequest.getOpenShift().getId().toString();
+                
+                // Safely access location
+                if (shift.getLocation() != null) {
+                    location = shift.getLocation().getName();
+                    
+                    // Safely access hospital address
+                    if (shift.getLocation().getHospital() != null) {
+                        address = shift.getLocation().getHospital().getAddress();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("🔍 RequestController - Error accessing open shift details: " + e.getMessage());
+            // Continue with null values for shift details
+        }
         
         return RequestCardDto.builder()
             .id(openShiftRequest.getId().toString())
@@ -342,9 +395,9 @@ public class RequestController {
             .reviewedBy(openShiftRequest.getReviewedBy() != null ? 
                 openShiftRequest.getReviewedBy().getFirstName() + " " + openShiftRequest.getReviewedBy().getLastName() : null)
             .reason(openShiftRequest.getMessage())
-            .shiftId(openShiftRequest.getOpenShift().getId().toString())
-            .location(openShiftRequest.getOpenShift().getShift().getLocation().getName())
-            .address(openShiftRequest.getOpenShift().getShift().getLocation().getHospital().getAddress())
+            .shiftId(shiftId)
+            .location(location)
+            .address(address)
             .build();
     }
     
