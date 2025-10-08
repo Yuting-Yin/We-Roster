@@ -19,14 +19,28 @@ import SuccessToast from "@/components/overlays/SuccessToast";
 import WarningToast from "@/components/overlays/WarningToast";
 
 /* ================= Helpers ================= */
-const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const addDays = (d: Date, n: number) => {
+  return new Date(Date.UTC(
+    d.getUTCFullYear(),
+    d.getUTCMonth(),
+    d.getUTCDate() + n,
+    0, 0, 0, 0
+  ));
+};
 const startOfWeekMon = (d: Date) => {
-  const r = new Date(d);
-  const day = r.getDay(); // 0..6 (Sun..Sat)
-  const diff = day === 0 ? -6 : 1 - day; // Monday as first day
-  r.setDate(r.getDate() + diff);
-  r.setHours(0, 0, 0, 0);
-  return r;
+  // Create a completely new date using UTC components to avoid any timezone issues
+  const year = d.getUTCFullYear();
+  const month = d.getUTCMonth();
+  const date = d.getUTCDate();
+  const dayOfWeek = d.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  
+  // Calculate days to subtract to get to Monday
+  const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 6 days back, Monday = 0 days back
+  
+  // Create the Monday date using UTC constructor
+  const mondayDate = new Date(Date.UTC(year, month, date - daysToSubtract, 0, 0, 0, 0));
+  
+  return mondayDate;
 };
 const addMonths = (d: Date, n: number) => {
   const r = new Date(d);
@@ -161,27 +175,46 @@ export default function OpenShifts() {
 
   /* ---- Convert API data to Item format and apply filters ---- */
   const filtered = useMemo(() => {
+    // Calculate the end of the current week (Sunday) for validation
+    // weekStart is already Monday, so weekEndDate should be Sunday (Monday + 6 days)
+    const weekEndDate = new Date(weekStart);
+    weekEndDate.setUTCDate(weekStart.getUTCDate() + 6); // Monday + 6 days = Sunday
+    weekEndDate.setUTCHours(0, 0, 0, 0);
+    
     // Convert OpenShiftDto to Item format
     const allItems: Item[] = [];
     Object.entries(openShifts).forEach(([date, shifts]) => {
-      shifts.forEach(shift => {
-        allItems.push({
-          id: shift.id.toString(),
-          date: shift.date,
-          session: shift.session,
-          start: shift.start,
-          end: shift.end,
-          location: shift.locationName || "Unknown",
-          hospitalName: shift.hospitalName || "Unknown",
-          designation: shift.designationRequirements.length > 0 
-            ? shift.designationRequirements.map(r => r.designationName).join(", ")
-            : "Any",
-          payment: shift.formattedPayment,
-          urgent: shift.urgentFlag,
-          status: shift.status,
-          hospitalAddress: shift.hospitalAddress,
+      // Parse date as UTC to avoid timezone issues
+      const shiftDate = new Date(date + 'T00:00:00.000Z');
+      
+      // Fix timezone issue by using UTC date components for comparison
+      const shiftDateUTC = new Date(shiftDate.getUTCFullYear(), shiftDate.getUTCMonth(), shiftDate.getUTCDate());
+      const weekStartUTC = new Date(weekStart.getUTCFullYear(), weekStart.getUTCMonth(), weekStart.getUTCDate());
+      const weekEndDateUTC = new Date(weekEndDate.getUTCFullYear(), weekEndDate.getUTCMonth(), weekEndDate.getUTCDate());
+      
+      const isInCurrentWeek = shiftDateUTC >= weekStartUTC && shiftDateUTC <= weekEndDateUTC;
+      
+      // Only process shifts within the current week
+      if (isInCurrentWeek) {
+        shifts.forEach(shift => {
+          allItems.push({
+            id: shift.id.toString(),
+            date: shift.date,
+            session: shift.session,
+            start: shift.start,
+            end: shift.end,
+            location: shift.locationName || "Unknown",
+            hospitalName: shift.hospitalName || "Unknown",
+            designation: shift.designationRequirements.length > 0 
+              ? shift.designationRequirements.map(r => r.designationName).join(", ")
+              : "Any",
+            payment: shift.formattedPayment,
+            urgent: shift.urgentFlag,
+            status: shift.status,
+            hospitalAddress: shift.hospitalAddress,
+          });
         });
-      });
+      }
     });
 
     // Apply filters
@@ -192,7 +225,7 @@ export default function OpenShifts() {
 
     arr.sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
     return arr;
-  }, [openShifts, filter]);
+  }, [openShifts, filter, weekStart]);
 
   /* ---- Group by day ---- */
   const sections = useMemo(() => {

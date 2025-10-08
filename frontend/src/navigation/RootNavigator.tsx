@@ -9,12 +9,15 @@ import Login from "@/screens/Login";
 import AppTabs from "@/navigation/AppTabs";   // 里面包含 Dashboard 等 Tab 页
 import Profile from "@/screens/Profile/index";
 import Settings from "@/screens/Settings";
+import EditDashboard from "@/screens/Settings/EditDashboard";
 import Notifications from "@/screens/Notifications";
 
 // 主题色（给 Profile / EditProfile 的头部用）
 import { COLOR } from "@/theme/colors";
+import { sx, sy } from "@/theme/metrics";
 import { OverlayProvider } from "@/contexts/OverlayContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
 
 /** ====== 顶层 Stack 的参数类型 ====== */
 export type RootStackParamList = {
@@ -23,6 +26,7 @@ export type RootStackParamList = {
   AppTabs: undefined;
   Profile: undefined;
   Settings: undefined;
+  EditDashboard: undefined;
   Notifications: undefined;
 };
 
@@ -39,11 +43,13 @@ export default function RootNavigator() {
         <Stack.Screen name="Login" component={Login} />
         <Stack.Screen name="AppTabs">
           {() => (
-            <NotificationProvider>
-              <OverlayProvider>
-                <AppTabs />
-              </OverlayProvider>
-            </NotificationProvider>
+            <SettingsProvider>
+              <NotificationProvider>
+                <OverlayProvider>
+                  <AppTabs />
+                </OverlayProvider>
+              </NotificationProvider>
+            </SettingsProvider>
           )}
         </Stack.Screen>
 
@@ -61,12 +67,40 @@ export default function RootNavigator() {
 
         <Stack.Screen 
           name="Settings" 
-          component={Settings} 
           options={{
             headerShown: true, 
             title: "Settings",
-            headerStyle:{ backgroundColor: COLOR.brand }, 
-            headerTintColor:"#fff",
+            headerStyle: { 
+              backgroundColor: COLOR.brand,
+            }, 
+            headerTintColor: "#fff",
+            headerTitleStyle: {
+              fontSize: sx(20),
+              fontWeight: "normal",
+            },
+          }}
+        >
+          {() => (
+            <SettingsProvider>
+              <Settings />
+            </SettingsProvider>
+          )}
+        </Stack.Screen>
+
+        <Stack.Screen 
+          name="EditDashboard" 
+          component={EditDashboard} 
+          options={{
+            headerShown: true, 
+            title: "Edit Dashboard",
+            headerStyle: { 
+              backgroundColor: COLOR.brand,
+            }, 
+            headerTintColor: "#fff",
+            headerTitleStyle: {
+              fontSize: sx(20),
+              fontWeight: "normal",
+            },
           }}
        />
 

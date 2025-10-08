@@ -33,7 +33,6 @@ export function useOpenShiftsData(weekStart: Date, opts: Options = {}) {
       
       const startDate = weekStart.toISOString().split('T')[0]; // YYYY-MM-DD format
       const response = await getOpenShiftsForWeek(startDate, user?.email || undefined);
-      
       setOpenShifts(response.openShifts);
     } catch (err) {
       console.error("Failed to load open shifts:", err);

@@ -15,8 +15,7 @@ async function copy(text: string | undefined) {
 }
 
 export default function ProfileScreen() {
-  // To connect to backend, change mock: true to mock: false
-  // Or use .env variable EXPO_PUBLIC_MOCK_DASHBOARD=1
+  // Connected to backend - using real user data from database
   const {
     displayName,
     initials,
@@ -28,7 +27,7 @@ export default function ProfileScreen() {
     loading,
     error,
     refresh,
-  } = useCurrentUser({ mock: true });
+  } = useCurrentUser({ mock: false });
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: COLOR.bg }} contentContainerStyle={{ padding: 16 }}>

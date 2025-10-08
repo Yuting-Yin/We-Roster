@@ -67,8 +67,29 @@ export default function Dashboard() {
     });
   };
 
-  // Get current user info (use mock data for now until authentication is properly implemented)
-  const { firstName, displayName, initials, email, user } = useCurrentUser({mock: true});
+  // Handle leave card press - navigate to My Request with leave details
+  const handleLeavePress = (leave: LeaveItem) => {
+    // Navigate to My Request tab
+    navigation.navigate('My Request');
+    
+    // Determine which sub-page to show based on leave state
+    const subPage = leave.state === 'Approved' || leave.state === 'APPROVED' ? 'HISTORY' : 'IN ACTION';
+    
+    // Navigate to the specific sub-page
+    setTimeout(() => {
+      navigation.navigate('My Request', { 
+        screen: subPage,
+        params: { 
+          showLeaveDetail: true, 
+          leaveId: leave.id,
+          leaveData: leave 
+        }
+      });
+    }, 100); // Small delay to ensure tab navigation completes first
+  };
+
+  // Get current user info (connected to backend database)
+  const { firstName, displayName, initials, email, user } = useCurrentUser({mock: false});
   
   // Get leaves without month filter - will be filtered in the hook
   const { leaves, loading: leavesLoading, error: leavesError, refresh: refreshLeaves } = useMyLeaves(undefined, { mock: false });
@@ -109,12 +130,15 @@ export default function Dashboard() {
   // Use a stable date to prevent re-loading on every render
   const [weekStartDate] = useState(() => {
     const today = new Date();
-    // Use the same week calculation as Roster page (Monday start)
-    const day = today.getDay(); // 0..6
-    const diff = day === 0 ? -6 : 1 - day; // Monday = 1, Sunday = 0
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() + diff);
-    startOfWeek.setHours(0, 0, 0, 0);
+    // Calculate start of current week (Monday) using UTC to avoid timezone issues
+    const year = today.getUTCFullYear();
+    const month = today.getUTCMonth();
+    const date = today.getUTCDate();
+    const dayOfWeek = today.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 6 days back, Monday = 0 days back
+    
+    const startOfWeek = new Date(Date.UTC(year, month, date - daysToSubtract, 0, 0, 0, 0));
+    
     return startOfWeek;
   });
   
@@ -149,12 +173,26 @@ export default function Dashboard() {
 
         // Filter events to only include the current week
         const weekData: Record<string, any[]> = {};
+        
+        // Calculate the end of the current week (Sunday) using UTC
+        const weekEndDate = new Date(Date.UTC(
+          weekStartDate.getUTCFullYear(),
+          weekStartDate.getUTCMonth(),
+          weekStartDate.getUTCDate() + 6,
+          0, 0, 0, 0
+        ));
+        
         for (let i = 0; i < 7; i++) {
-          const date = new Date(weekStartDate);
-          date.setDate(weekStartDate.getDate() + i);
+          const date = new Date(Date.UTC(
+            weekStartDate.getUTCFullYear(),
+            weekStartDate.getUTCMonth(),
+            weekStartDate.getUTCDate() + i,
+            0, 0, 0, 0
+          ));
           const dateKey = date.toISOString().split('T')[0];
           
-          if (res.events && res.events[dateKey]) {
+          // Double-check that this date is actually within the current week
+          if (date >= weekStartDate && date <= weekEndDate && res.events && res.events[dateKey]) {
             // Convert raw shift data to events format
             const events = res.events[dateKey].map((shift: any) => {
               // Handle overnight shifts properly
@@ -213,14 +251,29 @@ export default function Dashboard() {
     
     const weekShifts: any[] = [];
     
+    // Calculate the end of the current week (Sunday) for validation using UTC
+    const weekEndDate = new Date(Date.UTC(
+      weekStartDate.getUTCFullYear(),
+      weekStartDate.getUTCMonth(),
+      weekStartDate.getUTCDate() + 6,
+      0, 0, 0, 0
+    ));
+    
     for (let i = 0; i < 7; i++) {
-      const date = new Date(weekStartDate);
-      date.setDate(weekStartDate.getDate() + i);
+      const date = new Date(Date.UTC(
+        weekStartDate.getUTCFullYear(),
+        weekStartDate.getUTCMonth(),
+        weekStartDate.getUTCDate() + i,
+        0, 0, 0, 0
+      ));
       const dateKey = date.toISOString().split('T')[0];
       const dayEvents = weekEvents[dateKey] || [];
       
+      console.log(`🔍 Processing day ${i}: ${date.toDateString()} (${dateKey}) - ${dayEvents.length} events`);
       
-      dayEvents.forEach(event => {
+      // Validate that this date is within the current week
+      if (date >= weekStartDate && date <= weekEndDate) {
+        dayEvents.forEach(event => {
         if (event && event.id) {
           // Format date for display using the same approach as Roster page
           const dateObj = new Date(dateKey + 'T00:00:00'); // Add time to avoid timezone issues
@@ -229,6 +282,8 @@ export default function Dashboard() {
             day: 'numeric', 
             month: 'short' 
           });
+          
+          console.log(`🔍 Adding shift: ${formattedDate} (${dateKey}) - ${event.start} to ${event.end}`);
           
           weekShifts.push({
             id: event.id,
@@ -245,7 +300,9 @@ export default function Dashboard() {
           });
         }
       });
+      } // Close the if statement for date validation
     }
+    
     return weekShifts;
   }, [weekEvents, weekStartDate]);
 
@@ -258,8 +315,23 @@ export default function Dashboard() {
 
   // Convert open shifts to display format and sort by date (Monday to Sunday)
   const openShiftsFormatted = useMemo(() => {
+    // Calculate the end of the current week (Sunday) for validation using UTC
+    const weekEndDate = new Date(Date.UTC(
+      weekStartDate.getUTCFullYear(),
+      weekStartDate.getUTCMonth(),
+      weekStartDate.getUTCDate() + 6,
+      0, 0, 0, 0
+    ));
+    
+    // Filter shifts to only include current week using UTC comparisons
+    const currentWeekShifts = openShiftsData.filter(shift => {
+      const shiftDate = new Date(shift.date + 'T00:00:00.000Z'); // Parse as UTC
+      const isInCurrentWeek = shiftDate >= weekStartDate && shiftDate <= weekEndDate;
+      return isInCurrentWeek;
+    });
+    
     // First, sort the shifts by date chronologically
-    const sortedShifts = [...openShiftsData].sort((a, b) => {
+    const sortedShifts = [...currentWeekShifts].sort((a, b) => {
       // Compare dates, then start times
       const dateCompare = a.date.localeCompare(b.date);
       if (dateCompare !== 0) return dateCompare;
@@ -300,38 +372,30 @@ export default function Dashboard() {
     const resetScrollPositions = () => {
       setTimeout(() => {
         if (duty.length > 0) {
-          console.log('🔍 Resetting duty cards to position 0');
           try {
             dutyFlatListRef.current?.scrollToIndex({ index: 16, animated: true, viewPosition: 0 });
           } catch (error) {
-            console.log('🔍 Error scrolling duty cards:', error);
             dutyFlatListRef.current?.scrollToOffset({ offset: 0, animated: true });
           }
         }
         if (myShifts.length > 0) {
-          console.log('🔍 Resetting my shifts cards to position 0');
           try {
             myShiftFlatListRef.current?.scrollToIndex({ index: 16, animated: true, viewPosition: 0 });
           } catch (error) {
-            console.log('🔍 Error scrolling my shifts cards:', error);
             myShiftFlatListRef.current?.scrollToOffset({ offset: 0, animated: true });
           }
         }
         if (openShiftsFormatted.length > 0) {
-          console.log('🔍 Resetting open shifts cards to position 0');
           try {
             openShiftFlatListRef.current?.scrollToIndex({ index: 16, animated: true, viewPosition: 0 });
           } catch (error) {
-            console.log('🔍 Error scrolling open shifts cards:', error);
             openShiftFlatListRef.current?.scrollToOffset({ offset: 0, animated: true });
           }
         }
         if (leaves.length > 0) {
-          console.log('🔍 Resetting leaves cards to position 0');
           try {
             leaveFlatListRef.current?.scrollToIndex({ index: 16, animated: true, viewPosition: 0 });
           } catch (error) {
-            console.log('🔍 Error scrolling leaves cards:', error);
             leaveFlatListRef.current?.scrollToOffset({ offset: 0, animated: true });
           }
         }
@@ -455,7 +519,7 @@ export default function Dashboard() {
           data={leavesLoading && leaves.length === 0 ? placeholderArray<LeaveItem>(3) : leaves}
           keyExtractor={(i, idx) => String(i?.id ?? `leave-skel-${idx}`)}
           contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
-          renderItem={({ item }) => (item?.id ? <LeaveCard item={item} onPress={() => console.log("leave", item.id)} /> : <LeaveCardSkeleton />)}
+          renderItem={({ item }) => (item?.id ? <LeaveCard item={item} onPress={() => handleLeavePress(item)} /> : <LeaveCardSkeleton />)}
           flatListProps={leaveSnap}
           footer={<PaginationDots count={Math.max(leaves.length, leavesLoading ? 3 : 0)} index={leaveIdx} />}
           emptyText="No leave requests this month"

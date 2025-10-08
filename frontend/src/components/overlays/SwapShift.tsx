@@ -33,7 +33,7 @@ export default function SwapShift({
   availableUsers, loading, error,
   getShiftForUser,
 }: SwapShiftProps) {
-  const { user, displayName, initials, designation } = useCurrentUser({ mock: true });
+  const { user, displayName, initials, designation } = useCurrentUser({ mock: false });
   const { refreshUnreadCount } = useNotificationContext();
   const navigation = useNavigation();
 
@@ -61,7 +61,7 @@ export default function SwapShift({
     if (!selected || submitting) return;
     try {
       setSubmitting(true);
-      const requesterId = (useCurrentUser({ mock: true }) as any)?.user?.id ?? "u_mock";
+      const requesterId = user?.id ?? "u_mock";
       const payload = {
         requesterId,
         targetUserId: selected,

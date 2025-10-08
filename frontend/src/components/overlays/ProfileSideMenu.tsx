@@ -165,6 +165,8 @@ function ProfileSideMenu({
             <Text style={styles.rowText}>Log out</Text>
           </Pressable>
         </Animated.View>
+
+        <View style={styles.divider} />
       </Animated.View>
     </View>
   );
@@ -205,7 +207,7 @@ const styles = StyleSheet.create({
   avatarText: { color: COLOR.brand, fontWeight: "700", fontSize: sx(28) },
   name: { marginTop: sy(10), color: COLOR.ink, fontWeight: "700", fontSize: sx(20) },
   email: { color: COLOR.label, marginTop: sy(4), fontSize: sx(13) },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: COLOR.divider, marginVertical: sy(8) },
+  divider: { height: 0.25, backgroundColor: COLOR.divider, marginVertical: sy(6) },
   row: { flexDirection: "row", alignItems: "center", paddingHorizontal: sx(20), paddingVertical: sy(14) },
   rowText: { marginLeft: sx(12), color: COLOR.ink, fontSize: sx(16) },
 });
