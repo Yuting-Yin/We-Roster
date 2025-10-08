@@ -168,6 +168,11 @@ export default function MyRoster() {
   // Combine loading states and errors
   const loading = calendarLoading || timelineLoading || openShiftsLoading;
   const error = calendarError || timelineError || openShiftsError;
+  
+  // Only show error if we have no data AND there are errors
+  // This prevents showing error messages when some data has loaded successfully
+  const hasData = Object.keys(shiftMap).length > 0 || myShifts.length > 0 || Object.keys(openShiftsData).length > 0;
+  const shouldShowError = error && !hasData;
 
   // ===== avaliable users for wsap (api original data) =====
   const [availableUsers, setAvailableUsers] = useState<ApiUser[]>([]);
@@ -369,7 +374,7 @@ export default function MyRoster() {
   return (
     <View ref={rootRef} style={{ flex: 1, backgroundColor: COLOR.bg }}>
       {/* Show error if API call failed */}
-      {error && (
+      {shouldShowError && (
         <View style={{ padding: 16, backgroundColor: '#ffebee', margin: 16, borderRadius: 8 }}>
           <Text style={{ color: '#c62828', textAlign: 'center' }}>
             Error loading roster: {error}
