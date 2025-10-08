@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { sx, sy } from "@/theme/metrics";
 import { COLOR } from "@/theme/colors";
 import { fmt } from "@/lib/date";
+import { isDateInPast } from "@/lib/dateValidation";
 import type { EventItem, ShiftSlot } from "@/types/roster";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
@@ -131,7 +132,12 @@ export default function WeekTimeline({
                   {fmt(day, { weekday: "short" })} {fmt(day, { day: "2-digit", month: "short" })}
                 </Text>
               </View>
-              {events.map((ev) => {
+              {events.length === 0 ? (
+                <View style={styles.noShiftsContainer}>
+                  <Text style={styles.noShiftsText}>No shifts scheduled</Text>
+                </View>
+              ) : (
+                events.map((ev) => {
                 const filled = ev.action === "arrow";
                 const slot = slotFromEvent(ev);
                 const badge = badgeMetaFor(ev);
@@ -143,11 +149,27 @@ export default function WeekTimeline({
                 const teammates = teammatesOf(ev);
                 if (teammates) infoLines.push({ icon: "people-outline", text: teammates });
                 const isOpenShift = ev.action === 'plus';
+                const isPastEvent = isDateInPast(ev.date);
+                
+                const handlePress = () => {
+                  if (isPastEvent) return; // Disable for past events
+                  if (filled || isOpenShift) {
+                    onOpenDetails(ev);
+                  } else {
+                    onOpenRequest(day, slot);
+                  }
+                };
+                
                 return (
                   <Pressable
                     key={ev.id}
-                    onPress={() => (filled || isOpenShift ? onOpenDetails(ev) : onOpenRequest(day, slot))}
-                    style={[styles.row, isOpenShift ? styles.rowOpenShift : filled ? styles.rowOn : styles.rowOff]}
+                    onPress={handlePress}
+                    disabled={isPastEvent}
+                    style={[
+                      styles.row, 
+                      isOpenShift ? styles.rowOpenShift : filled ? styles.rowOn : styles.rowOff,
+                      isPastEvent && styles.pastEventRow
+                    ]}
                   >
                     <View style={[styles.badge, isOpenShift && styles.badgeOpenShift]}>
                       <Ionicons name={badge.icon} size={sx(18)} color={COLOR.brand} style={styles.badgeIcon} />
@@ -182,11 +204,12 @@ export default function WeekTimeline({
                     <Ionicons
                       name={filled ? "arrow-forward-circle" : isOpenShift ? "add-circle" : "add-circle"}
                       size={sx(24)}
-                      color={isOpenShift ? COLOR.success : COLOR.brand}
+                      color={isPastEvent ? COLOR.label : (isOpenShift ? COLOR.success : COLOR.brand)}
                     />
                   </Pressable>
                 );
-              })}
+                })
+              )}
             </View>
           );
         })}
@@ -243,6 +266,9 @@ const styles = StyleSheet.create({
     borderColor: "rgba(76, 175, 80, 0.3)", // Subtle green border
     borderStyle: 'dashed', // Dashed border to indicate open shift
   },
+  pastEventRow: {
+    opacity: 0.6, // Make past events appear dimmed
+  },
   badge: {
     width: sx(52),
     height: sy(58),
@@ -294,4 +320,22 @@ const styles = StyleSheet.create({
   subText: { color: COLOR.ink, fontSize: sx(12) },
   fabWrap: { position: "absolute", right: sx(16), bottom: sy(20) },
   todayBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: sx(22), paddingHorizontal: sx(14), paddingVertical: sy(10), shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 8 },
+  noShiftsContainer: {
+    backgroundColor: "#F8F9FA",
+    borderRadius: sx(12),
+    paddingHorizontal: sx(16),
+    paddingVertical: sy(20),
+    marginBottom: sy(10),
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
+    borderStyle: "dashed",
+  },
+  noShiftsText: {
+    color: COLOR.label,
+    fontSize: sx(14),
+    fontWeight: "500",
+    textAlign: "center",
+  },
 });

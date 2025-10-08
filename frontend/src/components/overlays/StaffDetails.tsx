@@ -6,8 +6,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { ShiftType } from "@/types/roster";
-import { useRosterPeriod } from "@/hooks/useRosterPeriod";
 import { useOverlayContext } from "@/contexts/OverlayContext";
+import ExpandedCalendar from "@/components/calendar/ExpandedCalendar";
+import { useApprovedLeaves } from "@/hooks/useApprovedLeaves";
 
 export type StaffMember = {
   id: number;
@@ -29,102 +30,12 @@ type Props = {
 
 type TabType = "about" | "schedule";
 
-const COL_W_PCT = 100 / 7; // 7 columns (Mon-Sun)
-const DOT_SIZE = sx(4);
-
-/* =================== Helpers =================== */
-const dayKey = (d: Date) => {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
-const endOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
-
-function buildMonths(anchor: Date, count = 2) {
-  return Array.from({ length: count }, (_, k) => {
-    const first = startOfMonth(new Date(anchor.getFullYear(), anchor.getMonth() + k, 1));
-    const last = endOfMonth(first);
-    const firstWeekdayMon0 = (first.getDay() + 6) % 7; // 0..6 => Mon..Sun
-
-    const days: Date[] = [];
-    for (let d = 1; d <= last.getDate(); d++) {
-      days.push(new Date(first.getFullYear(), first.getMonth(), d));
-    }
-
-    return {
-      title: new Intl.DateTimeFormat("en-US", { month: "long" }).format(first),
-      first,
-      firstWeekdayMon0,
-      days,
-    };
-  });
-}
-
-/** Get shift type(s) for a date */
-function getShiftTypeForDate(d: Date, shiftMap?: Record<string, ShiftType | ShiftType[]>): ShiftType | ShiftType[] | undefined {
-  const key = dayKey(d);
-  return shiftMap?.[key];
-}
-
-/**
- * Combine multiple shift types into a single visual representation
- */
-function visualOf(types: ShiftType | ShiftType[] | undefined) {
-  const typeArray = types ? (Array.isArray(types) ? types : [types]) : [];
-  
-  if (typeArray.length === 0) {
-    return { dots: ["hollow", "hollow"] as const, labels: [] };
-  }
-  
-  const hasAH = typeArray.includes("AH");
-  const hasPM = typeArray.includes("PM");
-  const hasAM = typeArray.includes("AM");
-  const hasOnCall = typeArray.includes("ON_CALL");
-  
-  const leftDot = (hasAM || hasAH) ? "filled" : "hollow";
-  const rightDot = hasPM ? "filled" : "hollow";
-  
-  const labels: string[] = [];
-  if (hasAH) labels.push("AH");
-  if (hasOnCall) labels.push("On Call");
-  
-  return { 
-    dots: [leftDot, rightDot] as const, 
-    labels 
-  };
-}
-
-const TwoDots = ({ left, right }: { left: "filled" | "hollow"; right: "filled" | "hollow" }) => (
-  <View style={{ height: sx(6), flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-    <View style={left === "filled" ? dotStyles.filled : dotStyles.hollow} />
-    <View style={{ width: sx(3) }} />
-    <View style={right === "filled" ? dotStyles.filled : dotStyles.hollow} />
-  </View>
-);
-
-const dotStyles = StyleSheet.create({
-  filled: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, backgroundColor: "#000" },
-  hollow: { width: DOT_SIZE, height: DOT_SIZE, borderRadius: DOT_SIZE / 2, borderWidth: 1.5, borderColor: "#BDBDBD", backgroundColor: "transparent" },
-});
-
 export default function StaffDetails({ visible, staff, shiftMap, onClose, returnToTab }: Props) {
   const [activeTab, setActiveTab] = useState<TabType>("about");
-  const today = useMemo(() => new Date(), []);
-  const { months: rosterMonths } = useRosterPeriod(today);
+  const [date, setDate] = useState(new Date());
   const navigation = useNavigation<any>();
   const { teamMemberNavRequest, clearTeamMemberNavRequest } = useOverlayContext();
-  
-  const months = useMemo(() => {
-    if (rosterMonths.length > 0) {
-      return rosterMonths;
-    }
-    return buildMonths(today, 2);
-  }, [rosterMonths, today]);
-
-  const todayKey = dayKey(today);
+  const { leaveMap } = useApprovedLeaves();
 
   const handlePhonePress = () => {
     if (staff?.phone) {
@@ -269,63 +180,12 @@ export default function StaffDetails({ visible, staff, shiftMap, onClose, return
             </View>
           ) : (
             <View style={styles.scheduleWrapper}>
-              <View style={styles.scheduleContent}>
-                {/* Day labels */}
-                <View style={styles.dayLabelsContainer}>
-                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d, i) => (
-                    <View key={d} style={styles.dayLabelContainer}>
-                      <Text style={[styles.dayLabel, i >= 5 && styles.weekend]}>{d}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Calendar Months */}
-                {months.map((m, idx) => (
-                  <View key={`${m.title}-${idx}`} style={styles.monthBlock}>
-                    {/* Month Title */}
-                    <View style={styles.monthTitleRow}>
-                      <Text style={styles.monthTitleText}>{m.title}</Text>
-                    </View>
-
-                    {/* Grid */}
-                    <View style={styles.gridWrap}>
-                      {/* Spacer cells for alignment */}
-                      {Array.from({ length: m.firstWeekdayMon0 }).map((_, i) => (
-                        <View key={`spacer-${i}`} style={styles.gridCellSpacer} />
-                      ))}
-
-                      {/* Date cells */}
-                      {m.days.map((d, i) => {
-                        const isToday = dayKey(d) === todayKey;
-                        const t = getShiftTypeForDate(d, shiftMap);
-                        const v = visualOf(t);
-                        return (
-                          <View key={`${dayKey(d)}-${i}`} style={styles.gridCell}>
-                            <View
-                              style={[
-                                styles.gridCellContent,
-                                isToday && { borderWidth: 1, borderColor: COLOR.brand },
-                              ]}
-                            >
-                              {v.labels.length > 0 && (
-                                <View style={styles.labelsContainer}>
-                                  {v.labels.map((label, idx) => (
-                                    <Text key={idx} style={styles.shiftLabel}>{label}</Text>
-                                  ))}
-                                </View>
-                              )}
-                              <Text style={[styles.gridText, isToday && styles.gridTextToday]}>
-                                {d.getDate()}
-                              </Text>
-                              <TwoDots left={v.dots[0]} right={v.dots[1]} />
-                            </View>
-                          </View>
-                        );
-                      })}
-                    </View>
-                  </View>
-                ))}
-              </View>
+              <ExpandedCalendar
+                value={date}
+                onChange={setDate}
+                shiftMap={shiftMap}
+                leaveMap={leaveMap}
+              />
             </View>
           )}
         </ScrollView>
@@ -486,90 +346,6 @@ const styles = StyleSheet.create({
   // Schedule Tab Content
   scheduleWrapper: {
     marginHorizontal: sx(16),
-  },
-  scheduleContent: {
-    backgroundColor: "#FFF",
-    borderRadius: sx(12),
-    padding: sx(16),
-  },
-  dayLabelsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: sy(12),
-    paddingHorizontal: sx(2),
-  },
-  dayLabelContainer: { 
-    width: `${COL_W_PCT}%`, 
-    alignItems: "center",
-  },
-  dayLabel: { 
-    color: COLOR.ink, 
-    fontSize: sx(12),
-    fontWeight: "500",
-  },
-  weekend: { color: COLOR.brand },
-
-  monthBlock: { 
-    marginBottom: sy(20),
-  },
-  monthTitleRow: {
-    marginBottom: sy(12),
-    paddingHorizontal: sx(2),
-  },
-  monthTitleText: {
-    fontSize: sx(16),
-    fontWeight: "700",
-    color: COLOR.ink,
-  },
-
-  gridWrap: { 
-    flexDirection: "row", 
-    flexWrap: "wrap",
-  },
-  gridCellSpacer: {
-    width: `${COL_W_PCT}%`,
-    height: sx(52),
-  },
-  gridCell: {
-    width: `${COL_W_PCT}%`,
-    height: sx(52),
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: sy(2),
-  },
-  gridCellContent: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: sx(2),
-    width: sx(40),
-    height: sx(48),
-    borderRadius: sx(8),
-    position: "relative",
-    backgroundColor: "transparent",
-    borderWidth: 0,
-    borderColor: "transparent",
-  },
-  gridText: { 
-    fontSize: sx(14), 
-    color: COLOR.ink,
-  },
-  gridTextToday: {
-    color: COLOR.brand,
-    fontWeight: "700",
-  },
-  labelsContainer: {
-    position: "absolute",
-    top: sx(1),
-    right: sx(1),
-    alignItems: "flex-end",
-    gap: sx(1),
-  },
-  shiftLabel: {
-    fontSize: sx(9),
-    fontWeight: "600",
-    color: COLOR.brand,
-    lineHeight: sx(10),
-    textAlign: "right",
   },
 });
 

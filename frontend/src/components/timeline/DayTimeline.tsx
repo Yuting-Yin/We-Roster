@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { EventItem } from "@/types/roster";
 import { sx, sy, W } from "@/theme/metrics";
 import { COLOR } from "@/theme/colors";
+import { isDateInPast } from "@/lib/dateValidation";
 
 const HOUR_START = 0, HOUR_END = 24, HOUR_HEIGHT = sy(72), TIME_GUTTER = sx(52);
 const OVERLAP_OFFSET = sx(8); // Horizontal offset for overlapping cards
@@ -111,6 +112,7 @@ export default function DayTimeline({
           const endMinutes = toMinutes(ev.end);
           const isOvernight = endMinutes < startMinutes;
           const isOpenShift = ev.action === 'plus';
+          const isPastEvent = isDateInPast(ev.date);
           
           // For overnight shifts, we'll show them as two separate visual elements
           // or adjust the rendering to handle the midnight crossover
@@ -128,6 +130,7 @@ export default function DayTimeline({
               style={[
                 styles.card,
                 isOpenShift && styles.openShiftCard,
+                isPastEvent && styles.pastEventCard,
                 {
                   top,
                   left: TIME_GUTTER + sx(8) + appliedOffset,
@@ -242,14 +245,23 @@ export default function DayTimeline({
                     <Pressable onPress={() => onOpenDetails(ev)} hitSlop={10}>
                       <Ionicons name="arrow-forward-circle" size={sx(32)} color={COLOR.brand} />
                     </Pressable>
-                    <Pressable onPress={() => {
-                      // Click plus to open open shift details
-                      if ((ev as any).originalOpenShift) {
-                        const openShiftEvent = { ...ev, action: 'plus' as const };
-                        onOpenDetails(openShiftEvent);
-                      }
-                    }} hitSlop={10}>
-                      <Ionicons name="add-circle" size={sx(32)} color={COLOR.success} />
+                    <Pressable 
+                      onPress={() => {
+                        if (isPastEvent) return; // Disable for past events
+                        // Click plus to open open shift details
+                        if ((ev as any).originalOpenShift) {
+                          const openShiftEvent = { ...ev, action: 'plus' as const };
+                          onOpenDetails(openShiftEvent);
+                        }
+                      }} 
+                      hitSlop={10}
+                      disabled={isPastEvent}
+                    >
+                      <Ionicons 
+                        name="add-circle" 
+                        size={sx(32)} 
+                        color={isPastEvent ? COLOR.label : COLOR.success} 
+                      />
                     </Pressable>
                   </View>
                 ) : ev.action === "arrow" ? (
@@ -257,12 +269,34 @@ export default function DayTimeline({
                     <Ionicons name="arrow-forward-circle" size={sx(36)} color={COLOR.brand} />
                   </Pressable>
                 ) : ev.action === "plus" ? (
-                  <Pressable onPress={() => onOpenDetails(ev)} hitSlop={10}>
-                    <Ionicons name="add-circle" size={sx(36)} color={COLOR.success} />
+                  <Pressable 
+                    onPress={() => {
+                      if (isPastEvent) return; // Disable for past events
+                      onOpenDetails(ev);
+                    }} 
+                    hitSlop={10}
+                    disabled={isPastEvent}
+                  >
+                    <Ionicons 
+                      name="add-circle" 
+                      size={sx(36)} 
+                      color={isPastEvent ? COLOR.label : COLOR.success} 
+                    />
                   </Pressable>
                 ) : (
-                  <Pressable onPress={() => onOpenRequest(ev)} hitSlop={10}>
-                    <Ionicons name="add-circle" size={sx(36)} color={COLOR.brand} />
+                  <Pressable 
+                    onPress={() => {
+                      if (isPastEvent) return; // Disable for past events
+                      onOpenRequest(ev);
+                    }} 
+                    hitSlop={10}
+                    disabled={isPastEvent}
+                  >
+                    <Ionicons 
+                      name="add-circle" 
+                      size={sx(36)} 
+                      color={isPastEvent ? COLOR.label : COLOR.brand} 
+                    />
                   </Pressable>
                 )}
               </View>
@@ -292,6 +326,9 @@ const styles = StyleSheet.create({
   openShiftCard: {
     backgroundColor: 'rgba(232, 245, 233, 0.85)', // Very light green with 85% opacity
     borderColor: 'rgba(76, 175, 80, 0.15)', // Subtle green border
+  },
+  pastEventCard: {
+    opacity: 0.6, // Make past events appear dimmed
   },
   takenBadge: {
     alignSelf: 'flex-start',

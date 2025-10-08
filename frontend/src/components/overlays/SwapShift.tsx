@@ -6,11 +6,13 @@ import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import Avatar from "@/components/common/Avatar";
 import { fmt, dayKey } from "@/lib/date";
+import { isDateInPast, getPastDateErrorMessage } from "@/lib/dateValidation";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type { EventItem } from "@/types/roster";
 import { getMockShiftForUser } from "@/lib/fakeData";
 import { createSwapRequest } from "@/api/swap";
 import { useNotificationContext } from "@/contexts/NotificationContext";
+import WarningToast from "@/components/overlays/WarningToast";
 
 type User = { id: string; name: string; initials: string; title?: string };
 
@@ -24,7 +26,7 @@ type SwapShiftProps = {
   availableUsers: User[];
   loading?: boolean;                  // optional
   error?: string | null;              // optional
-  getShiftForUser?: (userId: string, date: Date, slot?: { start: string; end: string }) => EventItem | null | undefined;
+  getShiftForUser?: (userId: string, date: Date, slot?: { start: string; end: string }) => Promise<EventItem | null | undefined>;
 };
 
 export default function SwapShift({
@@ -41,6 +43,29 @@ export default function SwapShift({
   const [query, setQuery] = React.useState("");
   const [selected, setSelected] = React.useState<string | undefined>();
   const [submitting, setSubmitting] = React.useState(false);
+  
+  // Toast state
+  const [warningToast, setWarningToast] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState("");
+  
+  // State for user shifts - using a Map to store shift data for each user
+  const [userShifts, setUserShifts] = React.useState<Map<string, EventItem | null>>(new Map());
+  const [loadingShifts, setLoadingShifts] = React.useState<Set<string>>(new Set());
+  
+  const showWarningToast = (message: string) => { 
+    setToastMessage(message); 
+    setWarningToast(true); 
+    setTimeout(() => setWarningToast(false), 1800); 
+  };
+
+
+  // Clear user shifts when component unmounts or visible changes
+  React.useEffect(() => {
+    if (!visible) {
+      setUserShifts(new Map());
+      setLoadingShifts(new Set());
+    }
+  }, [visible]);
 
   // candidates = all available users for swap (excluding current user)
   const candidates = React.useMemo(() => {
@@ -55,10 +80,57 @@ export default function SwapShift({
     return candidates.filter(u => u.name.toLowerCase().includes(q));
   }, [candidates, query]);
 
+  // Load shift data for all filtered users
+  React.useEffect(() => {
+    if (filtered.length === 0) return;
+
+    const loadShiftsForUsers = async () => {
+      for (const user of filtered) {
+        // Skip if we already have data for this user
+        if (userShifts.has(user.id) || loadingShifts.has(user.id)) continue;
+
+        // Mark as loading
+        setLoadingShifts(prev => new Set(prev).add(user.id));
+
+        try {
+          let shift: EventItem | null = null;
+          
+          if (getShiftForUser) {
+            // Use real API
+            shift = await getShiftForUser(user.id, date, slot);
+          } else {
+            // Fallback to mock data
+            shift = getMockShiftForUser(user.id, date, slot);
+          }
+          
+          setUserShifts(prev => new Map(prev).set(user.id, shift));
+        } catch (error) {
+          console.error('Error loading shift for user:', error);
+          setUserShifts(prev => new Map(prev).set(user.id, null));
+        } finally {
+          setLoadingShifts(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(user.id);
+            return newSet;
+          });
+        }
+      }
+    };
+
+    loadShiftsForUsers();
+  }, [filtered, getShiftForUser, date, slot]);
+
   if (!visible) return null;
 
   const submit = async () => {
     if (!selected || submitting) return;
+    
+    // Check if the date is in the past
+    if (isDateInPast(date)) {
+      showWarningToast(getPastDateErrorMessage(date));
+      return;
+    }
+    
     try {
       setSubmitting(true);
       const requesterId = user?.id ?? "u_mock";
@@ -127,12 +199,11 @@ export default function SwapShift({
         {/* Requested by */}
         <View style={{ marginHorizontal: sx(16), marginTop: sy(18) }}>
           <Text style={styles.sectionLabel}>Requested by</Text>
-          <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Avatar initials={initials} />
             <View style={{ marginLeft: sx(10), flex: 1 }}>
               <Text style={{ color: COLOR.ink, fontSize: sx(14), fontWeight: "700" }}>{displayName} (You)</Text>
               <Text style={{ color: COLOR.ink, fontSize: sx(12), marginTop: sy(2) }}>
-                {fmt(date, { weekday: "short" })}, {fmt(date, { day: "2-digit", month: "short", year: "numeric" })}{"  "}
                 {timeLabel}
               </Text>
               {!!designation && <Text style={styles.dim}>{designation}</Text>}
@@ -187,11 +258,16 @@ export default function SwapShift({
             ) : (
               filtered.map((p) => {
                 const active = selected === p.id;
-                const resolver = getShiftForUser ?? getMockShiftForUser;
-                const otherShift = resolver(p.id, date, slot);
-                const campus = campusOf(otherShift);
-                const room = roomOf(otherShift);
-                const isUnallocated = !otherShift;
+                const userShift = userShifts.get(p.id);
+                const loadingShift = loadingShifts.has(p.id);
+                const isUnallocated = !userShift;
+                
+                // Get shift information for display
+                const shiftTime = userShift ? `${userShift.start}-${userShift.end}` : null;
+                const shiftCampus = userShift?.campus || null;
+                const shiftRoom = userShift?.room || null;
+                const designation = userShift?.role || null;
+                
                 return (
                   <Pressable
                     key={p.id}
@@ -208,17 +284,33 @@ export default function SwapShift({
                       <Avatar initials={p.initials} />
                       <View style={{ marginLeft: sx(10), flex: 1, justifyContent: "center" }}>
                         <Text style={{ color: COLOR.ink, fontSize: sx(14), fontWeight: "600" }}>{p.name}</Text>
-                        <Text style={{ color: COLOR.brandAlt, fontSize: sx(12), marginTop: sy(2) }}>
-                          {fmt(date, { weekday: "short" })}, {fmt(date, { day: "2-digit", month: "short", year: "numeric" })}{"  "}
-                          {timeLabel}
-                        </Text>
-                        {!!p.title && <Text style={styles.dim}>{p.title}</Text>}
-                        {isUnallocated ? (
-                          <Text style={styles.dimStrong}>Unallocated</Text>
+                        {/* Show designation for all users */}
+                        {p.title && (
+                          <Text style={{ color: COLOR.ink, fontSize: sx(12), marginTop: sy(2) }}>
+                            {p.title}
+                          </Text>
+                        )}
+                        {loadingShift ? (
+                          <Text style={{ color: COLOR.label, fontSize: sx(12), marginTop: sy(2) }}>
+                            Loading...
+                          </Text>
+                        ) : isUnallocated ? (
+                          <Text style={{ color: COLOR.brandAlt, fontSize: sx(12), marginTop: sy(2) }}>
+                            Unallocated
+                          </Text>
                         ) : (
                           <>
-                            <Text style={styles.dimStrong}>{campus}</Text>
-                            <Text style={styles.dim}>{room}</Text>
+                            {shiftTime && (
+                              <Text style={{ color: COLOR.brandAlt, fontSize: sx(12), marginTop: sy(2) }}>
+                                {shiftTime}
+                              </Text>
+                            )}
+                            {shiftCampus && shiftRoom && (
+                              <>
+                                <Text style={styles.dimStrong}>{shiftCampus}</Text>
+                                <Text style={styles.dim}>{shiftRoom}</Text>
+                              </>
+                            )}
                           </>
                         )}
                       </View>
@@ -230,6 +322,8 @@ export default function SwapShift({
           )}
         </View>
       </ScrollView>
+      
+      <WarningToast visible={warningToast} text={toastMessage} />
     </View>
   );
 }
@@ -246,6 +340,6 @@ const styles = StyleSheet.create({
   dim: { color: COLOR.ink, fontSize: sx(12) },
   dimStrong: { color: COLOR.ink, fontSize: sx(12), fontWeight: "600" },
   searchBox: { borderWidth: 1, borderColor: COLOR.divider, borderRadius: sx(20), paddingVertical: sy(8), paddingHorizontal: sx(12), flexDirection: "row", alignItems: "center" },
-  card: { borderWidth: 1, borderColor: COLOR.divider, borderRadius: sx(10), paddingHorizontal: sx(12), paddingVertical: sy(10), marginTop: sy(12), height: sy(92) },
+  card: { borderWidth: 1, borderColor: COLOR.divider, borderRadius: sx(10), paddingHorizontal: sx(12), paddingVertical: sy(10), marginTop: sy(12), height: sy(110) },
   cardActive: { backgroundColor: "#EEF5FF", borderColor: COLOR.brand },
 });

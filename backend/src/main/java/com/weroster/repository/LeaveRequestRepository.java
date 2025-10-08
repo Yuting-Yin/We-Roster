@@ -27,4 +27,13 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
     
     @Query("SELECT lr FROM LeaveRequest lr WHERE lr.staff.id = :staffId AND lr.shift.id = :shiftId")
     List<LeaveRequest> findByStaffAndShift(@Param("staffId") Long staffId, @Param("shiftId") Long shiftId);
+    
+    // New methods that only consider APPROVED and AWAITING requests as duplicates
+    @Query("SELECT lr FROM LeaveRequest lr WHERE lr.staff.id = :staffId AND lr.shift.id = :shiftId AND lr.status IN ('APPROVED', 'AWAITING', 'PENDING')")
+    List<LeaveRequest> findByStaffAndShiftExcludingDeclined(@Param("staffId") Long staffId, @Param("shiftId") Long shiftId);
+    
+    @Query("SELECT lr FROM LeaveRequest lr WHERE lr.staff.id = :staffId AND lr.startTime < :endDate AND lr.endTime > :startDate AND lr.status IN ('APPROVED', 'AWAITING', 'PENDING') ORDER BY lr.startTime")
+    List<LeaveRequest> findByStaffAndDateRangeExcludingDeclined(@Param("staffId") Long staffId, 
+                                                              @Param("startDate") LocalDateTime startDate, 
+                                                              @Param("endDate") LocalDateTime endDate);
 }

@@ -70,9 +70,9 @@ public class LeaveController {
                 Long shiftId = Long.parseLong(input.getShiftId());
                 System.out.println("🔍 Leave Request - Checking duplicates for staff ID: " + staff.getId() + ", shift ID: " + shiftId);
                 
-                // First check for exact shift duplicates
-                List<LeaveRequest> existingRequests = leaveRequestRepository.findByStaffAndShift(staff.getId(), shiftId);
-                System.out.println("🔍 Leave Request - Found " + existingRequests.size() + " existing requests for this staff/shift combination");
+                // First check for exact shift duplicates (excluding declined requests)
+                List<LeaveRequest> existingRequests = leaveRequestRepository.findByStaffAndShiftExcludingDeclined(staff.getId(), shiftId);
+                System.out.println("🔍 Leave Request - Found " + existingRequests.size() + " existing APPROVED/AWAITING/PENDING requests for this staff/shift combination");
                 
                 if (!existingRequests.isEmpty()) {
                     System.out.println("🔍 Leave Request - DUPLICATE DETECTED! " + existingRequests.size() + " existing requests for shift " + shiftId);
@@ -87,17 +87,17 @@ public class LeaveController {
                     return ResponseEntity.ok(response); // 200 OK with duplicate flag
                 }
                 
-                // Then check for same-day conflicts (all-day leave on the same day)
+                // Then check for same-day conflicts (all-day leave on the same day, excluding declined requests)
                 LocalDate requestDate = LocalDate.parse(input.getDate());
                 System.out.println("🔍 Leave Request - Checking for same-day conflicts on: " + requestDate);
                 
-                List<LeaveRequest> sameDayRequests = leaveRequestRepository.findByStaffAndDateRange(
+                List<LeaveRequest> sameDayRequests = leaveRequestRepository.findByStaffAndDateRangeExcludingDeclined(
                     staff.getId(), 
                     requestDate.atStartOfDay(), 
                     requestDate.atTime(23, 59, 59)
                 );
                 
-                System.out.println("🔍 Leave Request - Found " + sameDayRequests.size() + " existing requests for the same day");
+                System.out.println("🔍 Leave Request - Found " + sameDayRequests.size() + " existing APPROVED/AWAITING/PENDING requests for the same day");
                 
                 if (!sameDayRequests.isEmpty()) {
                     System.out.println("🔍 Leave Request - SAME-DAY CONFLICT DETECTED!");
@@ -120,17 +120,17 @@ public class LeaveController {
             } else {
                 System.out.println("🔍 Leave Request - No shift ID provided, checking for same-day conflicts...");
                 
-                // Check for same-day conflicts between All Day Leave and Shift Leave
+                // Check for same-day conflicts between All Day Leave and Shift Leave (excluding declined requests)
                 LocalDate requestDate = LocalDate.parse(input.getDate());
                 System.out.println("🔍 Leave Request - Checking for same-day conflicts on: " + requestDate);
                 
-                List<LeaveRequest> sameDayRequests = leaveRequestRepository.findByStaffAndDateRange(
+                List<LeaveRequest> sameDayRequests = leaveRequestRepository.findByStaffAndDateRangeExcludingDeclined(
                     staff.getId(), 
                     requestDate.atStartOfDay(), 
                     requestDate.atTime(23, 59, 59)
                 );
                 
-                System.out.println("🔍 Leave Request - Found " + sameDayRequests.size() + " existing requests for the same day");
+                System.out.println("🔍 Leave Request - Found " + sameDayRequests.size() + " existing APPROVED/AWAITING/PENDING requests for the same day");
                 
                 if (!sameDayRequests.isEmpty()) {
                     System.out.println("🔍 Leave Request - SAME-DAY CONFLICT DETECTED!");

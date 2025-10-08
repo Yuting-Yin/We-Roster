@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
-import { View, StyleSheet, Text } from "react-native";
+import { View, StyleSheet, Text, Animated, Pressable } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import CollapsibleCalendar from "@/components/calendar/CollapsibleCalendar";
 import DayTimeline from "@/components/timeline/DayTimeline";
@@ -12,22 +13,25 @@ import SwapShift from "@/components/overlays/SwapShift";
 import TinyMenu from "@/components/overlays/TinyMenu";
 import SuccessToast from "@/components/overlays/SuccessToast";
 import { COLOR } from "@/theme/colors";
+import { sx } from "@/theme/metrics";
 import { EventItem } from "@/types/roster";
 import { fmt } from "@/lib/date";
 
 // users for swap
 import { getAvailableUsers, type ApiUser } from "@/api/user";
+import { getTeamRoster, type TeamRosterResponse } from "@/api/teamroster";
 import { useMyRosterData } from "@/hooks/useMyRoster";
 import { useRosterData } from "@/hooks/useRoster";
 import { useOpenShiftsWeek } from "@/hooks/useOpenShiftsWeek";
 import { useOpenShiftApplication } from "@/hooks/useOpenShifts";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
+import { useApprovedLeaves } from "@/hooks/useApprovedLeaves";
 import { useOverlayContext } from "@/contexts/OverlayContext";
 import type { OpenShiftDto } from "@/api/openshift";
 
 // user infos that only used for UI/SwapShift
-type UIUser = { id: string; name: string; initials: string };
+type UIUser = { id: string; name: string; initials: string; title?: string };
 
 export default function MyRoster() {
   const rootRef = useRef<View>(null);
@@ -74,6 +78,9 @@ export default function MyRoster() {
   
   // Use useRosterData for calendar dots (shiftMap) - loads data for entire month range
   const { shiftMap, getEventsForDate: getCalendarEvents, refresh: refreshRoster, loading: calendarLoading, error: calendarError } = useRosterData(date, { mock: false, months: 2 });
+  
+  // Get approved leaves for calendar highlighting
+  const { leaveMap, refresh: refreshLeaves } = useApprovedLeaves();
   
   // Use useMyRosterData for timeline events - loads data for specific day
   const { getEventsForDate, loading: timelineLoading, error: timelineError } = useMyRosterData(date, { mock: false });
@@ -229,9 +236,104 @@ export default function MyRoster() {
 
   const [toast, setToast] = React.useState(false);
   const showToast = () => { setToast(true); setTimeout(() => setToast(false), 1800); };
+
+  // Refresh animation state
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const rotateAnim = React.useRef(new Animated.Value(0)).current;
+
+  // Refresh animation functions
+  const startRefreshAnimation = () => {
+    setIsRefreshing(true);
+    rotateAnim.setValue(0);
+    Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      })
+    ).start();
+  };
+
+  const stopRefreshAnimation = () => {
+    setIsRefreshing(false);
+    rotateAnim.stopAnimation();
+    rotateAnim.setValue(0);
+  };
+
+  const rotateInterpolate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
   
   // Open shift application
   const { applyForShift, submitting } = useOpenShiftApplication();
+
+  // Function to get shift data for a specific user on a specific date
+  const getShiftForUser = React.useCallback(async (userId: string, targetDate: Date, slot?: { start: string; end: string }): Promise<EventItem | null> => {
+    try {
+      const dateStr = targetDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+      const teamRoster = await getTeamRoster(dateStr);
+      
+      // Look for the user in the team roster data
+      for (const table of teamRoster.tables) {
+        for (const cell of table.cells) {
+          for (const shift of cell.shifts) {
+            const assignedStaff = shift.assignedStaff.find(staff => staff.id === userId);
+            if (assignedStaff) {
+              // Found the user's shift
+              const startTime = shift.startTime.slice(0, 5); // HH:MM format
+              const endTime = shift.endTime.slice(0, 5); // HH:MM format
+              
+              // Check if this shift overlaps with the requested time slot
+              if (slot) {
+                const slotStart = slot.start;
+                const slotEnd = slot.end;
+                
+                // Simple overlap check: if either start or end is within the other's range
+                const overlaps = (startTime <= slotEnd && endTime >= slotStart);
+                if (!overlaps) {
+                  continue; // This shift doesn't overlap with the requested slot
+                }
+              }
+              
+              // Extract campus (hospital) and room information
+              const campus = table.hospital; // Hospital name is the campus
+              const room = cell.room; // Room is the location within the hospital
+              
+              return {
+                id: shift.id,
+                start: startTime,
+                end: endTime,
+                title: `${shift.shiftName || cell.room} - ${table.hospital}`,
+                location: cell.room,
+                role: assignedStaff.designation,
+                teammates: `working with ${shift.assignedStaff.length - 1} others`,
+                coworkers: shift.assignedStaff
+                  .filter(staff => staff.id !== userId)
+                  .map(staff => ({
+                    id: staff.id,
+                    name: staff.name,
+                    initials: staff.initials
+                  })),
+                action: "arrow",
+                campus,
+                room,
+                campusAddress: table.hospital,
+                shiftName: shift.shiftName,
+              };
+            }
+          }
+        }
+      }
+      
+      // User not found in any shift for this date
+      return null;
+    } catch (error) {
+      console.error('Error getting shift for user:', error);
+      return null;
+    }
+  }, []);
+
 
   // Register overlays with context for auto-close functionality
   const { registerOverlay, unregisterOverlay, requestTeamMemberNav, teamMemberNavRequest, clearTeamMemberNavRequest } = useOverlayContext();
@@ -362,7 +464,7 @@ export default function MyRoster() {
   };
   const toUIUser = (u: ApiUser): UIUser => {
     const name = (u as any).displayName ?? (u as any).name ?? "";
-    return { id: String(u.id), name, initials: initialsOf(name) };
+    return { id: String(u.id), name, initials: initialsOf(name), title: u.title };
   };
   const availableUIUsers = React.useMemo<UIUser[]>(
     () => {
@@ -401,6 +503,7 @@ export default function MyRoster() {
           value={date}
           onChange={setDate}
           shiftMap={shiftMap}
+          leaveMap={leaveMap}
           title={
             mode === "day"
               ? `${fmt(date, { weekday: "short" })}, ${fmt(date, { day: "2-digit", month: "long", year: "numeric" })}`
@@ -410,15 +513,32 @@ export default function MyRoster() {
                 )}`
           }
           leftAction={{ icon: "menu", onPress: () => setMode((m) => (m === "day" ? "week" : "day")) }}
-          rightAction={{ icon: "refresh", onPress: () => {
-            setLoadingUsers(true);
-            refreshRoster();
-            refreshOpenShifts();
-            getAvailableUsers()
-              .then((users) => setAvailableUsers(users))
-              .catch((e) => setUserErr(e?.message ?? "Failed to load users"))
-              .finally(() => setLoadingUsers(false));
-          }}}
+          rightAction={{ 
+            icon: "refresh", 
+            animated: isRefreshing,
+            onPress: async () => {
+              if (isRefreshing) return; // Prevent multiple simultaneous refreshes
+              
+              startRefreshAnimation();
+              setLoadingUsers(true);
+              
+              try {
+                // Refresh all data in parallel
+                await Promise.all([
+                  refreshRoster(),
+                  refreshOpenShifts(),
+                  refreshLeaves(),
+                  getAvailableUsers().then((users) => setAvailableUsers(users))
+                ]);
+              } catch (e) {
+                console.error('Error refreshing data:', e);
+                setUserErr(e?.message ?? "Failed to load users");
+              } finally {
+                setLoadingUsers(false);
+                stopRefreshAnimation();
+              }
+            }
+          }}
         />
       </View>
 
@@ -556,7 +676,9 @@ export default function MyRoster() {
         onSubmitted={() => { setSwapVisible(false); showToast(); }}
         date={date}
         slot={reqSlot}
+        currentEvent={detailEvent}
         availableUsers={availableUIUsers}
+        getShiftForUser={getShiftForUser}
         // loading={loadingUsers}
         // error={userErr}
       />

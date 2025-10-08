@@ -3,6 +3,9 @@ import { View, Text, StyleSheet, Modal, Pressable, ScrollView, Platform } from "
 import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
+import { isDateStringInPast, getPastDateErrorMessage } from "@/lib/dateValidation";
+import WarningToast from "@/components/overlays/WarningToast";
+import { useApprovedLeaves } from "@/hooks/useApprovedLeaves";
 
 export type Coworker = { id: string; name: string; initials: string };
 
@@ -40,6 +43,40 @@ const Pill = ({ children }: { children: React.ReactNode }) => (
 );
 
 export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], onClose, onApply, onCoworkerPress }: Props) {
+  const [warningToast, setWarningToast] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState("");
+  const { leaveMap } = useApprovedLeaves();
+  
+  const showWarningToast = (message: string) => { 
+    setToastMessage(message); 
+    setWarningToast(true); 
+    setTimeout(() => setWarningToast(false), 1800); 
+  };
+
+  const handleApply = () => {
+    if (!shift) return;
+    
+    // Check if the date has an approved leave
+    if (hasApprovedLeave) {
+      showWarningToast("Cannot submit requests for dates with approved leave. You already have an approved leave request for this date.");
+      return;
+    }
+    
+    // Check if the date is in the past
+    if (isPastDate) {
+      const errorMessage = getPastDateErrorMessage(shift.date);
+      console.log('🔍 OpenShiftDetails - Past date detected:', shift.date, 'Error message:', errorMessage);
+      showWarningToast(errorMessage);
+      return;
+    }
+    
+    onApply(shift);
+  };
+
+  // Check if the date has an approved leave or is in the past
+  const hasApprovedLeave = shift ? leaveMap[shift.date] === true : false;
+  const isPastDate = shift ? isDateStringInPast(shift.date) : false;
+  const isDisabled = hasApprovedLeave || isPastDate;
   const durationHrs = useMemo(() => {
     if (!shift) return 0;
     const [sh, sm] = shift.start.split(":").map(Number);
@@ -156,14 +193,16 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
 
           {/* Apply */}
           <Pressable
-            style={styles.applyBtn}
-            onPress={() => onApply(shift)}
-            android_ripple={{ color: "#e6f0fb", borderless: true }}
+            style={[styles.applyBtn, isDisabled && styles.applyBtnDisabled]}
+            onPress={handleApply}
+            android_ripple={isDisabled ? { color: "#e6f0fb40", borderless: true } : { color: "#e6f0fb", borderless: true }}
           >
-            <Text style={styles.applyText}>Apply</Text>
+            <Text style={[styles.applyText, isDisabled && styles.applyTextDisabled]}>Apply</Text>
           </Pressable>
         </View>
       </View>
+      
+      <WarningToast visible={warningToast} text={toastMessage} />
     </Modal>
   );
 });
@@ -245,5 +284,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  applyBtnDisabled: {
+    backgroundColor: COLOR.brand + "40", // Reduced saturation (25% opacity)
+  },
   applyText: { color: "#fff", fontWeight: "700" },
+  applyTextDisabled: { color: "#fff" + "80", fontWeight: "700" }, // Reduced text opacity
 });
