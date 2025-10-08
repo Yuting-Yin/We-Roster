@@ -130,12 +130,25 @@ export default function Dashboard() {
   // Use a stable date to prevent re-loading on every render
   const [weekStartDate] = useState(() => {
     const today = new Date();
-    // Use the same week calculation as Roster page (Monday start)
-    const day = today.getDay(); // 0..6
-    const diff = day === 0 ? -6 : 1 - day; // Monday = 1, Sunday = 0
+    // Calculate start of current week (Monday)
+    // If today is Sunday (0), go back 6 days to get Monday
+    // If today is Monday (1), go back 0 days
+    // If today is Tuesday (2), go back 1 day
+    // etc.
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 6 days back, Monday = 0 days back
+    
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() + diff);
+    startOfWeek.setDate(today.getDate() - daysToSubtract);
     startOfWeek.setHours(0, 0, 0, 0);
+    
+    console.log('🔍 Dashboard week calculation:', {
+      today: today.toDateString(),
+      dayOfWeek,
+      daysToSubtract,
+      startOfWeek: startOfWeek.toDateString()
+    });
+    
     return startOfWeek;
   });
   
@@ -170,10 +183,14 @@ export default function Dashboard() {
 
         // Filter events to only include the current week
         const weekData: Record<string, any[]> = {};
+        console.log('🔍 Dashboard loading week data for dates:');
+        
         for (let i = 0; i < 7; i++) {
           const date = new Date(weekStartDate);
           date.setDate(weekStartDate.getDate() + i);
           const dateKey = date.toISOString().split('T')[0];
+          
+          console.log(`  Day ${i}: ${date.toDateString()} (${dateKey})`);
           
           if (res.events && res.events[dateKey]) {
             // Convert raw shift data to events format
@@ -273,6 +290,9 @@ export default function Dashboard() {
   // Get open shifts for the current week (real data from backend)
   const { openShifts: openShiftsData, loading: openShiftsLoading, error: openShiftsError, refresh: refreshOpenShifts } = 
     useOpenShiftsWeek(weekStartDate, user?.email);
+  
+  console.log('🔍 Dashboard open shifts week start:', weekStartDate.toDateString());
+  console.log('🔍 Dashboard open shifts data:', openShiftsData?.length || 0, 'shifts');
 
   // Get notification unread count for bell icon
   const { unreadCount } = useNotificationContext();
