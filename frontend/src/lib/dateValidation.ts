@@ -4,7 +4,9 @@
  * @param date - The date to check
  * @returns true if the date is before today, false otherwise
  */
-export const isDateInPast = (date: Date): boolean => {
+export const isDateInPast = (date: Date | undefined | null): boolean => {
+  if (!date) return false; // If date is undefined/null, consider it not in the past
+  
   const today = new Date();
   const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const checkDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -17,7 +19,9 @@ export const isDateInPast = (date: Date): boolean => {
  * @param dateString - The date string to check
  * @returns true if the date is before today, false otherwise
  */
-export const isDateStringInPast = (dateString: string): boolean => {
+export const isDateStringInPast = (dateString: string | undefined | null): boolean => {
+  if (!dateString) return false; // If dateString is undefined/null, consider it not in the past
+  
   const date = new Date(dateString + 'T00:00:00.000Z');
   return isDateInPast(date);
 };
