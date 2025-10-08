@@ -141,6 +141,10 @@ function ScheduleTab() {
   const { leaveMap } = useApprovedLeaves();
   const { shiftMap, loading, error } = useMyRosterData(date);
 
+  // Debug logging for Profile Schedule
+  console.log('🔍 Profile Schedule - leaveMap:', leaveMap);
+  console.log('🔍 Profile Schedule - date:', date.toDateString());
+
   return (
     <View style={{ flex: 1, backgroundColor: COLOR.bg }}>
       <CollapsibleCalendar

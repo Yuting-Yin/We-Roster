@@ -357,6 +357,11 @@ export default function CollapsibleCalendar({
                       const t = getShiftTypeForDate(d, shiftMap);
                       const v = visualOf(t);
                       
+                      // Debug logging for calendar highlighting
+                      if (hasApprovedLeave) {
+                        console.log('🔍 Calendar - Approved leave found for:', dayKey(d), 'leaveMap:', leaveMap);
+                      }
+                      
                       // Determine background color priority: selected > today > approved leave
                       let backgroundColor = "transparent";
                       if (hasApprovedLeave) backgroundColor = "#E8F5E9"; // Light green for approved leave
