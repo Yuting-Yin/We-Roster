@@ -266,8 +266,9 @@ export default function MyRoster() {
                 }
               }
               
-              // Parse campus and room from shift location
-              const { campus, room } = parseCampusAndRoom(shift.shiftName || cell.room);
+              // Extract campus (hospital) and room information
+              const campus = table.hospital; // Hospital name is the campus
+              const room = cell.room; // Room is the location within the hospital
               
               return {
                 id: shift.id,
@@ -303,19 +304,6 @@ export default function MyRoster() {
     }
   }, []);
 
-  // Helper function to parse campus and room from location string
-  const parseCampusAndRoom = (location: string): { campus: string; room: string } => {
-    if (!location) return { campus: '', room: '' };
-    
-    // Try to split on common patterns
-    const parts = location.split(' - ');
-    if (parts.length >= 2) {
-      return { campus: parts[0], room: parts[1] };
-    }
-    
-    // If no clear split, assume it's all room
-    return { campus: '', room: location };
-  };
 
   // Register overlays with context for auto-close functionality
   const { registerOverlay, unregisterOverlay, requestTeamMemberNav, teamMemberNavRequest, clearTeamMemberNavRequest } = useOverlayContext();
