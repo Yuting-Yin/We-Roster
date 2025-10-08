@@ -150,6 +150,9 @@ public class MyRosterController {
                                 campusAddress
                         );
                         
+                        // Set the shift name
+                        shiftItem.setShiftName(shift.getName());
+                        
                         // Set the role (designation) for the current staff member
                         shiftItem.setRole(role);
                         
@@ -512,7 +515,7 @@ public class MyRosterController {
                         String campusAddress = shift.getDepartment() != null && shift.getDepartment().getHospital() != null ? 
                                 shift.getDepartment().getHospital().getAddress() : "";
                         
-                        return new ShiftItem(
+                        ShiftItem shiftItem = new ShiftItem(
                                 shift.getId(),
                                 shift.getStartTs().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
                                 shift.getEndTs().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
@@ -527,6 +530,11 @@ public class MyRosterController {
                                 shift.getLocation() != null ? shift.getLocation().getName() : "",
                                 campusAddress
                         );
+                        
+                        // Set the shift name
+                        shiftItem.setShiftName(shift.getName());
+                        
+                        return shiftItem;
                     })
                     .collect(Collectors.toList());
             

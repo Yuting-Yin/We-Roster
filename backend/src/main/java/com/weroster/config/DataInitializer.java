@@ -62,6 +62,9 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired
     private NotificationRepository notificationRepository;
     
+    @Autowired
+    private ShiftSwapRepository shiftSwapRepository;
+    
     // Removed UserStaffRepository - using direct User-Staff relationship
 
     @Override
@@ -76,6 +79,11 @@ public class DataInitializer implements CommandLineRunner {
         leaveRequestRepository.deleteAll();
         System.out.println("🔍 DataInitializer - Leave requests cleared");
         
+        // Clear swap requests for testing (real version should not do this)
+        System.out.println("🔍 DataInitializer - Clearing existing swap requests for testing...");
+        shiftSwapRepository.deleteAll();
+        System.out.println("🔍 DataInitializer - Swap requests cleared");
+        
         // Only initialize if database is empty
         if (userRepository.count() == 0) {
             createMockData();
@@ -83,6 +91,9 @@ public class DataInitializer implements CommandLineRunner {
         
         // Always create test leave requests (for testing purposes)
         createTestLeaveRequests();
+        
+        // Always create test swap requests (for testing purposes)
+        createTestSwapRequests();
     }
     
     private void createMockData() {
@@ -562,6 +573,7 @@ public class DataInitializer implements CommandLineRunner {
                     .type(determineShiftCode(8, false))
                     .department(emergencyDept)
                     .location(edRoom1)
+                    .name(generateShiftName(emergencyDept, "AM", false))
                     .note("Early morning shift ED - " + date.toString())
                     .build();
             amShift1 = shiftRepository.save(amShift1);
@@ -575,6 +587,7 @@ public class DataInitializer implements CommandLineRunner {
                     .type(determineShiftCode(9, false))
                     .department(icuDept)
                     .location(icuBed1)
+                    .name(generateShiftName(icuDept, "AM", false))
                     .note("Morning shift ICU - " + date.toString())
                     .build();
             amShift2 = shiftRepository.save(amShift2);
@@ -588,6 +601,7 @@ public class DataInitializer implements CommandLineRunner {
                     .type(determineShiftCode(10, false))
                     .department(medicalDept)
                     .location(medWard)
+                    .name(generateShiftName(medicalDept, "AM", false))
                     .note("Mid-morning shift Medical - " + date.toString())
                     .build();
             amShift3 = shiftRepository.save(amShift3);
@@ -603,6 +617,7 @@ public class DataInitializer implements CommandLineRunner {
                     .type(determineShiftCode(14, false))
                     .department(emergencyDept)
                     .location(edRoom1)
+                    .name(generateShiftName(emergencyDept, "PM", false))
                     .note("Afternoon shift ED - " + date.toString())
                     .build();
             pmShift1 = shiftRepository.save(pmShift1);
@@ -616,6 +631,7 @@ public class DataInitializer implements CommandLineRunner {
                     .type(determineShiftCode(16, false))
                     .department(icuDept)
                     .location(icuBed1)
+                    .name(generateShiftName(icuDept, "PM", false))
                     .note("Evening shift ICU - " + date.toString())
                     .build();
             pmShift2 = shiftRepository.save(pmShift2);
@@ -631,6 +647,7 @@ public class DataInitializer implements CommandLineRunner {
                     .type(determineShiftCode(22, false))
                     .department(emergencyDept)
                     .location(edRoom1)
+                    .name(generateShiftName(emergencyDept, "AH", false))
                     .note("Night shift ED - " + date.toString())
                     .build();
             ahShift1 = shiftRepository.save(ahShift1);
@@ -644,6 +661,7 @@ public class DataInitializer implements CommandLineRunner {
                     .type(determineShiftCode(0, false))
                     .department(medicalDept)
                     .location(medWard)
+                    .name(generateShiftName(medicalDept, "AH", false))
                     .note("Overnight shift Medical - " + date.toString())
                     .build();
             ahShift2 = shiftRepository.save(ahShift2);
@@ -657,6 +675,7 @@ public class DataInitializer implements CommandLineRunner {
                     .type(determineShiftCode(18, false))
                     .department(icuDept)
                     .location(icuBed1)
+                    .name(generateShiftName(icuDept, "AH", false))
                     .note("Late evening shift ICU - " + date.toString())
                     .build();
             ahShift3 = shiftRepository.save(ahShift3);
@@ -672,6 +691,7 @@ public class DataInitializer implements CommandLineRunner {
                     .type(determineShiftCode(20, true))
                     .department(emergencyDept)
                     .location(edRoom1)
+                    .name(generateShiftName(emergencyDept, "ON_CALL", true))
                     .note("On-call standby shift - " + date.toString())
                     .build();
             onCallShift = shiftRepository.save(onCallShift);
@@ -991,11 +1011,11 @@ public class DataInitializer implements CommandLineRunner {
             .endTime(today.withDayOfMonth(today.lengthOfMonth()).atTime(23, 59)) // Last day of current month
             .requestType("Month Leave")
             .reason("Family vacation")
-            .status("REJECTED")
+            .status("DECLINED")
             .createdAt(LocalDateTime.now().minusDays(5))
             .build();
         testLeaves.add(monthLeave);
-        System.out.println("🔍 DataInitializer - Created Month Leave request (REJECTED) for " + today.getMonth());
+        System.out.println("🔍 DataInitializer - Created Month Leave request (DECLINED) for " + today.getMonth());
         
         // 2. Week Leave request with status "APPROVED" - Next week for visibility
         LocalDate nextWeekStart = today.plusWeeks(1);
@@ -1012,6 +1032,21 @@ public class DataInitializer implements CommandLineRunner {
         testLeaves.add(weekLeave);
         System.out.println("🔍 DataInitializer - Created Week Leave request (APPROVED) for " + nextWeekStart + " to " + nextWeekStart.plusDays(6));
         
+        // 3. Day Leave request with status "PENDING" - For awaiting requests
+        LocalDate nextDay = today.plusDays(1);
+        LeaveRequest dayLeave = LeaveRequest.builder()
+            .staff(testStaff)
+            .shift(null) // Day leave is not tied to a specific shift
+            .startTime(nextDay.atStartOfDay())
+            .endTime(nextDay.atTime(23, 59))
+            .requestType("Day Leave")
+            .reason("Personal appointment")
+            .status("AWAITING")
+            .createdAt(LocalDateTime.now().minusDays(1))
+            .build();
+        testLeaves.add(dayLeave);
+        System.out.println("🔍 DataInitializer - Created Day Leave request (AWAITING) for " + nextDay);
+        
         // Save all test leave requests
         leaveRequestRepository.saveAll(testLeaves);
         System.out.println("🔍 DataInitializer - Saved " + testLeaves.size() + " test leave requests");
@@ -1024,6 +1059,155 @@ public class DataInitializer implements CommandLineRunner {
                 ", Start: " + leave.getStartTime() + 
                 ", End: " + leave.getEndTime() +
                 ", Shift ID: " + (leave.getShift() != null ? leave.getShift().getId() : "null"));
+        }
+    }
+    
+    private void createTestSwapRequests() {
+        System.out.println("🔍 DataInitializer - Creating test swap requests...");
+        
+        // Find the test user (Sarah Johnson)
+        User testUser = userRepository.findAll().stream()
+            .filter(user -> "test@example.com".equals(user.getEmail()))
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException("Test user not found"));
+        Staff testStaff = testUser.getStaff();
+        if (testStaff == null) {
+            System.out.println("🔍 DataInitializer - Test user has no staff record, skipping swap requests");
+            return;
+        }
+        
+        // Find other staff members for swap targets
+        List<Staff> otherStaff = staffRepository.findAll().stream()
+            .filter(staff -> !staff.getId().equals(testStaff.getId()))
+            .limit(5) // Get 5 other staff members
+            .toList();
+        
+        if (otherStaff.isEmpty()) {
+            System.out.println("🔍 DataInitializer - No other staff found, skipping swap requests");
+            return;
+        }
+        
+        // Get some shifts for the test user to create swap requests
+        List<Shift> testUserShifts = shiftAssignmentRepository.findAll().stream()
+            .filter(assignment -> assignment.getStaff().getId().equals(testStaff.getId()))
+            .map(assignment -> assignment.getShift())
+            .distinct()
+            .limit(4)
+            .toList();
+        
+        if (testUserShifts.isEmpty()) {
+            System.out.println("🔍 DataInitializer - No shifts found for test user, skipping swap requests");
+            return;
+        }
+        
+        // Create test swap requests
+        List<ShiftSwap> testSwaps = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        
+        // 1. Swap request submitted BY test user (AWAITING status)
+        Shift testShift1 = testUserShifts.get(0);
+        Staff targetStaff1 = otherStaff.get(0);
+        ShiftSwap swapRequest1 = ShiftSwap.builder()
+            .requester(testStaff)
+            .target(targetStaff1)
+            .fromTime(testShift1.getStartTs())
+            .toTime(testShift1.getEndTs())
+            .message("I need to swap this shift due to personal commitments")
+            .status("AWAITING")
+            .dateMade(now.minusDays(2))
+            .build();
+        testSwaps.add(swapRequest1);
+        System.out.println("🔍 DataInitializer - Created swap request BY test user (AWAITING)");
+        
+        // 2. Swap request submitted BY test user (APPROVED status)
+        if (testUserShifts.size() > 1) {
+            Shift testShift2 = testUserShifts.get(1);
+            Staff targetStaff2 = otherStaff.get(1);
+            ShiftSwap swapRequest2 = ShiftSwap.builder()
+                .requester(testStaff)
+                .target(targetStaff2)
+                .fromTime(testShift2.getStartTs())
+                .toTime(testShift2.getEndTs())
+                .message("Need to swap for family event")
+                .status("APPROVED")
+                .dateMade(now.minusDays(5))
+                .build();
+            testSwaps.add(swapRequest2);
+            System.out.println("🔍 DataInitializer - Created swap request BY test user (APPROVED)");
+        }
+        
+        // 3. Swap request submitted BY test user (DECLINED status)
+        if (testUserShifts.size() > 2) {
+            Shift testShift3 = testUserShifts.get(2);
+            Staff targetStaff3 = otherStaff.get(2);
+            ShiftSwap swapRequest3 = ShiftSwap.builder()
+                .requester(testStaff)
+                .target(targetStaff3)
+                .fromTime(testShift3.getStartTs())
+                .toTime(testShift3.getEndTs())
+                .message("Would like to swap this shift")
+                .status("DECLINED")
+                .dateMade(now.minusDays(3))
+                .build();
+            testSwaps.add(swapRequest3);
+            System.out.println("🔍 DataInitializer - Created swap request BY test user (DECLINED)");
+        }
+        
+        // 4. Swap request TARGETING test user (AWAITING status)
+        // Get a shift from another staff member
+        List<Shift> otherStaffShifts = shiftAssignmentRepository.findAll().stream()
+            .filter(assignment -> otherStaff.stream().anyMatch(staff -> staff.getId().equals(assignment.getStaff().getId())))
+            .map(assignment -> assignment.getShift())
+            .distinct()
+            .limit(2)
+            .toList();
+        
+        if (!otherStaffShifts.isEmpty()) {
+            Shift otherShift = otherStaffShifts.get(0);
+            Staff requesterStaff = otherStaff.get(3 % otherStaff.size());
+            ShiftSwap swapRequest4 = ShiftSwap.builder()
+                .requester(requesterStaff)
+                .target(testStaff)
+                .fromTime(otherShift.getStartTs())
+                .toTime(otherShift.getEndTs())
+                .message("Can you please swap this shift with me?")
+                .status("AWAITING")
+                .dateMade(now.minusDays(1))
+                .build();
+            testSwaps.add(swapRequest4);
+            System.out.println("🔍 DataInitializer - Created swap request TARGETING test user (AWAITING)");
+        }
+        
+        // 5. Swap request TARGETING test user (APPROVED status)
+        if (otherStaffShifts.size() > 1) {
+            Shift otherShift2 = otherStaffShifts.get(1);
+            Staff requesterStaff2 = otherStaff.get(4 % otherStaff.size());
+            ShiftSwap swapRequest5 = ShiftSwap.builder()
+                .requester(requesterStaff2)
+                .target(testStaff)
+                .fromTime(otherShift2.getStartTs())
+                .toTime(otherShift2.getEndTs())
+                .message("I'd like to swap shifts with you")
+                .status("APPROVED")
+                .dateMade(now.minusDays(4))
+                .build();
+            testSwaps.add(swapRequest5);
+            System.out.println("🔍 DataInitializer - Created swap request TARGETING test user (APPROVED)");
+        }
+        
+        // Save all test swap requests
+        shiftSwapRepository.saveAll(testSwaps);
+        System.out.println("🔍 DataInitializer - Saved " + testSwaps.size() + " test swap requests");
+        
+        // Log details
+        for (ShiftSwap swap : testSwaps) {
+            System.out.println("🔍 DataInitializer - Swap Request ID: " + swap.getId() + 
+                ", Requester: " + swap.getRequester().getFirstName() + " " + swap.getRequester().getLastName() +
+                ", Target: " + swap.getTarget().getFirstName() + " " + swap.getTarget().getLastName() +
+                ", Status: " + swap.getStatus() + 
+                ", From: " + swap.getFromTime() + 
+                ", To: " + swap.getToTime() +
+                ", Date Made: " + swap.getDateMade());
         }
     }
     
@@ -1496,6 +1680,7 @@ public class DataInitializer implements CommandLineRunner {
                 .type(determineShiftCode(start.getHour(), type.equals("ON_CALL")))
                 .department(dept)
                 .location(location)
+                .name(generateShiftName(dept, type, type.equals("ON_CALL")))
                 .note("Open shift - " + type + " - " + date.toString())
                 .dateMade(LocalDateTime.now().minusDays(random.nextInt(7))) // Use passed random instance
                 .urgentFlag(isUrgent)
@@ -1506,6 +1691,66 @@ public class DataInitializer implements CommandLineRunner {
                 .build();
     }
     
+    /**
+     * Generate appropriate shift name based on department and shift type
+     */
+    private String generateShiftName(Department department, String shiftType, boolean isOnCall) {
+        String deptCode = department.getCode();
+        
+        if (isOnCall) {
+            // On-call shifts
+            switch (deptCode) {
+                case "ED":
+                    return "[OC]Emergency Call";
+                case "ICU":
+                    return "[OC]ICU Call";
+                case "MED":
+                    return "[OC]Medical Call";
+                default:
+                    return "[OC]Duty Call";
+            }
+        } else {
+            // Regular shifts
+            switch (shiftType) {
+                case "AM":
+                    switch (deptCode) {
+                        case "ED":
+                            return "Emergency AM";
+                        case "ICU":
+                            return "ICU Morning";
+                        case "MED":
+                            return "Medical AM";
+                        default:
+                            return "AM Shift";
+                    }
+                case "PM":
+                    switch (deptCode) {
+                        case "ED":
+                            return "Emergency PM";
+                        case "ICU":
+                            return "ICU Evening";
+                        case "MED":
+                            return "Medical PM";
+                        default:
+                            return "PM Shift";
+                    }
+                case "AH":
+                    switch (deptCode) {
+                        case "ED":
+                            return "Emergency Night";
+                        case "ICU":
+                            return "ICU Night";
+                        case "MED":
+                            return "Medical Night";
+                        default:
+                            return "Night Shift";
+                    }
+                default:
+                    return "Regular Shift";
+            }
+        }
+    }
+
     private int calculatePayment(String shiftType, boolean isUrgent, Random random) {
         // Base payment by shift type (in cents)
         int basePayment;

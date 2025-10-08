@@ -32,6 +32,7 @@ export type EventItem = {
   campus?: string;          // e.g., "PMCC"
   room?: string;            // e.g., "Theatre 1"
   campusAddress?: string;   // e.g., address of the campus
+  shiftName?: string;       // e.g., "Emergency PFY"
   isTaken?: boolean;        // True if this assigned shift has a matching open shift at the same time
   hasOpenShift?: boolean;   // True if this shift has a matching open shift merged into one card
   openShiftInfo?: {         // Open shift details for merged events

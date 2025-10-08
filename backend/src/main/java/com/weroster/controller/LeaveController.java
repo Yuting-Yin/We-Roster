@@ -186,7 +186,7 @@ public class LeaveController {
                     .endTime(endTime)
                     .requestType(input.getRequestType() != null ? input.getRequestType() : (input.getAllDay() ? "All Day Leave" : "Shift Leave"))
                     .reason(input.getReason())
-                    .status("PENDING")
+                    .status("AWAITING")
                     .createdAt(LocalDateTime.now())
                     .build();
             

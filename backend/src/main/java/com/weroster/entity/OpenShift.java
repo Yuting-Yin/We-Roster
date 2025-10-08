@@ -36,6 +36,9 @@ public class OpenShift {
     @Column(name = "type", length = 50)
     private String type;
     
+    @Column(name = "name", length = 200)
+    private String name;
+    
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
     

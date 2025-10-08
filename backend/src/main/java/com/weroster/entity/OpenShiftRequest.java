@@ -30,7 +30,7 @@ public class OpenShiftRequest {
     
     @Column(name = "status", length = 30, nullable = false)
     @Builder.Default
-    private String status = "PENDING";
+    private String status = "AWAITING";
     
     @Column(name = "message", columnDefinition = "TEXT")
     private String message;
@@ -50,8 +50,8 @@ public class OpenShiftRequest {
     private String reviewNotes;
     
     // Helper methods
-    public boolean isPending() {
-        return "PENDING".equals(status);
+    public boolean isAwaiting() {
+        return "AWAITING".equals(status);
     }
     
     public boolean isApproved() {

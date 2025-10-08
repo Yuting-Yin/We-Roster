@@ -41,7 +41,7 @@ public class LeaveRequest {
     
     @Column(name = "status", length = 30)
     @Builder.Default
-    private String status = "PENDING";
+    private String status = "AWAITING";
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;
