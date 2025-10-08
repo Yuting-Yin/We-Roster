@@ -23,6 +23,8 @@ async function copy(text: string | undefined) {
 const Tab = createMaterialTopTabNavigator();
 
 export default function ProfileScreen() {
+  console.log('🔍 ProfileScreen - Component loaded');
+  
   return (
     <Tab.Navigator
       screenOptions={{
@@ -45,6 +47,8 @@ export default function ProfileScreen() {
 }
 
 function AboutTab() {
+  console.log('🔍 AboutTab - Component loaded');
+  
   // Connected to backend - using real user data from database
   const {
     displayName,
@@ -137,6 +141,8 @@ function AboutTab() {
 }
 
 function ScheduleTab() {
+  console.log('🔍 ScheduleTab - Component loaded');
+  
   const [date, setDate] = useState(new Date());
   const { leaveMap, loading: leavesLoading, error: leavesError } = useApprovedLeaves();
   const { shiftMap, loading, error } = useMyRosterData(date);
