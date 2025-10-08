@@ -326,8 +326,8 @@ public class RequestController {
         String requestType = "Open Shift Request";
         String requestSubType = "Open Shift Request"; // Open shift requests don't have sub-types
         
-        String date = formatDate(openShiftRequest.getOpenShift().getStartTs().toLocalDate());
-        String timeRange = formatTimeRange(openShiftRequest.getOpenShift().getStartTs(), openShiftRequest.getOpenShift().getEndTs());
+        String date = formatDate(openShiftRequest.getOpenShift().getShift().getStartTs().toLocalDate());
+        String timeRange = formatTimeRange(openShiftRequest.getOpenShift().getShift().getStartTs(), openShiftRequest.getOpenShift().getShift().getEndTs());
         
         return RequestCardDto.builder()
             .id(openShiftRequest.getId().toString())
@@ -343,8 +343,8 @@ public class RequestController {
                 openShiftRequest.getReviewedBy().getFirstName() + " " + openShiftRequest.getReviewedBy().getLastName() : null)
             .reason(openShiftRequest.getMessage())
             .shiftId(openShiftRequest.getOpenShift().getId().toString())
-            .location(openShiftRequest.getOpenShift().getLocation().getName())
-            .address(openShiftRequest.getOpenShift().getLocation().getHospital().getAddress())
+            .location(openShiftRequest.getOpenShift().getShift().getLocation().getName())
+            .address(openShiftRequest.getOpenShift().getShift().getLocation().getHospital().getAddress())
             .build();
     }
     

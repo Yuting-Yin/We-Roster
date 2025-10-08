@@ -54,7 +54,7 @@ public class DataInitializer implements CommandLineRunner {
     private OpenShiftRepository openShiftRepository;
     
     @Autowired
-    private OpenShiftDesignationRequirementsRepository openShiftDesignationRequirementsRepository;
+    private ShiftDesignationRequirementsRepository shiftDesignationRequirementsRepository;
     
     @Autowired
     private OpenShiftRequestRepository openShiftRequestRepository;
@@ -1244,9 +1244,20 @@ public class DataInitializer implements CommandLineRunner {
                     // Determine total staff needed and requirements
                     int totalStaffNeeded = 1 + random.nextInt(3); // 1-3 staff needed
                     
-                    // Create independent open shift (NOT linked to shift table)
-                    OpenShift openShift = createOpenShiftByType(shiftType, date, dept, location, 
-                                                                 isUrgent, paymentCents, createdByStaff, totalStaffNeeded, random);
+                    // First create a shift for the open shift
+                    Shift shift = createShiftByType(shiftType, date, dept, location, random);
+                    shift = shiftRepository.save(shift);
+                    
+                    // Create open shift linked to the shift
+                    OpenShift openShift = OpenShift.builder()
+                            .shift(shift)
+                            .urgentFlag(isUrgent)
+                            .extraPayCents(paymentCents)
+                            .status("AVAILABLE")
+                            .totalStaffNeeded(totalStaffNeeded)
+                            .createdBy(createdByStaff)
+                            .createdAt(LocalDateTime.now())
+                            .build();
                     
                     openShift = openShiftRepository.save(openShift);
                     createdShifts.add(openShift); // Add to list for later use
@@ -1255,7 +1266,7 @@ public class DataInitializer implements CommandLineRunner {
                     boolean hasRequirements = random.nextInt(100) < 60;
                     String requirementDesc = "ANY";
                     if (hasRequirements) {
-                        requirementDesc = addDesignationRequirements(openShift, totalStaffNeeded, random, 
+                        requirementDesc = addDesignationRequirements(shift, totalStaffNeeded, random, 
                                                                       nurseDesignation, doctorDesignation, surgeonDesignation);
                     }
                     
@@ -1277,10 +1288,55 @@ public class DataInitializer implements CommandLineRunner {
     }
     
     /**
-     * Add designation requirements to an open shift
+     * Create a shift for open shift
+     */
+    private Shift createShiftByType(String shiftType, LocalDate date, Department dept, Location location, Random random) {
+        LocalDateTime startTime;
+        LocalDateTime endTime;
+        
+        switch (shiftType) {
+            case "AM":
+                startTime = date.atTime(8 + random.nextInt(5), random.nextInt(60)); // 8:00-12:59
+                endTime = startTime.plusHours(8); // 8-hour shift
+                break;
+            case "PM":
+                startTime = date.atTime(13 + random.nextInt(5), random.nextInt(60)); // 13:00-17:59
+                endTime = startTime.plusHours(8); // 8-hour shift
+                break;
+            case "AH":
+                startTime = date.atTime(18 + random.nextInt(6), random.nextInt(60)); // 18:00-23:59
+                endTime = startTime.plusHours(8); // 8-hour shift
+                if (endTime.toLocalDate().isAfter(date)) {
+                    endTime = date.plusDays(1).atTime(endTime.getHour(), endTime.getMinute());
+                }
+                break;
+            case "ON_CALL":
+                startTime = date.atTime(20, 0); // 20:00
+                endTime = date.plusDays(1).atTime(8, 0); // 08:00 next day
+                break;
+            default:
+                startTime = date.atTime(8, 0);
+                endTime = startTime.plusHours(8);
+        }
+        
+        return Shift.builder()
+                .startTs(startTime)
+                .endTs(endTime)
+                .department(dept)
+                .location(location)
+                .type(shiftType)
+                .name("Open " + shiftType + " Shift - " + dept.getName())
+                .note("Open shift created for additional staffing needs")
+                .status("INCOMPLETE") // Open shifts start as incomplete
+                .createdAt(LocalDateTime.now())
+                .build();
+    }
+    
+    /**
+     * Add designation requirements to a shift
      * Returns description of requirements for logging
      */
-    private String addDesignationRequirements(OpenShift openShift, int totalStaffNeeded, Random random,
+    private String addDesignationRequirements(Shift shift, int totalStaffNeeded, Random random,
                                                Designation nurseDesignation, Designation doctorDesignation, 
                                                Designation surgeonDesignation) {
         // Randomly determine which designations are required - now with more multiple-designation scenarios
@@ -1290,87 +1346,91 @@ public class DataInitializer implements CommandLineRunner {
         switch (requirementType) {
             case 0:
                 // Single: 2 Nurses
-                OpenShiftDesignationRequirements nursesReq = OpenShiftDesignationRequirements.builder()
-                        .openShift(openShift)
+                ShiftDesignationRequirements nursesReq = ShiftDesignationRequirements.builder()
+                        .shift(shift)
                         .designation(nurseDesignation)
                         .requiredCount(Math.min(2, totalStaffNeeded))
+                        .createdAt(LocalDateTime.now())
                         .build();
-                openShiftDesignationRequirementsRepository.save(nursesReq);
+                shiftDesignationRequirementsRepository.save(nursesReq);
                 description = Math.min(2, totalStaffNeeded) + " Nurses";
                 break;
                 
             case 1:
                 // Single: 1 Doctor
-                OpenShiftDesignationRequirements doctorReq = OpenShiftDesignationRequirements.builder()
-                        .openShift(openShift)
+                ShiftDesignationRequirements doctorReq = ShiftDesignationRequirements.builder()
+                        .shift(shift)
                         .designation(doctorDesignation)
                         .requiredCount(1)
+                        .createdAt(LocalDateTime.now())
                         .build();
-                openShiftDesignationRequirementsRepository.save(doctorReq);
+                shiftDesignationRequirementsRepository.save(doctorReq);
                 description = "1 Doctor";
                 break;
                 
             case 2:
                 // Single: 1 Surgeon
-                OpenShiftDesignationRequirements surgeonReq = OpenShiftDesignationRequirements.builder()
-                        .openShift(openShift)
+                ShiftDesignationRequirements surgeonReq = ShiftDesignationRequirements.builder()
+                        .shift(shift)
                         .designation(surgeonDesignation)
                         .requiredCount(1)
+                        .createdAt(LocalDateTime.now())
                         .build();
-                openShiftDesignationRequirementsRepository.save(surgeonReq);
+                shiftDesignationRequirementsRepository.save(surgeonReq);
                 description = "1 Surgeon";
                 break;
                 
             case 3:
                 // Multiple: 2 Nurses + 1 Surgeon
                 if (totalStaffNeeded >= 3) {
-                    OpenShiftDesignationRequirements nurseReq2 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements nurseReq2 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(nurseDesignation)
-                            .requiredCount(2)
-                            .build();
-                    OpenShiftDesignationRequirements surgeonReq2 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                        .requiredCount(2)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                    ShiftDesignationRequirements surgeonReq2 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(surgeonDesignation)
                             .requiredCount(1)
                             .build();
-                    openShiftDesignationRequirementsRepository.save(nurseReq2);
-                    openShiftDesignationRequirementsRepository.save(surgeonReq2);
+                    shiftDesignationRequirementsRepository.save(nurseReq2);
+                    shiftDesignationRequirementsRepository.save(surgeonReq2);
                     description = "2 Nurses + 1 Surgeon";
                 } else {
                     description = "1 Nurse";
-                    OpenShiftDesignationRequirements nurseReq2 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements nurseReq2 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(nurseDesignation)
                             .requiredCount(1)
                             .build();
-                    openShiftDesignationRequirementsRepository.save(nurseReq2);
+                    shiftDesignationRequirementsRepository.save(nurseReq2);
                 }
                 break;
                 
             case 4:
                 // Multiple: 1 Doctor + 1 Nurse
                 if (totalStaffNeeded >= 2) {
-                    OpenShiftDesignationRequirements doctorReq4 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements doctorReq4 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(doctorDesignation)
                             .requiredCount(1)
                             .build();
-                    OpenShiftDesignationRequirements nurseReq4 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements nurseReq4 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(nurseDesignation)
                             .requiredCount(1)
                             .build();
-                    openShiftDesignationRequirementsRepository.save(doctorReq4);
-                    openShiftDesignationRequirementsRepository.save(nurseReq4);
+                    shiftDesignationRequirementsRepository.save(doctorReq4);
+                    shiftDesignationRequirementsRepository.save(nurseReq4);
                     description = "1 Doctor + 1 Nurse";
                 } else {
-                    OpenShiftDesignationRequirements nurseReq4 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements nurseReq4 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(nurseDesignation)
                             .requiredCount(1)
                             .build();
-                    openShiftDesignationRequirementsRepository.save(nurseReq4);
+                    shiftDesignationRequirementsRepository.save(nurseReq4);
                     description = "1 Nurse";
                 }
                 break;
@@ -1378,26 +1438,27 @@ public class DataInitializer implements CommandLineRunner {
             case 5:
                 // Multiple: 1 Surgeon + 2 Nurses
                 if (totalStaffNeeded >= 3) {
-                    OpenShiftDesignationRequirements surgeonReq5 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements surgeonReq5 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(surgeonDesignation)
                             .requiredCount(1)
                             .build();
-                    OpenShiftDesignationRequirements nurseReq5 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements nurseReq5 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(nurseDesignation)
-                            .requiredCount(2)
-                            .build();
-                    openShiftDesignationRequirementsRepository.save(surgeonReq5);
-                    openShiftDesignationRequirementsRepository.save(nurseReq5);
+                        .requiredCount(2)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                    shiftDesignationRequirementsRepository.save(surgeonReq5);
+                    shiftDesignationRequirementsRepository.save(nurseReq5);
                     description = "1 Surgeon + 2 Nurses";
                 } else {
-                    OpenShiftDesignationRequirements surgeonReq5 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements surgeonReq5 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(surgeonDesignation)
                             .requiredCount(1)
                             .build();
-                    openShiftDesignationRequirementsRepository.save(surgeonReq5);
+                    shiftDesignationRequirementsRepository.save(surgeonReq5);
                     description = "1 Surgeon";
                 }
                 break;
@@ -1405,26 +1466,26 @@ public class DataInitializer implements CommandLineRunner {
             case 6:
                 // Multiple: 1 Doctor + 1 Surgeon
                 if (totalStaffNeeded >= 2) {
-                    OpenShiftDesignationRequirements doctorReq6 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements doctorReq6 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(doctorDesignation)
                             .requiredCount(1)
                             .build();
-                    OpenShiftDesignationRequirements surgeonReq6 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements surgeonReq6 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(surgeonDesignation)
                             .requiredCount(1)
                             .build();
-                    openShiftDesignationRequirementsRepository.save(doctorReq6);
-                    openShiftDesignationRequirementsRepository.save(surgeonReq6);
+                    shiftDesignationRequirementsRepository.save(doctorReq6);
+                    shiftDesignationRequirementsRepository.save(surgeonReq6);
                     description = "1 Doctor + 1 Surgeon";
                 } else {
-                    OpenShiftDesignationRequirements doctorReq6 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements doctorReq6 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(doctorDesignation)
                             .requiredCount(1)
                             .build();
-                    openShiftDesignationRequirementsRepository.save(doctorReq6);
+                    shiftDesignationRequirementsRepository.save(doctorReq6);
                     description = "1 Doctor";
                 }
                 break;
@@ -1432,46 +1493,46 @@ public class DataInitializer implements CommandLineRunner {
             case 7:
                 // Multiple: 1 Doctor + 1 Surgeon + 1 Nurse (complex team)
                 if (totalStaffNeeded >= 3) {
-                    OpenShiftDesignationRequirements doctorReq7 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements doctorReq7 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(doctorDesignation)
                             .requiredCount(1)
                             .build();
-                    OpenShiftDesignationRequirements surgeonReq7 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements surgeonReq7 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(surgeonDesignation)
                             .requiredCount(1)
                             .build();
-                    OpenShiftDesignationRequirements nurseReq7 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements nurseReq7 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(nurseDesignation)
                             .requiredCount(1)
                             .build();
-                    openShiftDesignationRequirementsRepository.save(doctorReq7);
-                    openShiftDesignationRequirementsRepository.save(surgeonReq7);
-                    openShiftDesignationRequirementsRepository.save(nurseReq7);
+                    shiftDesignationRequirementsRepository.save(doctorReq7);
+                    shiftDesignationRequirementsRepository.save(surgeonReq7);
+                    shiftDesignationRequirementsRepository.save(nurseReq7);
                     description = "1 Doctor + 1 Surgeon + 1 Nurse";
                 } else if (totalStaffNeeded >= 2) {
-                    OpenShiftDesignationRequirements doctorReq7 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements doctorReq7 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(doctorDesignation)
                             .requiredCount(1)
                             .build();
-                    OpenShiftDesignationRequirements nurseReq7 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements nurseReq7 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(nurseDesignation)
                             .requiredCount(1)
                             .build();
-                    openShiftDesignationRequirementsRepository.save(doctorReq7);
-                    openShiftDesignationRequirementsRepository.save(nurseReq7);
+                    shiftDesignationRequirementsRepository.save(doctorReq7);
+                    shiftDesignationRequirementsRepository.save(nurseReq7);
                     description = "1 Doctor + 1 Nurse";
                 } else {
-                    OpenShiftDesignationRequirements nurseReq7 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements nurseReq7 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(nurseDesignation)
                             .requiredCount(1)
                             .build();
-                    openShiftDesignationRequirementsRepository.save(nurseReq7);
+                    shiftDesignationRequirementsRepository.save(nurseReq7);
                     description = "1 Nurse";
                 }
                 break;
@@ -1479,75 +1540,79 @@ public class DataInitializer implements CommandLineRunner {
             case 8:
                 // Multiple: 2 Doctors + 1 Nurse
                 if (totalStaffNeeded >= 3) {
-                    OpenShiftDesignationRequirements doctorReq8 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements doctorReq8 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(doctorDesignation)
-                            .requiredCount(2)
-                            .build();
-                    OpenShiftDesignationRequirements nurseReq8 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                        .requiredCount(2)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                    ShiftDesignationRequirements nurseReq8 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(nurseDesignation)
                             .requiredCount(1)
                             .build();
-                    openShiftDesignationRequirementsRepository.save(doctorReq8);
-                    openShiftDesignationRequirementsRepository.save(nurseReq8);
+                    shiftDesignationRequirementsRepository.save(doctorReq8);
+                    shiftDesignationRequirementsRepository.save(nurseReq8);
                     description = "2 Doctors + 1 Nurse";
                 } else {
-                    OpenShiftDesignationRequirements doctorReq8 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements doctorReq8 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(doctorDesignation)
                             .requiredCount(1)
                             .build();
-                    openShiftDesignationRequirementsRepository.save(doctorReq8);
+                    shiftDesignationRequirementsRepository.save(doctorReq8);
                     description = "1 Doctor";
                 }
                 break;
                 
             case 9:
                 // Flexible: Need total staff, but 1 MUST be Surgeon (others can be anyone)
-                OpenShiftDesignationRequirements surgeonReq9 = OpenShiftDesignationRequirements.builder()
-                        .openShift(openShift)
+                ShiftDesignationRequirements surgeonReq9 = ShiftDesignationRequirements.builder()
+                        .shift(shift)
                         .designation(surgeonDesignation)
                         .requiredCount(1)
+                        .createdAt(LocalDateTime.now())
                         .build();
-                openShiftDesignationRequirementsRepository.save(surgeonReq9);
+                shiftDesignationRequirementsRepository.save(surgeonReq9);
                 description = "1 Surgeon + " + (totalStaffNeeded - 1) + " others";
                 break;
                 
             case 10:
                 // Flexible: Need total staff, but 1 MUST be Doctor (others can be anyone)
-                OpenShiftDesignationRequirements doctorReq10 = OpenShiftDesignationRequirements.builder()
-                        .openShift(openShift)
+                ShiftDesignationRequirements doctorReq10 = ShiftDesignationRequirements.builder()
+                        .shift(shift)
                         .designation(doctorDesignation)
                         .requiredCount(1)
+                        .createdAt(LocalDateTime.now())
                         .build();
-                openShiftDesignationRequirementsRepository.save(doctorReq10);
+                shiftDesignationRequirementsRepository.save(doctorReq10);
                 description = "1 Doctor + " + (totalStaffNeeded - 1) + " others";
                 break;
                 
             case 11:
                 // Multiple: 1 Doctor + 2 Nurses
                 if (totalStaffNeeded >= 3) {
-                    OpenShiftDesignationRequirements doctorReq11 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements doctorReq11 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(doctorDesignation)
                             .requiredCount(1)
                             .build();
-                    OpenShiftDesignationRequirements nurseReq11 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements nurseReq11 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(nurseDesignation)
-                            .requiredCount(2)
-                            .build();
-                    openShiftDesignationRequirementsRepository.save(doctorReq11);
-                    openShiftDesignationRequirementsRepository.save(nurseReq11);
+                        .requiredCount(2)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                    shiftDesignationRequirementsRepository.save(doctorReq11);
+                    shiftDesignationRequirementsRepository.save(nurseReq11);
                     description = "1 Doctor + 2 Nurses";
                 } else {
-                    OpenShiftDesignationRequirements doctorReq11 = OpenShiftDesignationRequirements.builder()
-                            .openShift(openShift)
+                    ShiftDesignationRequirements doctorReq11 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
                             .designation(doctorDesignation)
                             .requiredCount(1)
                             .build();
-                    openShiftDesignationRequirementsRepository.save(doctorReq11);
+                    shiftDesignationRequirementsRepository.save(doctorReq11);
                     description = "1 Doctor";
                 }
                 break;
@@ -1571,8 +1636,8 @@ public class DataInitializer implements CommandLineRunner {
         for (OpenShift openShift : openShifts) {
             if (random.nextInt(100) < 50) {
                 // Get designation requirements for this shift
-                List<OpenShiftDesignationRequirements> requirements = openShiftDesignationRequirementsRepository
-                        .findByOpenShiftId(openShift.getId());
+                List<ShiftDesignationRequirements> requirements = shiftDesignationRequirementsRepository
+                        .findByShiftId(openShift.getShift().getId());
                 
                 // Determine how many approved requests to create (1 to totalStaffNeeded-1)
                 // Don't fill completely so shift stays AVAILABLE for user to apply
@@ -1589,7 +1654,7 @@ public class DataInitializer implements CommandLineRunner {
                     }
                 } else {
                     // Has designation requirements - try to match them
-                    for (OpenShiftDesignationRequirements req : requirements) {
+                    for (ShiftDesignationRequirements req : requirements) {
                         int neededForThisDesignation = Math.min(req.getRequiredCount(), numApprovals - selectedStaff.size());
                         List<Staff> matchingStaff = allStaff.stream()
                                 .filter(s -> s.getDesignation() != null && 
@@ -1648,48 +1713,6 @@ public class DataInitializer implements CommandLineRunner {
         return medWard;
     }
     
-    private OpenShift createOpenShiftByType(String type, LocalDate date, Department dept, Location location, 
-                                             boolean isUrgent, int paymentCents, Staff createdBy, int totalStaffNeeded, Random random) {
-        LocalDateTime start, end;
-        
-        switch (type) {
-            case "AM":
-                start = date.atTime(8, 0);
-                end = date.atTime(16, 0);
-                break;
-            case "PM":
-                start = date.atTime(14, 0);
-                end = date.atTime(22, 0);
-                break;
-            case "AH":
-                start = date.atTime(22, 0);
-                end = date.plusDays(1).atTime(6, 0);
-                break;
-            case "ON_CALL":
-                start = date.atTime(20, 0);
-                end = date.plusDays(1).atTime(8, 0);
-                break;
-            default:
-                start = date.atTime(9, 0);
-                end = date.atTime(17, 0);
-        }
-        
-        return OpenShift.builder()
-                .startTs(start)
-                .endTs(end)
-                .type(determineShiftCode(start.getHour(), type.equals("ON_CALL")))
-                .department(dept)
-                .location(location)
-                .name(generateShiftName(dept, type, type.equals("ON_CALL")))
-                .note("Open shift - " + type + " - " + date.toString())
-                .dateMade(LocalDateTime.now().minusDays(random.nextInt(7))) // Use passed random instance
-                .urgentFlag(isUrgent)
-                .extraPayCents(paymentCents)
-                .status("AVAILABLE")
-                .createdBy(createdBy)
-                .totalStaffNeeded(totalStaffNeeded)
-                .build();
-    }
     
     /**
      * Generate appropriate shift name based on department and shift type

@@ -19,31 +19,9 @@ public class OpenShift {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(name = "start_ts", nullable = false)
-    private LocalDateTime startTs;
-    
-    @Column(name = "end_ts", nullable = false)
-    private LocalDateTime endTs;
-    
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "dept_id")
-    private Department department;
-    
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "location_id")
-    private Location location;
-    
-    @Column(name = "type", length = 50)
-    private String type;
-    
-    @Column(name = "name", length = 200)
-    private String name;
-    
-    @Column(name = "note", columnDefinition = "TEXT")
-    private String note;
-    
-    @Column(name = "date_made", nullable = false)
-    private LocalDateTime dateMade;
+    @OneToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "shift_id", nullable = false)
+    private Shift shift;
     
     @Column(name = "urgent_flag")
     private Boolean urgentFlag;
@@ -52,7 +30,8 @@ public class OpenShift {
     private Integer extraPayCents;
     
     @Column(name = "status", length = 30)
-    private String status; // AVAILABLE, READY_TO_RUN, APPROVED_FOR_FORMAL, CANCELLED
+    @Builder.Default
+    private String status = "AVAILABLE"; // AVAILABLE, READY_TO_RUN, APPROVED_FOR_FORMAL, CANCELLED
     
     @Column(name = "total_staff_needed", nullable = false)
     @Builder.Default
@@ -61,4 +40,8 @@ public class OpenShift {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "created_by")
     private Staff createdBy;
+    
+    @Column(name = "created_at", nullable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

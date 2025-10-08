@@ -9,20 +9,20 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "open_shift_designation_requirements")
+@Table(name = "shift_designation_requirements")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class OpenShiftDesignationRequirements {
+public class ShiftDesignationRequirements {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "open_shift_id", nullable = false)
-    private OpenShift openShift;
+    @JoinColumn(name = "shift_id", nullable = false)
+    private Shift shift;
     
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "designation_id", nullable = false)
