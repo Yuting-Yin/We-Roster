@@ -3,11 +3,15 @@ server:
 
 spring:
   datasource:
-    # Railway MySQL Database Configuration
-    url: jdbc:mysql://${{ MySQL.MYSQL_HOST }}:${{ MySQL.MYSQL_PORT }}/${{ MySQL.MYSQL_DATABASE }}?useSSL=true&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: ${{ MySQL.MYSQL_USER }}
-    password: ${{ MySQL.MYSQL_PASSWORD }}
+    # Railway MySQL Database Configuration - Option 1: Individual variables
+    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?useSSL=true&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    
+    # Alternative Option 2: Full connection string (uncomment if Option 1 fails)
+    # url: ${DATABASE_URL}
+    # driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
