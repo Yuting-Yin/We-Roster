@@ -61,11 +61,14 @@ export function useApprovedLeaves(month?: string) {
       const startTime = new Date(leave.startTime);
       const endTime = new Date(leave.endTime);
       
-      // Add all dates in the leave range
-      const currentDate = new Date(startTime);
-      currentDate.setHours(0, 0, 0, 0);
+      // Normalize both dates to midnight for proper date-only comparison
+      const startDate = new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate());
+      const endDate = new Date(endTime.getFullYear(), endTime.getMonth(), endTime.getDate());
       
-      while (currentDate <= endTime) {
+      // Add all dates in the leave range (inclusive)
+      const currentDate = new Date(startDate);
+      
+      while (currentDate <= endDate) {
         const dateKey = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
         map[dateKey] = true;
         currentDate.setDate(currentDate.getDate() + 1);
