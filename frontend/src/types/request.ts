@@ -8,6 +8,12 @@ export type SwapRequestSubType = "My Swap Request" | "Incoming Swap Request";
 
 export type RequestType = "Leave Request" | "Swap Request" | "Open Shift Request";
 
+export interface RequestFilterValue {
+  leaveTypes: string[];
+  swapTypes: string[];
+  openShiftRequest: boolean;
+}
+
 export interface Request {
   id: string;
   status: RequestStatus;
@@ -44,4 +50,7 @@ export interface RequestCardData {
   date: string; // Display date (e.g., "Thursday, 15 Oct")
   timeRange?: string; // Display time range (e.g., "08:00 AM - 13:00 PM")
   isIncomingSwap?: boolean; // Special flag for incoming swap requests
+  shiftId?: string; // ID of the related shift (if applicable)
+  location?: string; // Location name for shift-related requests
+  address?: string; // Address for shift-related requests
 }

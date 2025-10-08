@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Animated } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Animated, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
@@ -7,6 +7,7 @@ import { RequestCardData } from "@/types/request";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNavigation } from "@react-navigation/native";
 import Avatar from "@/components/common/Avatar";
+import { getShiftDetails } from "@/api/myroster";
 
 interface RequestDetailProps {
   visible: boolean;
@@ -28,11 +29,38 @@ export default function RequestDetail({
 }: RequestDetailProps) {
   const { user } = useCurrentUser({ mock: false });
   const navigation = useNavigation<any>();
+  
+  // State for shift details
+  const [shiftDetails, setShiftDetails] = React.useState<any>(null);
+  const [loadingShift, setLoadingShift] = React.useState(false);
+  const [shiftError, setShiftError] = React.useState<string | null>(null);
 
   const anim = React.useRef(new Animated.Value(0)).current;
   React.useEffect(() => {
     Animated.timing(anim, { toValue: visible ? 1 : 0, duration: 220, useNativeDriver: true }).start();
   }, [visible]);
+
+  // Fetch shift details when request changes and has a shift ID
+  React.useEffect(() => {
+    if (request?.shiftId && visible) {
+      setLoadingShift(true);
+      setShiftError(null);
+      
+      getShiftDetails(parseInt(request.shiftId))
+        .then(details => {
+          setShiftDetails(details);
+          setLoadingShift(false);
+        })
+        .catch(error => {
+          console.error("Error fetching shift details:", error);
+          setShiftError("Failed to load shift details");
+          setLoadingShift(false);
+        });
+    } else {
+      setShiftDetails(null);
+      setShiftError(null);
+    }
+  }, [request?.shiftId, visible]);
 
   const handleStaffPress = (staffId: string, staffName: string, initials: string) => {
     // Navigate to staff profile page
@@ -72,6 +100,22 @@ export default function RequestDetail({
   if (!visible || !request) return null;
 
   const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
+  const isIncomingSwap = request.isIncomingSwap || request.requestSubType === "Incoming Swap Request";
+
+  const handleDecline = () => {
+    console.log("Decline swap request:", request.id);
+    // TODO: Implement decline functionality
+  };
+
+  const handleAccept = () => {
+    console.log("Accept swap request:", request.id);
+    // TODO: Implement accept functionality
+  };
+
+  const handleCancelRequest = () => {
+    console.log("Cancel request:", request.id);
+    // TODO: Implement cancel functionality
+  };
 
   return (
     <Animated.View style={[styles.wrap, { transform: [{ translateY }] }]}>
@@ -98,8 +142,8 @@ export default function RequestDetail({
               <DetailRow label="Designation" value={user?.designation || "Unknown Designation"} />
               <DetailRow label="Date" value={request.date} />
               <DetailRow label="Time" value={request.timeRange || ""} />
-              <DetailRow label="Address" value="" />
-              <DetailRow label="Location" value="" />
+              <DetailRow label="Address" value={request.address || shiftDetails?.location?.address || ""} />
+              <DetailRow label="Location" value={request.location || shiftDetails?.location?.name || ""} />
               <DetailRow 
                 label="Status" 
                 value={request.status}
@@ -109,7 +153,7 @@ export default function RequestDetail({
             </View>
           </View>
 
-          {workingStaff.length > 0 && (
+          {(workingStaff.length > 0 || (shiftDetails?.coworkers && shiftDetails.coworkers.length > 0)) && (
             <>
               <View style={styles.divider} />
               <View style={styles.section}>
@@ -118,31 +162,72 @@ export default function RequestDetail({
                   <Text style={styles.sectionTitle}>Working with</Text>
                 </View>
 
-                <View style={styles.staffList}>
-                  {workingStaff.map((staff) => (
-                    <Pressable
-                      key={staff.id}
-                      style={styles.staffItem}
-                      onPress={() => handleStaffPress(staff.id, staff.name, staff.initials)}
-                    >
-                      <Avatar initials={staff.initials} />
-                      <View style={styles.staffInfo}>
-                        <Text style={styles.staffName}>{staff.name}</Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={sx(20)} color={COLOR.label} />
-                    </Pressable>
-                  ))}
-                </View>
+                {loadingShift ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color={COLOR.brand} />
+                    <Text style={styles.loadingText}>Loading staff...</Text>
+                  </View>
+                ) : shiftError ? (
+                  <Text style={styles.errorText}>{shiftError}</Text>
+                ) : (
+                  <View style={styles.staffList}>
+                    {/* Show staff from workingStaff prop first */}
+                    {workingStaff.map((staff) => (
+                      <Pressable
+                        key={staff.id}
+                        style={styles.staffItem}
+                        onPress={() => handleStaffPress(staff.id, staff.name, staff.initials)}
+                      >
+                        <Avatar initials={staff.initials} />
+                        <View style={styles.staffInfo}>
+                          <Text style={styles.staffName}>{staff.name}</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={sx(20)} color={COLOR.label} />
+                      </Pressable>
+                    ))}
+                    
+                    {/* Show staff from shift details */}
+                    {shiftDetails?.coworkers?.map((coworker: any) => (
+                      <Pressable
+                        key={coworker.id}
+                        style={styles.staffItem}
+                        onPress={() => handleStaffPress(coworker.id.toString(), coworker.name, coworker.initials)}
+                      >
+                        <Avatar initials={coworker.initials} />
+                        <View style={styles.staffInfo}>
+                          <Text style={styles.staffName}>{coworker.name}</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={sx(20)} color={COLOR.label} />
+                      </Pressable>
+                    ))}
+                    
+                    {/* Show message if no staff */}
+                    {workingStaff.length === 0 && (!shiftDetails?.coworkers || shiftDetails.coworkers.length === 0) && (
+                      <Text style={styles.noStaffText}>No staff assigned to this shift</Text>
+                    )}
+                  </View>
+                )}
               </View>
             </>
           )}
         </ScrollView>
 
-        {/* Cancel Request Button */}
+        {/* Action Buttons */}
         <View style={styles.buttonContainer}>
-          <Pressable style={styles.cancelButton}>
-            <Text style={styles.cancelButtonText}>Cancel Request</Text>
-          </Pressable>
+          {isIncomingSwap ? (
+            <View style={styles.swapButtonRow}>
+              <Pressable style={styles.declineButton} onPress={handleDecline}>
+                <Text style={styles.declineButtonText}>Decline</Text>
+              </Pressable>
+              <Pressable style={styles.acceptButton} onPress={handleAccept}>
+                <Text style={styles.acceptButtonText}>Accept</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable style={styles.cancelButton} onPress={handleCancelRequest}>
+              <Text style={styles.cancelButtonText}>Cancel Request</Text>
+            </Pressable>
+          )}
         </View>
     </Animated.View>
   );
@@ -272,5 +357,61 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: sx(16),
     fontWeight: "600",
+  },
+  swapButtonRow: {
+    flexDirection: "row",
+    gap: sx(12),
+  },
+  declineButton: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: COLOR.brand,
+    borderRadius: sx(12),
+    paddingVertical: sy(16),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  declineButtonText: {
+    color: COLOR.brand,
+    fontSize: sx(16),
+    fontWeight: "600",
+  },
+  acceptButton: {
+    flex: 1,
+    backgroundColor: COLOR.brand,
+    borderRadius: sx(12),
+    paddingVertical: sy(16),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  acceptButtonText: {
+    color: "#fff",
+    fontSize: sx(16),
+    fontWeight: "600",
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: sy(20),
+  },
+  loadingText: {
+    color: COLOR.label,
+    fontSize: sx(14),
+    marginLeft: sx(8),
+  },
+  errorText: {
+    color: COLOR.red,
+    fontSize: sx(14),
+    textAlign: "center",
+    paddingVertical: sy(20),
+  },
+  noStaffText: {
+    color: COLOR.label,
+    fontSize: sx(14),
+    textAlign: "center",
+    paddingVertical: sy(20),
+    fontStyle: "italic",
   },
 });

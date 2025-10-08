@@ -15,6 +15,9 @@ interface RequestCardDto {
   reviewedAt?: string;
   reviewedBy?: string;
   reason?: string;
+  shiftId?: string; // ID of the related shift (if applicable)
+  location?: string; // Location name for shift-related requests
+  address?: string; // Address for shift-related requests
 }
 
 // Backend response structure
@@ -92,7 +95,10 @@ export async function getAwaitingRequests(month?: number, year?: number): Promis
     requestSubType: dto.requestSubType as any, // Backend returns string, frontend expects union type
     date: dto.date,
     timeRange: dto.timeRange,
-    isIncomingSwap: dto.isIncomingSwap
+    isIncomingSwap: dto.isIncomingSwap,
+    shiftId: dto.shiftId,
+    location: dto.location,
+    address: dto.address
   }));
 }
 
@@ -114,7 +120,10 @@ export async function getHistoryRequests(month?: number, year?: number): Promise
     requestSubType: dto.requestSubType as any, // Backend returns string, frontend expects union type
     date: dto.date,
     timeRange: dto.timeRange,
-    isIncomingSwap: dto.isIncomingSwap
+    isIncomingSwap: dto.isIncomingSwap,
+    shiftId: dto.shiftId,
+    location: dto.location,
+    address: dto.address
   }));
 }
 

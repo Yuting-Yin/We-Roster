@@ -65,7 +65,10 @@ export default function RequestCard({ request, onPress }: RequestCardProps) {
   const isIncomingSwap = request.isIncomingSwap || request.requestSubType === "Incoming Swap Request";
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
+    <TouchableOpacity style={[styles.card, isIncomingSwap && styles.incomingSwapCard]} onPress={onPress}>
+      {/* Special yellow bar for incoming swap requests */}
+      {isIncomingSwap}
+      
       {/* Status indicator line */}
       <View style={[styles.statusLine, { backgroundColor: getStatusColor(request.status) }]} />
       
@@ -92,6 +95,14 @@ export default function RequestCard({ request, onPress }: RequestCardProps) {
           )}
         </View>
       </View>
+
+      {/* Respond indicator for incoming swap requests */}
+      {isIncomingSwap && (
+        <View style={styles.respondIndicator}>
+          <Ionicons name="arrow-back" size={sx(14)} color="#B0C4DE" />
+          <Text style={styles.respondIndicatorText}>Respond</Text>
+        </View>
+      )}
 
       <View style={styles.footer}>
         <Ionicons name="chevron-forward" size={sx(20)} color={COLOR.label} />
@@ -176,5 +187,33 @@ const styles = StyleSheet.create({
     justifyContent: "center", // Center the arrow vertically
     alignItems: "center", // Center horizontally within the footer area
     width: sx(40), // Give the footer a fixed width
+  },
+  incomingSwapCard: {
+    // Special styling for incoming swap requests
+    position: "relative",
+  },
+  yellowBar: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: sx(6),
+    backgroundColor: "#FFF8DC", // Light yellow color
+    borderTopLeftRadius: sx(12),
+    borderBottomLeftRadius: sx(12),
+    zIndex: 1,
+  },
+  respondIndicator: {
+    position: "absolute",
+    right: sx(16),
+    bottom: sx(16),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: sx(4),
+  },
+  respondIndicatorText: {
+    color: "#B0C4DE", // Light blue-gray color
+    fontSize: sx(11),
+    fontWeight: "500",
   },
 });

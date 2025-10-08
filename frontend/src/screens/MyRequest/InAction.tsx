@@ -11,17 +11,24 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
-import { RequestCardData, RequestStatus } from "@/types/request";
+import { RequestCardData, RequestStatus, RequestFilterValue } from "@/types/request";
 import RequestCard from "@/components/overlays/RequestCard";
 import { useRequestByStatus } from "@/hooks/useRequests";
 import NewLeaveRequest from "@/components/overlays/NewLeaveRequest";
 import RequestDetail from "@/components/overlays/RequestDetail";
+import RequestFilter from "@/components/overlays/RequestFilter";
 
 export default function InAction() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [newLeaveRequestVisible, setNewLeaveRequestVisible] = useState(false);
   const [requestDetailVisible, setRequestDetailVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<RequestCardData | null>(null);
+  const [filterValue, setFilterValue] = useState<RequestFilterValue>({
+    leaveTypes: [],
+    swapTypes: [],
+    openShiftRequest: false,
+  });
+  const [showFilter, setShowFilter] = useState(false);
   const { requests, loading, error, refresh } = useRequestByStatus(
     "AWAITING",
     selectedMonth.getMonth() + 1,
@@ -73,11 +80,63 @@ export default function InAction() {
     setSelectedRequest(null);
   };
 
+  const handleFilterApply = () => {
+    setShowFilter(false);
+  };
+
+  const handleFilterClear = () => {
+    setFilterValue({
+      leaveTypes: [],
+      swapTypes: [],
+      openShiftRequest: false,
+    });
+  };
+
+  const handleFilterClose = () => {
+    setShowFilter(false);
+  };
+
+  // Filter requests based on selected filters
+  const filteredRequests = requests.filter(request => {
+    // Check leave types
+    if (filterValue.leaveTypes.length > 0) {
+      if (request.requestType === "Leave Request" && 
+          filterValue.leaveTypes.includes(request.requestSubType as string)) {
+        return true;
+      }
+    }
+
+    // Check swap types
+    if (filterValue.swapTypes.length > 0) {
+      if (request.requestType === "Swap Request") {
+        const isIncomingSwap = request.isIncomingSwap;
+        const swapType = isIncomingSwap ? "Incoming Swap" : "My Swap";
+        if (filterValue.swapTypes.includes(swapType)) {
+          return true;
+        }
+      }
+    }
+
+    // Check open shift request
+    if (filterValue.openShiftRequest && request.requestType === "Open Shift Request") {
+      return true;
+    }
+
+    // If no filters are selected, show all requests
+    if (filterValue.leaveTypes.length === 0 && 
+        filterValue.swapTypes.length === 0 && 
+        !filterValue.openShiftRequest) {
+      return true;
+    }
+
+    return false;
+  });
+
   return (
     <View style={styles.container}>
       {/* Month Navigation */}
       <View style={styles.monthNav}>
-        <TouchableOpacity style={styles.filterButton}>
+        <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilter(!showFilter)}>
           <Ionicons name="options-outline" size={sx(20)} color={COLOR.ink} />
         </TouchableOpacity>
         
@@ -98,6 +157,16 @@ export default function InAction() {
         </TouchableOpacity>
       </View>
 
+      {/* Request Filter */}
+      <RequestFilter
+        visible={showFilter}
+        value={filterValue}
+        onChange={setFilterValue}
+        onApply={handleFilterApply}
+        onClear={handleFilterClear}
+        onClose={handleFilterClose}
+      />
+
       {/* Request List */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.requestList}>
@@ -113,13 +182,13 @@ export default function InAction() {
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
-          ) : requests.length === 0 ? (
+          ) : filteredRequests.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="document-outline" size={sx(48)} color={COLOR.label} />
               <Text style={styles.emptyText}>No awaiting requests</Text>
             </View>
           ) : (
-            requests.map((request, index) => (
+            filteredRequests.map((request, index) => (
               <RequestCard
                 key={`awaiting-${request.id}-${index}`}
                 request={request}
