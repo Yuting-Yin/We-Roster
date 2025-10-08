@@ -29,7 +29,6 @@ export default function Login() {
   const [domain, setDomain] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function onLogin() {
@@ -65,7 +64,7 @@ export default function Login() {
 
       {/* Welcome message */}
       <View style={{ alignItems: "center", marginTop: sy(12), marginBottom: sy(64) }}>
-        <Text style={styles.welcome}>Welcome message</Text>
+        <Text style={styles.welcome}>Sign in to your account</Text>
       </View>
 
       {/* Inputs */}
@@ -74,16 +73,6 @@ export default function Login() {
         <Field placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" topGap={sy(24)} />
         <Field placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry topGap={sy(24)} />
       </View>
-
-      {/* Remember me */}
-      <TouchableOpacity
-        onPress={() => setRemember(!remember)}
-        style={{ flexDirection: "row", alignItems: "center", marginLeft: sx(48), marginTop: sy(24) }}
-        activeOpacity={0.8}
-      >
-        <View style={[styles.checkbox, { backgroundColor: remember ? "#4090CD" : "#fff" }]} />
-        <Text style={styles.remember}>Remember me</Text>
-      </TouchableOpacity>
 
       {/* Login */}
       <TouchableOpacity
@@ -100,11 +89,6 @@ export default function Login() {
         }}
       >
         <Text style={styles.loginText}>{loading ? "LOGGING IN..." : "LOGIN"}</Text>
-      </TouchableOpacity>
-
-      {/* Forgot password */}
-      <TouchableOpacity activeOpacity={0.8} style={{ alignItems: "center", marginTop: sy(64) }}>
-        <Text style={styles.forgot}>Forgot password?</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -134,8 +118,5 @@ function Field({ topGap = 0, style, ...rest }: FieldProps) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
   welcome: { color: "#4090CD", fontSize: sx(14) },
-  checkbox: { width: sx(20), height: sx(20), borderWidth: 1, borderColor: "#4090CD", marginRight: sx(8) },
-  remember: { color: "#4090CD", fontSize: sx(14) },
   loginText: { color: "#FFFFFF", fontSize: sx(16), fontWeight: "normal" },
-  forgot: { color: "#4090CD", fontSize: sx(14) },
 });
