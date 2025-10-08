@@ -284,6 +284,12 @@ export default function SwapShift({
                       <Avatar initials={p.initials} />
                       <View style={{ marginLeft: sx(10), flex: 1, justifyContent: "center" }}>
                         <Text style={{ color: COLOR.ink, fontSize: sx(14), fontWeight: "600" }}>{p.name}</Text>
+                        {/* Show designation for all users */}
+                        {p.title && (
+                          <Text style={{ color: COLOR.ink, fontSize: sx(12), marginTop: sy(2) }}>
+                            {p.title}
+                          </Text>
+                        )}
                         {loadingShift ? (
                           <Text style={{ color: COLOR.label, fontSize: sx(12), marginTop: sy(2) }}>
                             Loading...
@@ -294,11 +300,6 @@ export default function SwapShift({
                           </Text>
                         ) : (
                           <>
-                            {designation && (
-                              <Text style={{ color: COLOR.ink, fontSize: sx(12), marginTop: sy(2) }}>
-                                {designation}
-                              </Text>
-                            )}
                             {shiftTime && (
                               <Text style={{ color: COLOR.brandAlt, fontSize: sx(12), marginTop: sy(2) }}>
                                 {shiftTime}
@@ -310,7 +311,6 @@ export default function SwapShift({
                                 <Text style={styles.dim}>{shiftRoom}</Text>
                               </>
                             )}
-                            {!!p.title && <Text style={styles.dim}>{p.title}</Text>}
                           </>
                         )}
                       </View>
@@ -340,6 +340,6 @@ const styles = StyleSheet.create({
   dim: { color: COLOR.ink, fontSize: sx(12) },
   dimStrong: { color: COLOR.ink, fontSize: sx(12), fontWeight: "600" },
   searchBox: { borderWidth: 1, borderColor: COLOR.divider, borderRadius: sx(20), paddingVertical: sy(8), paddingHorizontal: sx(12), flexDirection: "row", alignItems: "center" },
-  card: { borderWidth: 1, borderColor: COLOR.divider, borderRadius: sx(10), paddingHorizontal: sx(12), paddingVertical: sy(10), marginTop: sy(12), height: sy(92) },
+  card: { borderWidth: 1, borderColor: COLOR.divider, borderRadius: sx(10), paddingHorizontal: sx(12), paddingVertical: sy(10), marginTop: sy(12), height: sy(110) },
   cardActive: { backgroundColor: "#EEF5FF", borderColor: COLOR.brand },
 });
