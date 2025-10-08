@@ -266,6 +266,7 @@ export default function SwapShift({
                 const shiftTime = userShift ? `${userShift.start}-${userShift.end}` : null;
                 const shiftCampus = userShift?.campus || null;
                 const shiftRoom = userShift?.room || null;
+                const designation = userShift?.role || null;
                 
                 return (
                   <Pressable
@@ -293,6 +294,11 @@ export default function SwapShift({
                           </Text>
                         ) : (
                           <>
+                            {designation && (
+                              <Text style={{ color: COLOR.ink, fontSize: sx(12), marginTop: sy(2) }}>
+                                {designation}
+                              </Text>
+                            )}
                             {shiftTime && (
                               <Text style={{ color: COLOR.brandAlt, fontSize: sx(12), marginTop: sy(2) }}>
                                 {shiftTime}
