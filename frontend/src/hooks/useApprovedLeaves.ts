@@ -61,20 +61,42 @@ export function useApprovedLeaves(month?: string) {
       const startTime = new Date(leave.startTime);
       const endTime = new Date(leave.endTime);
       
+      console.log('🔍 Leave processing:', {
+        leaveId: leave.id,
+        originalStartTime: leave.startTime,
+        originalEndTime: leave.endTime,
+        parsedStartTime: startTime.toISOString(),
+        parsedEndTime: endTime.toISOString(),
+        startTimeLocal: startTime.toDateString(),
+        endTimeLocal: endTime.toDateString()
+      });
+      
       // Normalize both dates to midnight for proper date-only comparison
       const startDate = new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate());
       const endDate = new Date(endTime.getFullYear(), endTime.getMonth(), endTime.getDate());
       
+      console.log('🔍 Normalized dates:', {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        startDateLocal: startDate.toDateString(),
+        endDateLocal: endDate.toDateString()
+      });
+      
       // Add all dates in the leave range (inclusive)
       const currentDate = new Date(startDate);
+      const datesAdded: string[] = [];
       
       while (currentDate <= endDate) {
         const dateKey = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
         map[dateKey] = true;
+        datesAdded.push(dateKey);
         currentDate.setDate(currentDate.getDate() + 1);
       }
+      
+      console.log('🔍 Dates added to map:', datesAdded);
     });
     
+    console.log('🔍 Final leaveMap:', map);
     return map;
   }, [leaves]);
 
