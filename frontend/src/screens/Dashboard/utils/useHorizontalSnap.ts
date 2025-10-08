@@ -14,7 +14,14 @@ export function useHorizontalSnapProps<T>(setter: (n: number) => void) {
     [setter]
   );
 
-  if (IS_WEB) return {} as const;
+  // For web, we still need onViewableItemsChanged for pagination dots to work
+  // but we don't need snap behavior
+  if (IS_WEB) {
+    return {
+      onViewableItemsChanged,
+      viewabilityConfig: viewConfigRef.current,
+    } as const;
+  }
 
   return {
     decelerationRate: "fast" as const,

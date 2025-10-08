@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, RefObject } from "react";
 import { View, Text, Pressable, FlatList, FlatListProps, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { sx } from "@/theme/metrics";
@@ -15,6 +15,8 @@ type Props<T> = {
   contentContainerStyle?: ViewStyle | Record<string, unknown>;
   flatListProps?: Partial<FlatListProps<T>>;
   footer?: React.ReactNode;
+  emptyText?: string;
+  flatListRef?: RefObject<FlatList<T> | null>;
 };
 
 export const Section = memo(function Section<T>({
@@ -27,6 +29,8 @@ export const Section = memo(function Section<T>({
   contentContainerStyle,
   flatListProps,
   footer,
+  emptyText,
+  flatListRef,
 }: Props<T>) {
   return (
     <View style={{ marginTop: sx(16) }}>
@@ -42,17 +46,24 @@ export const Section = memo(function Section<T>({
         ) : null}
       </View>
 
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        removeClippedSubviews
-        data={data}
-        keyExtractor={keyExtractor as any}
-        renderItem={renderItem as any}
-        contentContainerStyle={contentContainerStyle as any}
-        {...(flatListProps as any)}
-      />
+      {data.length === 0 && emptyText ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>{emptyText}</Text>
+        </View>
+      ) : (
+        <FlatList
+          ref={flatListRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          removeClippedSubviews={false}
+          data={data}
+          keyExtractor={keyExtractor as any}
+          renderItem={renderItem as any}
+          contentContainerStyle={[{ paddingBottom: 16 }, contentContainerStyle as any]}
+          {...(flatListProps as any)}
+        />
+      )}
       {footer}
     </View>
   );
-}) as <T>(p: Props<T>) => JSX.Element;
+}) as <T>(p: Props<T>) => React.ReactElement;
