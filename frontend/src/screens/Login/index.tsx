@@ -64,7 +64,7 @@ export default function Login() {
 
       {/* Welcome message */}
       <View style={{ alignItems: "center", marginTop: sy(12), marginBottom: sy(64) }}>
-        <Text style={styles.welcome}>Welcome message</Text>
+        <Text style={styles.welcome}>Sign in to your account</Text>
       </View>
 
       {/* Inputs */}
