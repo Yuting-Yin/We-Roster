@@ -5,6 +5,7 @@ import com.weroster.entity.*;
 import com.weroster.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -289,6 +290,83 @@ public class MyRosterController {
             
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Get shift details by ID
+     */
+    @GetMapping("/shift/{id}")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ShiftDetailsDto> getShiftDetails(@PathVariable Long id) {
+        try {
+            System.out.println("🔍 MyRosterController - getShiftDetails called for shift ID: " + id);
+            
+            // Get current user from JWT token (simplified for now)
+            User currentUser = userRepository.findByDomainAndEmail("test", "test@example.com")
+                .orElseThrow(() -> new RuntimeException("Test user not found"));
+            
+            Staff staff = findStaffByUser(currentUser);
+            System.out.println("🔍 MyRosterController - Found staff: " + staff.getId());
+            
+            // Find the shift
+            Shift shift = shiftRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Shift not found"));
+            
+            System.out.println("🔍 MyRosterController - Found shift: " + shift.getId());
+            
+            // Check if the staff member is assigned to this shift
+            List<ShiftAssignment> assignments = shiftAssignmentRepository.findByShiftId(id);
+            boolean isAssigned = assignments.stream()
+                .anyMatch(assignment -> assignment.getStaff().getId().equals(staff.getId()));
+            
+            if (!isAssigned) {
+                System.out.println("🔍 MyRosterController - Staff not assigned to this shift");
+                return ResponseEntity.status(403).body(null);
+            }
+            
+            // Get all coworkers for this shift
+            List<CoworkerDto> coworkers = assignments.stream()
+                .map(assignment -> {
+                    Staff coworkerStaff = assignment.getStaff();
+                    return CoworkerDto.builder()
+                        .id(coworkerStaff.getId().toString())
+                        .name(coworkerStaff.getFirstName() + " " + coworkerStaff.getLastName())
+                        .initials((coworkerStaff.getFirstName().charAt(0) + "" + coworkerStaff.getLastName().charAt(0)).toUpperCase())
+                        .designationName(coworkerStaff.getDesignation() != null ? coworkerStaff.getDesignation().getName() : "Any")
+                        .isLead(false) // TODO: Determine if this staff member is a lead
+                        .build();
+                })
+                .collect(Collectors.toList());
+            
+            // Build location info
+            LocationDto location = LocationDto.builder()
+                .name(shift.getLocation() != null ? shift.getLocation().getName() : "Unknown")
+                .code(shift.getLocation() != null ? shift.getLocation().getCode() : null)
+                .type(shift.getLocation() != null ? shift.getLocation().getType() : null)
+                .build();
+            
+            // Calculate duration
+            long durationMinutes = java.time.Duration.between(shift.getStartTs(), shift.getEndTs()).toMinutes();
+            
+            // Build response
+            ShiftDetailsDto response = ShiftDetailsDto.builder()
+                .date(shift.getStartTs().toLocalDate().toString())
+                .shiftId(shift.getId())
+                .startTime(shift.getStartTs().format(DateTimeFormatter.ofPattern("HH:mm")))
+                .endTime(shift.getEndTs().format(DateTimeFormatter.ofPattern("HH:mm")))
+                .durationMinutes((int) durationMinutes)
+                .location(location)
+                .designation("Any") // TODO: Get designation from shift or staff
+                .coworkers(coworkers)
+                .build();
+            
+            System.out.println("🔍 MyRosterController - Returning shift details for shift " + id);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.out.println("🔍 MyRosterController - Error getting shift details: " + e.getMessage());
+            return ResponseEntity.status(500).body(null);
         }
     }
 
