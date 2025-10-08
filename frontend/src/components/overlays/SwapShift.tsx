@@ -250,7 +250,7 @@ export default function SwapShift({
         </View>
       </ScrollView>
       
-      <WarningToast visible={warningToast} message={toastMessage} />
+      <WarningToast visible={warningToast} text={toastMessage} />
     </View>
   );
 }

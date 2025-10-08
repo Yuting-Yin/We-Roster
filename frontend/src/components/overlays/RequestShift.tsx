@@ -83,7 +83,7 @@ export default function RequestShift({
         </ScrollView>
       </Animated.View>
       
-      <WarningToast visible={warningToast} message={toastMessage} />
+      <WarningToast visible={warningToast} text={toastMessage} />
     </View>
   );
 }

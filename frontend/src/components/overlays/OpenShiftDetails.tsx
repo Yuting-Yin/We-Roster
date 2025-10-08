@@ -189,7 +189,7 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
         </View>
       </View>
       
-      <WarningToast visible={warningToast} message={toastMessage} />
+      <WarningToast visible={warningToast} text={toastMessage} />
     </Modal>
   );
 });
