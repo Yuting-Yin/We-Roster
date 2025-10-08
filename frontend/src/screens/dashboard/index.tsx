@@ -67,8 +67,8 @@ export default function Dashboard() {
     });
   };
 
-  // Get current user info (use mock data for now until authentication is properly implemented)
-  const { firstName, displayName, initials, email, user } = useCurrentUser({mock: true});
+  // Get current user info (connected to backend database)
+  const { firstName, displayName, initials, email, user } = useCurrentUser({mock: false});
   
   // Get leaves without month filter - will be filtered in the hook
   const { leaves, loading: leavesLoading, error: leavesError, refresh: refreshLeaves } = useMyLeaves(undefined, { mock: false });
