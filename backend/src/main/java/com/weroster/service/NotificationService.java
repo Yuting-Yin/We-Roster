@@ -137,8 +137,8 @@ public class NotificationService {
     // Create notification for open shift application approval
     public void createOpenShiftApprovalNotification(OpenShiftRequest openShiftRequest, Staff approvedBy) {
         String message = String.format("Your application for open shift on %s - %s has been approved by %s",
-            formatDate(openShiftRequest.getOpenShift().getStartTs()),
-            getShiftTime(openShiftRequest.getOpenShift().getStartTs()),
+            formatDate(openShiftRequest.getOpenShift().getShift().getStartTs()),
+            getShiftTime(openShiftRequest.getOpenShift().getShift().getStartTs()),
             getStaffName(approvedBy));
             
         createNotification(
@@ -155,8 +155,8 @@ public class NotificationService {
     // Create notification for open shift application decline
     public void createOpenShiftDeclineNotification(OpenShiftRequest openShiftRequest, Staff declinedBy) {
         String message = String.format("Your application for open shift on %s - %s has been declined by %s",
-            formatDate(openShiftRequest.getOpenShift().getStartTs()),
-            getShiftTime(openShiftRequest.getOpenShift().getStartTs()),
+            formatDate(openShiftRequest.getOpenShift().getShift().getStartTs()),
+            getShiftTime(openShiftRequest.getOpenShift().getShift().getStartTs()),
             getStaffName(declinedBy));
             
         createNotification(

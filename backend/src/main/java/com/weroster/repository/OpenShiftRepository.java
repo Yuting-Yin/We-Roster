@@ -12,12 +12,15 @@ import java.util.List;
 @Repository
 public interface OpenShiftRepository extends JpaRepository<OpenShift, Long> {
     
-    @Query("SELECT os FROM OpenShift os WHERE os.startTs >= :startDate AND os.startTs < :endDate ORDER BY os.startTs")
+    @Query("SELECT os FROM OpenShift os WHERE os.shift.startTs >= :startDate AND os.shift.startTs < :endDate ORDER BY os.shift.startTs")
     List<OpenShift> findByDateRange(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
     
-    @Query("SELECT os FROM OpenShift os WHERE DATE(os.startTs) = DATE(:date) ORDER BY os.startTs")
+    @Query("SELECT os FROM OpenShift os WHERE DATE(os.shift.startTs) = DATE(:date) ORDER BY os.shift.startTs")
     List<OpenShift> findByDate(@Param("date") LocalDateTime date);
     
-    @Query("SELECT os FROM OpenShift os WHERE os.status = 'AVAILABLE' AND os.startTs >= :startDate AND os.startTs < :endDate ORDER BY os.startTs")
+    @Query("SELECT os FROM OpenShift os WHERE os.status = 'AVAILABLE' AND os.shift.startTs >= :startDate AND os.shift.startTs < :endDate ORDER BY os.shift.startTs")
     List<OpenShift> findAvailableByDateRange(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+    
+    @Query("SELECT os FROM OpenShift os WHERE os.shift.id = :shiftId")
+    List<OpenShift> findByShiftId(@Param("shiftId") Long shiftId);
 }

@@ -43,6 +43,20 @@ public class Shift {
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
     
+    @Column(name = "status", length = 30, nullable = false)
+    @Builder.Default
+    private String status = "COMPLETE";
+    
+    @Column(name = "created_at", nullable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
+    
     @OneToMany(mappedBy = "shift", cascade = CascadeType.ALL)
     private List<ShiftAssignment> shiftAssignments;
+    
+    @OneToMany(mappedBy = "shift", cascade = CascadeType.ALL)
+    private List<ShiftDesignationRequirements> designationRequirements;
+    
+    @OneToOne(mappedBy = "shift", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private OpenShift openShift;
 }

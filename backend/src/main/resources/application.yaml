@@ -7,7 +7,7 @@ spring:
     name: weroster-backend
   
   datasource:
-    url: jdbc:mysql://localhost:3306/weroster?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/weroster_fresh?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -20,6 +20,10 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
         format_sql: true
+        hbm2ddl:
+          auto: create-drop
+          create_namespaces: true
+          drop_database: true
     open-in-view: false
 
 logging:
