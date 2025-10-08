@@ -8,6 +8,7 @@ import Chip from "@/components/common/Chip";
 import Avatar from "@/components/common/Avatar";
 import { EventItem } from "@/types/roster";
 import { useApprovedLeaves } from "@/hooks/useApprovedLeaves";
+import WarningToast from "@/components/overlays/WarningToast";
 
 export default function ShiftDetails({
   visible, onClose, onPressPlus, onCoworkerPress, date, event,
@@ -22,6 +23,14 @@ export default function ShiftDetails({
   const plusRef = React.useRef<View>(null);
   const anim = React.useRef(new Animated.Value(0)).current; // 0 -> hidden, 1 -> visible
   const { leaveMap } = useApprovedLeaves();
+  const [warningToast, setWarningToast] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState("");
+  
+  const showWarningToast = (message: string) => { 
+    setToastMessage(message); 
+    setWarningToast(true); 
+    setTimeout(() => setWarningToast(false), 1800); 
+  };
 
   React.useEffect(() => {
     if (visible && event) {
@@ -45,7 +54,11 @@ export default function ShiftDetails({
   const isDisabled = hasApprovedLeave;
   
   const measurePlus = () => {
-    if (isDisabled) return; // Don't allow pressing if disabled
+    // Check if the date has an approved leave
+    if (hasApprovedLeave) {
+      showWarningToast("Cannot submit requests for dates with approved leave. You already have an approved leave request for this date.");
+      return;
+    }
     
     console.log("[ShiftDetails] + pressed"); // TODO: Remove debug logging after hooking up real action.
     plusRef.current?.measureInWindow((px, py, w, h) => {
@@ -71,7 +84,7 @@ export default function ShiftDetails({
   return (
     <Animated.View style={[styles.wrap, animatedStyle]}>
       <View style={styles.header}>
-        <Pressable ref={plusRef} onPress={measurePlus} hitSlop={10} disabled={isDisabled}>
+        <Pressable ref={plusRef} onPress={measurePlus} hitSlop={10}>
           <Ionicons 
             name="add-outline" 
             size={sx(24)} 
@@ -179,6 +192,8 @@ export default function ShiftDetails({
           </View>
         </View>
       </ScrollView>
+      
+      <WarningToast visible={warningToast} text={toastMessage} />
     </Animated.View>
   );
 }

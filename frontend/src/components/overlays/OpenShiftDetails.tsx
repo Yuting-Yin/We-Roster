@@ -56,6 +56,12 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
   const handleApply = () => {
     if (!shift) return;
     
+    // Check if the date has an approved leave
+    if (hasApprovedLeave) {
+      showWarningToast("Cannot submit requests for dates with approved leave. You already have an approved leave request for this date.");
+      return;
+    }
+    
     // Check if the date is in the past
     if (isDateStringInPast(shift.date)) {
       const errorMessage = getPastDateErrorMessage(shift.date);
@@ -187,9 +193,8 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
           {/* Apply */}
           <Pressable
             style={[styles.applyBtn, isDisabled && styles.applyBtnDisabled]}
-            onPress={isDisabled ? undefined : handleApply}
-            android_ripple={isDisabled ? undefined : { color: "#e6f0fb", borderless: true }}
-            disabled={isDisabled}
+            onPress={handleApply}
+            android_ripple={isDisabled ? { color: "#e6f0fb40", borderless: true } : { color: "#e6f0fb", borderless: true }}
           >
             <Text style={[styles.applyText, isDisabled && styles.applyTextDisabled]}>Apply</Text>
           </Pressable>
