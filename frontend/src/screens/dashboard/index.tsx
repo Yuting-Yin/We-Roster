@@ -130,23 +130,23 @@ export default function Dashboard() {
   // Use a stable date to prevent re-loading on every render
   const [weekStartDate] = useState(() => {
     const today = new Date();
-    // Calculate start of current week (Monday)
-    // If today is Sunday (0), go back 6 days to get Monday
-    // If today is Monday (1), go back 0 days
-    // If today is Tuesday (2), go back 1 day
-    // etc.
-    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    // Calculate start of current week (Monday) using UTC to avoid timezone issues
+    const year = today.getUTCFullYear();
+    const month = today.getUTCMonth();
+    const date = today.getUTCDate();
+    const dayOfWeek = today.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 6 days back, Monday = 0 days back
     
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - daysToSubtract);
-    startOfWeek.setHours(0, 0, 0, 0);
+    const startOfWeek = new Date(Date.UTC(year, month, date - daysToSubtract, 0, 0, 0, 0));
     
     console.log('🔍 Dashboard week calculation:', {
       today: today.toDateString(),
+      todayUTC: today.toISOString(),
       dayOfWeek,
       daysToSubtract,
-      startOfWeek: startOfWeek.toDateString()
+      startOfWeek: startOfWeek.toDateString(),
+      startOfWeekUTC: startOfWeek.toISOString(),
+      startOfWeekUTCDay: startOfWeek.getUTCDay() // Should be 1 (Monday)
     });
     
     return startOfWeek;
@@ -188,15 +188,23 @@ export default function Dashboard() {
         const weekData: Record<string, any[]> = {};
         console.log('🔍 Dashboard loading week data for dates:');
         
-        // Calculate the end of the current week (Sunday)
-        const weekEndDate = new Date(weekStartDate);
-        weekEndDate.setDate(weekStartDate.getDate() + 6);
+        // Calculate the end of the current week (Sunday) using UTC
+        const weekEndDate = new Date(Date.UTC(
+          weekStartDate.getUTCFullYear(),
+          weekStartDate.getUTCMonth(),
+          weekStartDate.getUTCDate() + 6,
+          0, 0, 0, 0
+        ));
         
         console.log('🔍 Week range:', weekStartDate.toDateString(), 'to', weekEndDate.toDateString());
         
         for (let i = 0; i < 7; i++) {
-          const date = new Date(weekStartDate);
-          date.setDate(weekStartDate.getDate() + i);
+          const date = new Date(Date.UTC(
+            weekStartDate.getUTCFullYear(),
+            weekStartDate.getUTCMonth(),
+            weekStartDate.getUTCDate() + i,
+            0, 0, 0, 0
+          ));
           const dateKey = date.toISOString().split('T')[0];
           
           console.log(`  Day ${i}: ${date.toDateString()} (${dateKey})`);
@@ -264,17 +272,25 @@ export default function Dashboard() {
     
     const weekShifts: any[] = [];
     
-    // Calculate the end of the current week (Sunday) for validation
-    const weekEndDate = new Date(weekStartDate);
-    weekEndDate.setDate(weekStartDate.getDate() + 6);
+    // Calculate the end of the current week (Sunday) for validation using UTC
+    const weekEndDate = new Date(Date.UTC(
+      weekStartDate.getUTCFullYear(),
+      weekStartDate.getUTCMonth(),
+      weekStartDate.getUTCDate() + 6,
+      0, 0, 0, 0
+    ));
     
     console.log('🔍 Processing myShifts for range:', weekStartDate.toDateString(), 'to', weekEndDate.toDateString());
     console.log('🔍 weekEvents keys:', Object.keys(weekEvents));
     console.log('🔍 weekEvents data:', weekEvents);
     
     for (let i = 0; i < 7; i++) {
-      const date = new Date(weekStartDate);
-      date.setDate(weekStartDate.getDate() + i);
+      const date = new Date(Date.UTC(
+        weekStartDate.getUTCFullYear(),
+        weekStartDate.getUTCMonth(),
+        weekStartDate.getUTCDate() + i,
+        0, 0, 0, 0
+      ));
       const dateKey = date.toISOString().split('T')[0];
       const dayEvents = weekEvents[dateKey] || [];
       
@@ -330,15 +346,19 @@ export default function Dashboard() {
 
   // Convert open shifts to display format and sort by date (Monday to Sunday)
   const openShiftsFormatted = useMemo(() => {
-    // Calculate the end of the current week (Sunday) for validation
-    const weekEndDate = new Date(weekStartDate);
-    weekEndDate.setDate(weekStartDate.getDate() + 6);
+    // Calculate the end of the current week (Sunday) for validation using UTC
+    const weekEndDate = new Date(Date.UTC(
+      weekStartDate.getUTCFullYear(),
+      weekStartDate.getUTCMonth(),
+      weekStartDate.getUTCDate() + 6,
+      0, 0, 0, 0
+    ));
     
     console.log('🔍 Processing openShifts for range:', weekStartDate.toDateString(), 'to', weekEndDate.toDateString());
     
-    // Filter shifts to only include current week
+    // Filter shifts to only include current week using UTC comparisons
     const currentWeekShifts = openShiftsData.filter(shift => {
-      const shiftDate = new Date(shift.date + 'T00:00:00');
+      const shiftDate = new Date(shift.date + 'T00:00:00.000Z'); // Parse as UTC
       const isInCurrentWeek = shiftDate >= weekStartDate && shiftDate <= weekEndDate;
       console.log(`🔍 Open shift ${shift.date}: ${isInCurrentWeek ? 'INCLUDED' : 'EXCLUDED'} (${shiftDate.toDateString()})`);
       return isInCurrentWeek;
