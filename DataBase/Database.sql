@@ -103,9 +103,12 @@ CREATE TABLE shift (
                        type VARCHAR(50),
                        name VARCHAR(200),
                        note TEXT,
+                       status VARCHAR(30) NOT NULL DEFAULT 'COMPLETE',
+                       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                        CONSTRAINT fk_shift_dept FOREIGN KEY (dept_id) REFERENCES dept(id),
                        CONSTRAINT fk_shift_location FOREIGN KEY (location_id) REFERENCES location(id),
-                       CONSTRAINT chk_shift_time CHECK (end_ts > start_ts)
+                       CONSTRAINT chk_shift_time CHECK (end_ts > start_ts),
+                       CONSTRAINT chk_shift_status CHECK (status IN ('COMPLETE', 'INCOMPLETE'))
 ) ENGINE=InnoDB;
 
 
@@ -117,10 +120,14 @@ CREATE TABLE shift_assignment (
                                   shift_id BIGINT NOT NULL,
                                   is_lead BOOLEAN NOT NULL DEFAULT FALSE,
                                   assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                  assigned_by BIGINT NULL,
+                                  status VARCHAR(30) DEFAULT 'ACTIVE',
                                   note TEXT,
                                   UNIQUE KEY uq_shift_staff (shift_id, staff_id),
                                   CONSTRAINT fk_staff_sa FOREIGN KEY (staff_id) REFERENCES staff(id)  ON DELETE CASCADE,
-                                  CONSTRAINT fk_shift_sa FOREIGN KEY (shift_id) REFERENCES shift(id)  ON DELETE CASCADE
+                                  CONSTRAINT fk_shift_sa FOREIGN KEY (shift_id) REFERENCES shift(id)  ON DELETE CASCADE,
+                                  CONSTRAINT fk_assigned_by FOREIGN KEY (assigned_by) REFERENCES staff(id),
+                                  CONSTRAINT chk_assignment_status CHECK (status IN ('ACTIVE', 'WITHDRAWN', 'CANCELLED'))
 ) ENGINE=InnoDB;
 
 CREATE TABLE leave_request(
@@ -155,33 +162,26 @@ CREATE TABLE shift_swap(
 
 CREATE TABLE open_shift(
                            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                           start_ts DATETIME NOT NULL,
-                           end_ts DATETIME NOT NULL,
-                           dept_id BIGINT NULL,
-                           location_id BIGINT NULL,
-                           type VARCHAR(50),
-                           name VARCHAR(200),
-                           note TEXT,
-                           date_made DATETIME NOT NULL,
+                           shift_id BIGINT NOT NULL,
                            urgent_flag TINYINT(1) NULL,
                            extra_pay_cents INT NULL,
                            status VARCHAR(30) DEFAULT 'AVAILABLE',
                            created_by BIGINT NULL,
                            total_staff_needed INT NOT NULL DEFAULT 1,
-                           CONSTRAINT fk_open_shift_dept FOREIGN KEY (dept_id) REFERENCES dept(id),
-                           CONSTRAINT fk_open_shift_location FOREIGN KEY (location_id) REFERENCES location(id),
+                           created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                           CONSTRAINT fk_open_shift_shift FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE,
                            CONSTRAINT fk_open_shift_created_by FOREIGN KEY (created_by) REFERENCES staff(id),
-                           CONSTRAINT chk_open_shift_time CHECK (end_ts > start_ts),
                            CONSTRAINT chk_open_shift_status CHECK (status IN ('AVAILABLE', 'READY_TO_RUN', 'APPROVED_FOR_FORMAL', 'CANCELLED'))
 ) ENGINE = InnoDB;
 
-CREATE TABLE open_shift_designation_requirements (
+CREATE TABLE shift_designation_requirements (
                                                       id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                                      open_shift_id BIGINT NOT NULL,
+                                                      shift_id BIGINT NOT NULL,
                                                       designation_id BIGINT NOT NULL,
                                                       required_count INT NOT NULL DEFAULT 1,
-                                                      CONSTRAINT fk_osdr_open_shift FOREIGN KEY (open_shift_id) REFERENCES open_shift(id) ON DELETE CASCADE,
-                                                      CONSTRAINT fk_osdr_designation FOREIGN KEY (designation_id) REFERENCES designation(id)
+                                                      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                      CONSTRAINT fk_sdr_shift FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE,
+                                                      CONSTRAINT fk_sdr_designation FOREIGN KEY (designation_id) REFERENCES designation(id)
 ) ENGINE = InnoDB;
 
 CREATE TABLE open_shift_request (
@@ -201,21 +201,6 @@ CREATE TABLE open_shift_request (
                                      UNIQUE KEY uq_open_shift_staff (open_shift_id, staff_id)
 ) ENGINE = InnoDB;
 
-CREATE TABLE open_shift_assignment (
-                                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                        open_shift_id BIGINT NOT NULL,
-                                        staff_id BIGINT NOT NULL,
-                                        is_lead BOOLEAN NOT NULL DEFAULT FALSE,
-                                        assigned_by BIGINT NULL,
-                                        assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                        status VARCHAR(30) DEFAULT 'ACTIVE',
-                                        note TEXT,
-                                        CONSTRAINT fk_osa_open_shift FOREIGN KEY (open_shift_id) REFERENCES open_shift(id) ON DELETE CASCADE,
-                                        CONSTRAINT fk_osa_staff FOREIGN KEY (staff_id) REFERENCES staff(id),
-                                        CONSTRAINT fk_osa_assigned_by FOREIGN KEY (assigned_by) REFERENCES staff(id),
-                                        CONSTRAINT chk_osa_status CHECK (status IN ('ACTIVE', 'WITHDRAWN', 'CANCELLED')),
-                                        UNIQUE KEY uq_open_shift_assignment (open_shift_id, staff_id)
-) ENGINE = InnoDB;
 
 CREATE TABLE notification (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
