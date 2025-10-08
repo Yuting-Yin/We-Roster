@@ -60,6 +60,9 @@ export function useMyLeaves(month?: string, opts: Options = {}) {
       return;
     }
 
+    // Add a small delay to ensure token is properly set in the API layer
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     try {
       setLoading(true);
       setError(null);
