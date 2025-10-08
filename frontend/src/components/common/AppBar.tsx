@@ -34,6 +34,8 @@ export default function AppBar({ title }: AppBarProps) {
         return "My Request";
       case "My Team":
         return "My Team";
+      case "Settings":
+        return "Settings";
       default:
         return "Roster"; // Default fallback
     }
