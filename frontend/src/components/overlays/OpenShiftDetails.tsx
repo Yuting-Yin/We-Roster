@@ -190,6 +190,7 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
       
       <WarningToast visible={warningToast} message={toastMessage} />
     </Modal>
+  );
 });
 
 const styles = StyleSheet.create({
