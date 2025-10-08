@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, Modal, Pressable, ScrollView, Platform } from "
 import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
+import { isDateStringInPast, getPastDateErrorMessage } from "@/lib/dateValidation";
+import WarningToast from "@/components/overlays/WarningToast";
 
 export type Coworker = { id: string; name: string; initials: string };
 
@@ -40,6 +42,27 @@ const Pill = ({ children }: { children: React.ReactNode }) => (
 );
 
 export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], onClose, onApply, onCoworkerPress }: Props) {
+  const [warningToast, setWarningToast] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState("");
+  
+  const showWarningToast = (message: string) => { 
+    setToastMessage(message); 
+    setWarningToast(true); 
+    setTimeout(() => setWarningToast(false), 1800); 
+  };
+
+  const handleApply = () => {
+    if (!shift) return;
+    
+    // Check if the date is in the past
+    if (isDateStringInPast(shift.date)) {
+      const date = new Date(shift.date + 'T00:00:00.000Z');
+      showWarningToast(getPastDateErrorMessage(date));
+      return;
+    }
+    
+    onApply(shift);
+  };
   const durationHrs = useMemo(() => {
     if (!shift) return 0;
     const [sh, sm] = shift.start.split(":").map(Number);
@@ -157,15 +180,16 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
           {/* Apply */}
           <Pressable
             style={styles.applyBtn}
-            onPress={() => onApply(shift)}
+            onPress={handleApply}
             android_ripple={{ color: "#e6f0fb", borderless: true }}
           >
             <Text style={styles.applyText}>Apply</Text>
           </Pressable>
         </View>
       </View>
+      
+      <WarningToast visible={warningToast} message={toastMessage} />
     </Modal>
-  );
 });
 
 const styles = StyleSheet.create({

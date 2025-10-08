@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { fmt as fmtDate, dayKey } from "@/lib/date";
+import { isDateInPast, getPastDateErrorMessage } from "@/lib/dateValidation";
 import Chip from "@/components/common/Chip";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { createLeaveRequest } from "@/api/leave";
@@ -101,6 +102,13 @@ export default function RequestLeave({
 
   const submit = async () => {
     if (submitting) return;
+    
+    // Check if the date is in the past
+    if (isDateInPast(date)) {
+      showWarningToast(getPastDateErrorMessage(date));
+      return;
+    }
+    
     try {
       setSubmitting(true);
       const payload = {

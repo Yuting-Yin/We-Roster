@@ -6,11 +6,13 @@ import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import Avatar from "@/components/common/Avatar";
 import { fmt, dayKey } from "@/lib/date";
+import { isDateInPast, getPastDateErrorMessage } from "@/lib/dateValidation";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type { EventItem } from "@/types/roster";
 import { getMockShiftForUser } from "@/lib/fakeData";
 import { createSwapRequest } from "@/api/swap";
 import { useNotificationContext } from "@/contexts/NotificationContext";
+import WarningToast from "@/components/overlays/WarningToast";
 
 type User = { id: string; name: string; initials: string; title?: string };
 
@@ -41,6 +43,16 @@ export default function SwapShift({
   const [query, setQuery] = React.useState("");
   const [selected, setSelected] = React.useState<string | undefined>();
   const [submitting, setSubmitting] = React.useState(false);
+  
+  // Toast state
+  const [warningToast, setWarningToast] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState("");
+  
+  const showWarningToast = (message: string) => { 
+    setToastMessage(message); 
+    setWarningToast(true); 
+    setTimeout(() => setWarningToast(false), 1800); 
+  };
 
   // candidates = all available users for swap (excluding current user)
   const candidates = React.useMemo(() => {
@@ -59,6 +71,13 @@ export default function SwapShift({
 
   const submit = async () => {
     if (!selected || submitting) return;
+    
+    // Check if the date is in the past
+    if (isDateInPast(date)) {
+      showWarningToast(getPastDateErrorMessage(date));
+      return;
+    }
+    
     try {
       setSubmitting(true);
       const requesterId = user?.id ?? "u_mock";
@@ -230,8 +249,9 @@ export default function SwapShift({
           )}
         </View>
       </ScrollView>
+      
+      <WarningToast visible={warningToast} message={toastMessage} />
     </View>
-  );
 }
 
 const styles = StyleSheet.create({
