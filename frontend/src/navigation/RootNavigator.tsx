@@ -13,7 +13,7 @@ import Notifications from "@/screens/Notifications";
 
 // 主题色（给 Profile / EditProfile 的头部用）
 import { COLOR } from "@/theme/colors";
-import { sx } from "@/theme/metrics";
+import { sx, sy } from "@/theme/metrics";
 import { OverlayProvider } from "@/contexts/OverlayContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 
@@ -68,6 +68,7 @@ export default function RootNavigator() {
             title: "Settings",
             headerStyle: { 
               backgroundColor: COLOR.brand,
+              height: 56, // Standard header height to match AppBar
               shadowColor: "#000",
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.12,
