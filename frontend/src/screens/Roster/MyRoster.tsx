@@ -38,10 +38,24 @@ export default function MyRoster() {
   // Helper function to get start of week (Monday)
   const startOfWeekMon = (d: Date) => {
     const r = new Date(d);
-    const day = r.getDay(); // 0..6
-    const diff = day === 0 ? -6 : 1 - day;
-    r.setDate(r.getDate() + diff);
+    // Calculate start of current week (Monday)
+    // If today is Sunday (0), go back 6 days to get Monday
+    // If today is Monday (1), go back 0 days
+    // If today is Tuesday (2), go back 1 day
+    // etc.
+    const dayOfWeek = r.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 6 days back, Monday = 0 days back
+    
+    r.setDate(r.getDate() - daysToSubtract);
     r.setHours(0, 0, 0, 0);
+    
+    console.log('🔍 Roster MyRoster week calculation:', {
+      today: d.toDateString(),
+      dayOfWeek,
+      daysToSubtract,
+      startOfWeek: r.toDateString()
+    });
+    
     return r;
   };
 
