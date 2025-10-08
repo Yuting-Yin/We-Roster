@@ -74,20 +74,50 @@ public class DataInitializer implements CommandLineRunner {
             return;
         }
         
-        // Clear leave requests for testing (real version should not do this)
-        System.out.println("🔍 DataInitializer - Clearing existing leave requests for testing...");
+        // Clear ALL existing data for clean setup (testing only)
+        System.out.println("🔍 DataInitializer - Clearing ALL existing data for clean setup...");
+        
+        // Clear in reverse dependency order
+        System.out.println("🔍 DataInitializer - Clearing open shift requests...");
+        openShiftRequestRepository.deleteAll();
+        
+        System.out.println("🔍 DataInitializer - Clearing shift designation requirements...");
+        shiftDesignationRequirementsRepository.deleteAll();
+        
+        System.out.println("🔍 DataInitializer - Clearing open shifts...");
+        openShiftRepository.deleteAll();
+        
+        System.out.println("🔍 DataInitializer - Clearing shift assignments...");
+        shiftAssignmentRepository.deleteAll();
+        
+        System.out.println("🔍 DataInitializer - Clearing shifts...");
+        shiftRepository.deleteAll();
+        
+        System.out.println("🔍 DataInitializer - Clearing leave requests...");
         leaveRequestRepository.deleteAll();
-        System.out.println("🔍 DataInitializer - Leave requests cleared");
         
-        // Clear swap requests for testing (real version should not do this)
-        System.out.println("🔍 DataInitializer - Clearing existing swap requests for testing...");
+        System.out.println("🔍 DataInitializer - Clearing swap requests...");
         shiftSwapRepository.deleteAll();
-        System.out.println("🔍 DataInitializer - Swap requests cleared");
         
-        // Clear existing users and reset staff user_id to ensure clean User-Staff linking
-        System.out.println("🔍 DataInitializer - Clearing existing users for clean setup...");
+        System.out.println("🔍 DataInitializer - Clearing staff...");
+        staffRepository.deleteAll();
+        
+        System.out.println("🔍 DataInitializer - Clearing users...");
         userRepository.deleteAll();
-        System.out.println("🔍 DataInitializer - Users cleared");
+        
+        System.out.println("🔍 DataInitializer - Clearing departments...");
+        departmentRepository.deleteAll();
+        
+        System.out.println("🔍 DataInitializer - Clearing locations...");
+        locationRepository.deleteAll();
+        
+        System.out.println("🔍 DataInitializer - Clearing designations...");
+        designationRepository.deleteAll();
+        
+        System.out.println("🔍 DataInitializer - Clearing hospitals...");
+        hospitalRepository.deleteAll();
+        
+        System.out.println("🔍 DataInitializer - All data cleared successfully");
         
         // Always create mock data to ensure User-Staff links exist
         // TODO: Change back to conditional check after initial setup
