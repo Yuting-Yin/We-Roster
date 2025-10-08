@@ -33,9 +33,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadToken = async () => {
     try {
       const storedToken = await AsyncStorage.getItem('auth_token');
+      console.log('🔍 AuthContext - Stored token from AsyncStorage:', storedToken ? 'Token present' : 'No token');
       if (storedToken) {
         setTokenState(storedToken);
-        console.log('🔍 AuthContext - Token loaded from storage');
+        console.log('🔍 AuthContext - Token loaded from storage:', storedToken);
+      } else {
+        console.log('🔍 AuthContext - No stored token found');
       }
     } catch (error) {
       console.error('🔍 AuthContext - Failed to load token:', error);
@@ -46,12 +49,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       if (newToken) {
         await AsyncStorage.setItem('auth_token', newToken);
-        console.log('🔍 AuthContext - Token saved');
+        console.log('🔍 AuthContext - Token saved:', newToken);
       } else {
         await AsyncStorage.removeItem('auth_token');
         console.log('🔍 AuthContext - Token cleared');
       }
       setTokenState(newToken);
+      console.log('🔍 AuthContext - Token state updated to:', newToken ? 'Token present' : 'No token');
     } catch (error) {
       console.error('🔍 AuthContext - Failed to save token:', error);
     }
@@ -83,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const data = await response.json();
       console.log('🔍 AuthContext - Login successful, data:', data);
+      console.log('🔍 AuthContext - Access token value:', data.accessToken);
       await setToken(data.accessToken);
     } catch (error) {
       console.error('🔍 AuthContext - Login error:', error);
