@@ -48,11 +48,63 @@ export default function SwapShift({
   const [warningToast, setWarningToast] = React.useState(false);
   const [toastMessage, setToastMessage] = React.useState("");
   
+  // State for user shifts - using a Map to store shift data for each user
+  const [userShifts, setUserShifts] = React.useState<Map<string, EventItem | null>>(new Map());
+  const [loadingShifts, setLoadingShifts] = React.useState<Set<string>>(new Set());
+  
   const showWarningToast = (message: string) => { 
     setToastMessage(message); 
     setWarningToast(true); 
     setTimeout(() => setWarningToast(false), 1800); 
   };
+
+  // Load shift data for all filtered users
+  React.useEffect(() => {
+    if (filtered.length === 0) return;
+
+    const loadShiftsForUsers = async () => {
+      for (const user of filtered) {
+        // Skip if we already have data for this user
+        if (userShifts.has(user.id) || loadingShifts.has(user.id)) continue;
+
+        // Mark as loading
+        setLoadingShifts(prev => new Set(prev).add(user.id));
+
+        try {
+          let shift: EventItem | null = null;
+          
+          if (getShiftForUser) {
+            // Use real API
+            shift = await getShiftForUser(user.id, date, slot);
+          } else {
+            // Fallback to mock data
+            shift = getMockShiftForUser(user.id, date, slot);
+          }
+          
+          setUserShifts(prev => new Map(prev).set(user.id, shift));
+        } catch (error) {
+          console.error('Error loading shift for user:', error);
+          setUserShifts(prev => new Map(prev).set(user.id, null));
+        } finally {
+          setLoadingShifts(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(user.id);
+            return newSet;
+          });
+        }
+      }
+    };
+
+    loadShiftsForUsers();
+  }, [filtered, getShiftForUser, date, slot]);
+
+  // Clear user shifts when component unmounts or visible changes
+  React.useEffect(() => {
+    if (!visible) {
+      setUserShifts(new Map());
+      setLoadingShifts(new Set());
+    }
+  }, [visible]);
 
   // candidates = all available users for swap (excluding current user)
   const candidates = React.useMemo(() => {
@@ -205,33 +257,8 @@ export default function SwapShift({
             ) : (
               filtered.map((p) => {
                 const active = selected === p.id;
-                const [userShift, setUserShift] = React.useState<EventItem | null | undefined>(undefined);
-                const [loadingShift, setLoadingShift] = React.useState(true);
-                
-                // Load shift data for this user
-                React.useEffect(() => {
-                  if (!getShiftForUser) {
-                    // Fallback to mock data
-                    const mockShift = getMockShiftForUser(p.id, date, slot);
-                    setUserShift(mockShift);
-                    setLoadingShift(false);
-                    return;
-                  }
-                  
-                  setLoadingShift(true);
-                  getShiftForUser(p.id, date, slot)
-                    .then((shift) => {
-                      setUserShift(shift);
-                    })
-                    .catch((error) => {
-                      console.error('Error loading shift for user:', error);
-                      setUserShift(null);
-                    })
-                    .finally(() => {
-                      setLoadingShift(false);
-                    });
-                }, [p.id, date, slot]);
-                
+                const userShift = userShifts.get(p.id);
+                const loadingShift = loadingShifts.has(p.id);
                 const isUnallocated = !userShift;
                 
                 // Get shift information for display
