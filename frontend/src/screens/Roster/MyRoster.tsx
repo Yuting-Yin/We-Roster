@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
-import { View, StyleSheet, Text } from "react-native";
+import { View, StyleSheet, Text, Animated, Pressable } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import CollapsibleCalendar from "@/components/calendar/CollapsibleCalendar";
 import DayTimeline from "@/components/timeline/DayTimeline";
@@ -234,6 +235,34 @@ export default function MyRoster() {
 
   const [toast, setToast] = React.useState(false);
   const showToast = () => { setToast(true); setTimeout(() => setToast(false), 1800); };
+
+  // Refresh animation state
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const rotateAnim = React.useRef(new Animated.Value(0)).current;
+
+  // Refresh animation functions
+  const startRefreshAnimation = () => {
+    setIsRefreshing(true);
+    rotateAnim.setValue(0);
+    Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      })
+    ).start();
+  };
+
+  const stopRefreshAnimation = () => {
+    setIsRefreshing(false);
+    rotateAnim.stopAnimation();
+    rotateAnim.setValue(0);
+  };
+
+  const rotateInterpolate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
   
   // Open shift application
   const { applyForShift, submitting } = useOpenShiftApplication();
@@ -483,17 +512,39 @@ export default function MyRoster() {
                 )}`
           }
           leftAction={{ icon: "menu", onPress: () => setMode((m) => (m === "day" ? "week" : "day")) }}
-          rightAction={{ icon: "refresh", onPress: () => {
-            setLoadingUsers(true);
-            refreshRoster();
-            refreshOpenShifts();
-            refreshLeaves();
-            getAvailableUsers()
-              .then((users) => setAvailableUsers(users))
-              .catch((e) => setUserErr(e?.message ?? "Failed to load users"))
-              .finally(() => setLoadingUsers(false));
-          }}}
+          rightAction={{ 
+            icon: "refresh", 
+            onPress: async () => {
+              startRefreshAnimation();
+              setLoadingUsers(true);
+              
+              try {
+                // Refresh all data in parallel
+                await Promise.all([
+                  refreshRoster(),
+                  refreshOpenShifts(),
+                  refreshLeaves(),
+                  getAvailableUsers().then((users) => setAvailableUsers(users))
+                ]);
+              } catch (e) {
+                console.error('Error refreshing data:', e);
+                setUserErr(e?.message ?? "Failed to load users");
+              } finally {
+                setLoadingUsers(false);
+                stopRefreshAnimation();
+              }
+            }
+          }}
         />
+        
+        {/* Animated refresh overlay */}
+        {isRefreshing && (
+          <View style={styles.refreshOverlay}>
+            <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
+              <Ionicons name="refresh" size={sx(20)} color={COLOR.brand} />
+            </Animated.View>
+          </View>
+        )}
       </View>
 
       {mode === "day" ? (
@@ -667,5 +718,16 @@ export default function MyRoster() {
 
 const styles = StyleSheet.create({
   calendarStack: { position: "relative", zIndex: 2, elevation: 4 },
+  refreshOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: sx(44),
+    height: sx(44),
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+    elevation: 10,
+  },
 });
 
