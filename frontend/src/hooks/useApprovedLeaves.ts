@@ -15,6 +15,8 @@ export function useApprovedLeaves(month?: string) {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    console.log('🔍 useApprovedLeaves - Load called, isAuthenticated:', isAuthenticated, 'token:', token ? 'present' : 'missing');
+    
     // Don't make API calls if not authenticated
     if (!isAuthenticated || !token) {
       setLoading(false);
@@ -28,6 +30,7 @@ export function useApprovedLeaves(month?: string) {
       setLoading(true);
       setError(null);
       
+      console.log('🔍 useApprovedLeaves - Making API call with token:', token ? 'present' : 'missing');
       const data = await getMyLeaves(month);
       
       // Filter only approved leaves
@@ -35,6 +38,7 @@ export function useApprovedLeaves(month?: string) {
         leave.status === 'APPROVED'
       );
       
+      console.log('🔍 useApprovedLeaves - Total leaves:', data.length, 'Approved leaves:', approvedLeaves.length);
       setLeaves(approvedLeaves);
     } catch (err: any) {
       console.error('useApprovedLeaves - Error:', err);

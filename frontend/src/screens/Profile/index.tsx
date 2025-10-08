@@ -138,12 +138,14 @@ function AboutTab() {
 
 function ScheduleTab() {
   const [date, setDate] = useState(new Date());
-  const { leaveMap } = useApprovedLeaves();
+  const { leaveMap, loading: leavesLoading, error: leavesError } = useApprovedLeaves();
   const { shiftMap, loading, error } = useMyRosterData(date);
 
   // Debug logging for Profile Schedule
   console.log('🔍 Profile Schedule - leaveMap:', leaveMap);
   console.log('🔍 Profile Schedule - date:', date.toDateString());
+  console.log('🔍 Profile Schedule - leavesLoading:', leavesLoading);
+  console.log('🔍 Profile Schedule - leavesError:', leavesError);
 
   return (
     <View style={{ flex: 1, backgroundColor: COLOR.bg }}>
