@@ -84,10 +84,10 @@ public class DataInitializer implements CommandLineRunner {
         shiftSwapRepository.deleteAll();
         System.out.println("🔍 DataInitializer - Swap requests cleared");
         
-        // Only initialize if database is empty
-        if (userRepository.count() == 0) {
-            createMockData();
-        }
+        // Always create mock data to ensure User-Staff links exist
+        // TODO: Change back to conditional check after initial setup
+        System.out.println("🔍 DataInitializer - Forcing mock data creation...");
+        createMockData();
         
         // Always create test leave requests (for testing purposes)
         createTestLeaveRequests();
