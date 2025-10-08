@@ -20,23 +20,12 @@ import WarningToast from "@/components/overlays/WarningToast";
 
 /* ================= Helpers ================= */
 const addDays = (d: Date, n: number) => {
-  const result = new Date(Date.UTC(
+  return new Date(Date.UTC(
     d.getUTCFullYear(),
     d.getUTCMonth(),
     d.getUTCDate() + n,
     0, 0, 0, 0
   ));
-  
-  console.log('🔍 addDays calculation:', {
-    inputDate: d.toDateString(),
-    inputUTC: d.toISOString(),
-    daysToAdd: n,
-    resultDate: result.toDateString(),
-    resultUTC: result.toISOString(),
-    resultUTCDay: result.getUTCDay()
-  });
-  
-  return result;
 };
 const startOfWeekMon = (d: Date) => {
   // Create a completely new date using UTC components to avoid any timezone issues
@@ -50,26 +39,6 @@ const startOfWeekMon = (d: Date) => {
   
   // Create the Monday date using UTC constructor
   const mondayDate = new Date(Date.UTC(year, month, date - daysToSubtract, 0, 0, 0, 0));
-  
-  console.log('🔍 Roster OpenShifts week calculation:', {
-    inputDate: d.toDateString(),
-    inputUTC: d.toISOString(),
-    inputUTCDay: dayOfWeek,
-    daysToSubtract,
-    mondayDate: mondayDate.toDateString(),
-    mondayUTC: mondayDate.toISOString(),
-    mondayUTCDay: mondayDate.getUTCDay(), // Should be 1 (Monday)
-    mondayUTCDate: mondayDate.getUTCDate(),
-    mondayUTCMonth: mondayDate.getUTCMonth(),
-    mondayUTCYear: mondayDate.getUTCFullYear()
-  });
-  
-  // Verify the calculation is correct
-  if (mondayDate.getUTCDay() !== 1) {
-    console.error('❌ ERROR: startOfWeekMon did not return Monday! Got day:', mondayDate.getUTCDay());
-  } else {
-    console.log('✅ SUCCESS: startOfWeekMon correctly returned Monday');
-  }
   
   return mondayDate;
 };
@@ -112,19 +81,11 @@ export default function OpenShifts() {
   const [weekStart, setWeekStart] = useState<Date>(currentWeek);
   const maxWeekStart = addMonths(currentWeek, 2);
   
-  console.log('🔍 Roster OpenShifts - Week navigation debug:');
-  console.log('🔍   - today:', today.toDateString());
-  console.log('🔍   - currentWeek:', currentWeek.toDateString());
-  console.log('🔍   - weekStart:', weekStart.toDateString());
-  
   // Update week when navigation params change
   useEffect(() => {
     if (route.params?.selectedDate) {
       const selectedDate = new Date(route.params.selectedDate + 'T00:00:00');
       const newWeekStart = startOfWeekMon(selectedDate);
-      console.log('🔍   - route.params.selectedDate:', route.params.selectedDate);
-      console.log('🔍   - selectedDate:', selectedDate.toDateString());
-      console.log('🔍   - newWeekStart:', newWeekStart.toDateString());
       setWeekStart(newWeekStart);
     }
   }, [route.params?.selectedDate]);
@@ -136,11 +97,6 @@ export default function OpenShifts() {
   const { user } = useCurrentUser();
   const { openShifts, loading, error, refresh } = useOpenShiftsData(weekStart);
   const { metadata: filterMetadata, loading: metadataLoading } = useFilterMetadata();
-  
-  console.log('🔍 Roster OpenShifts - Data loading debug:');
-  console.log('🔍   - weekStart for API:', weekStart.toISOString().split('T')[0]);
-  console.log('🔍   - openShifts keys:', Object.keys(openShifts));
-  console.log('🔍   - openShifts data:', openShifts);
 
   /* ---- Filter overlay ---- */
   const [filterVisible, setFilterVisible] = useState(false);
@@ -225,49 +181,18 @@ export default function OpenShifts() {
     weekEndDate.setUTCDate(weekStart.getUTCDate() + 6); // Monday + 6 days = Sunday
     weekEndDate.setUTCHours(0, 0, 0, 0);
     
-    console.log('🔍 Roster OpenShifts filtering for range:', weekStart.toDateString(), 'to', weekEndDate.toDateString());
-    console.log('🔍 weekStart (Monday):', weekStart.toISOString());
-    console.log('🔍 weekEndDate (Sunday):', weekEndDate.toISOString());
-    console.log('🔍 weekStart UTC components:', {
-      year: weekStart.getUTCFullYear(),
-      month: weekStart.getUTCMonth(),
-      date: weekStart.getUTCDate(),
-      day: weekStart.getUTCDay()
-    });
-    console.log('🔍 weekEndDate UTC components:', {
-      year: weekEndDate.getUTCFullYear(),
-      month: weekEndDate.getUTCMonth(),
-      date: weekEndDate.getUTCDate(),
-      day: weekEndDate.getUTCDay()
-    });
-    
     // Convert OpenShiftDto to Item format
     const allItems: Item[] = [];
     Object.entries(openShifts).forEach(([date, shifts]) => {
       // Parse date as UTC to avoid timezone issues
       const shiftDate = new Date(date + 'T00:00:00.000Z');
       
-      // Use date-only comparison to avoid time component issues
-      const shiftDateOnly = new Date(shiftDate.getFullYear(), shiftDate.getMonth(), shiftDate.getDate());
-      const weekStartOnly = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
-      const weekEndDateOnly = new Date(weekEndDate.getFullYear(), weekEndDate.getMonth(), weekEndDate.getDate());
-      
-      // Fix timezone issue by using UTC date components
+      // Fix timezone issue by using UTC date components for comparison
       const shiftDateUTC = new Date(shiftDate.getUTCFullYear(), shiftDate.getUTCMonth(), shiftDate.getUTCDate());
       const weekStartUTC = new Date(weekStart.getUTCFullYear(), weekStart.getUTCMonth(), weekStart.getUTCDate());
       const weekEndDateUTC = new Date(weekEndDate.getUTCFullYear(), weekEndDate.getUTCMonth(), weekEndDate.getUTCDate());
       
       const isInCurrentWeek = shiftDateUTC >= weekStartUTC && shiftDateUTC <= weekEndDateUTC;
-      
-      console.log(`🔍 Open shift date ${date}: ${isInCurrentWeek ? 'INCLUDED' : 'EXCLUDED'}`);
-      console.log(`🔍   - shiftDateOnly: ${shiftDateOnly.toDateString()} (${shiftDateOnly.toISOString()})`);
-      console.log(`🔍   - weekStartOnly: ${weekStartOnly.toDateString()} (${weekStartOnly.toISOString()})`);
-      console.log(`🔍   - weekEndDateOnly: ${weekEndDateOnly.toDateString()} (${weekEndDateOnly.toISOString()})`);
-      console.log(`🔍   - shiftDateUTC: ${shiftDateUTC.toDateString()} (${shiftDateUTC.toISOString()})`);
-      console.log(`🔍   - weekStartUTC: ${weekStartUTC.toDateString()} (${weekStartUTC.toISOString()})`);
-      console.log(`🔍   - weekEndDateUTC: ${weekEndDateUTC.toDateString()} (${weekEndDateUTC.toISOString()})`);
-      console.log(`🔍   - shiftDateUTC >= weekStartUTC: ${shiftDateUTC >= weekStartUTC}`);
-      console.log(`🔍   - shiftDateUTC <= weekEndDateUTC: ${shiftDateUTC <= weekEndDateUTC}`);
       
       // Only process shifts within the current week
       if (isInCurrentWeek) {
@@ -291,8 +216,6 @@ export default function OpenShifts() {
         });
       }
     });
-
-    console.log(`🔍 Filtered ${allItems.length} open shifts for current week from ${Object.values(openShifts).flat().length} total`);
 
     // Apply filters
     let arr = allItems;

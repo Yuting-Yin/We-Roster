@@ -32,16 +32,7 @@ export function useOpenShiftsData(weekStart: Date, opts: Options = {}) {
       setError(null);
       
       const startDate = weekStart.toISOString().split('T')[0]; // YYYY-MM-DD format
-      console.log('🔍 useOpenShiftsData - API call debug:');
-      console.log('🔍   - weekStart:', weekStart.toDateString());
-      console.log('🔍   - startDate sent to API:', startDate);
-      console.log('🔍   - user email:', user?.email);
-      
       const response = await getOpenShiftsForWeek(startDate, user?.email || undefined);
-      
-      console.log('🔍   - API response keys:', Object.keys(response.openShifts));
-      console.log('🔍   - API response data:', response.openShifts);
-      
       setOpenShifts(response.openShifts);
     } catch (err) {
       console.error("Failed to load open shifts:", err);

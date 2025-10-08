@@ -139,16 +139,6 @@ export default function Dashboard() {
     
     const startOfWeek = new Date(Date.UTC(year, month, date - daysToSubtract, 0, 0, 0, 0));
     
-    console.log('🔍 Dashboard week calculation:', {
-      today: today.toDateString(),
-      todayUTC: today.toISOString(),
-      dayOfWeek,
-      daysToSubtract,
-      startOfWeek: startOfWeek.toDateString(),
-      startOfWeekUTC: startOfWeek.toISOString(),
-      startOfWeekUTCDay: startOfWeek.getUTCDay() // Should be 1 (Monday)
-    });
-    
     return startOfWeek;
   });
   
@@ -181,12 +171,8 @@ export default function Dashboard() {
         }>(`/api/v1/myroster/roster?${params.toString()}`);
 
 
-        console.log('🔍 API response events keys:', res.events ? Object.keys(res.events) : 'No events');
-        console.log('🔍 API response events data:', res.events);
-        
         // Filter events to only include the current week
         const weekData: Record<string, any[]> = {};
-        console.log('🔍 Dashboard loading week data for dates:');
         
         // Calculate the end of the current week (Sunday) using UTC
         const weekEndDate = new Date(Date.UTC(
@@ -196,8 +182,6 @@ export default function Dashboard() {
           0, 0, 0, 0
         ));
         
-        console.log('🔍 Week range:', weekStartDate.toDateString(), 'to', weekEndDate.toDateString());
-        
         for (let i = 0; i < 7; i++) {
           const date = new Date(Date.UTC(
             weekStartDate.getUTCFullYear(),
@@ -206,8 +190,6 @@ export default function Dashboard() {
             0, 0, 0, 0
           ));
           const dateKey = date.toISOString().split('T')[0];
-          
-          console.log(`  Day ${i}: ${date.toDateString()} (${dateKey})`);
           
           // Double-check that this date is actually within the current week
           if (date >= weekStartDate && date <= weekEndDate && res.events && res.events[dateKey]) {
@@ -251,9 +233,6 @@ export default function Dashboard() {
           }
         }
         
-        console.log('🔍 Final weekData keys:', Object.keys(weekData));
-        console.log('🔍 Final weekData:', weekData);
-        
         setWeekEvents(weekData);
       } catch (error) {
         console.error('Failed to load week data:', error);
@@ -279,10 +258,6 @@ export default function Dashboard() {
       weekStartDate.getUTCDate() + 6,
       0, 0, 0, 0
     ));
-    
-    console.log('🔍 Processing myShifts for range:', weekStartDate.toDateString(), 'to', weekEndDate.toDateString());
-    console.log('🔍 weekEvents keys:', Object.keys(weekEvents));
-    console.log('🔍 weekEvents data:', weekEvents);
     
     for (let i = 0; i < 7; i++) {
       const date = new Date(Date.UTC(
@@ -328,18 +303,12 @@ export default function Dashboard() {
       } // Close the if statement for date validation
     }
     
-    console.log(`🔍 Final myShifts count: ${weekShifts.length}`);
-    console.log('🔍 Final myShifts:', weekShifts.map(s => `${s.date} (${s.eventDate})`));
-    
     return weekShifts;
   }, [weekEvents, weekStartDate]);
 
   // Get open shifts for the current week (real data from backend)
   const { openShifts: openShiftsData, loading: openShiftsLoading, error: openShiftsError, refresh: refreshOpenShifts } = 
     useOpenShiftsWeek(weekStartDate, user?.email);
-  
-  console.log('🔍 Dashboard open shifts week start:', weekStartDate.toDateString());
-  console.log('🔍 Dashboard open shifts data:', openShiftsData?.length || 0, 'shifts');
 
   // Get notification unread count for bell icon
   const { unreadCount } = useNotificationContext();
@@ -354,17 +323,12 @@ export default function Dashboard() {
       0, 0, 0, 0
     ));
     
-    console.log('🔍 Processing openShifts for range:', weekStartDate.toDateString(), 'to', weekEndDate.toDateString());
-    
     // Filter shifts to only include current week using UTC comparisons
     const currentWeekShifts = openShiftsData.filter(shift => {
       const shiftDate = new Date(shift.date + 'T00:00:00.000Z'); // Parse as UTC
       const isInCurrentWeek = shiftDate >= weekStartDate && shiftDate <= weekEndDate;
-      console.log(`🔍 Open shift ${shift.date}: ${isInCurrentWeek ? 'INCLUDED' : 'EXCLUDED'} (${shiftDate.toDateString()})`);
       return isInCurrentWeek;
     });
-    
-    console.log(`🔍 Filtered ${currentWeekShifts.length} open shifts for current week from ${openShiftsData.length} total`);
     
     // First, sort the shifts by date chronologically
     const sortedShifts = [...currentWeekShifts].sort((a, b) => {
@@ -408,38 +372,30 @@ export default function Dashboard() {
     const resetScrollPositions = () => {
       setTimeout(() => {
         if (duty.length > 0) {
-          console.log('🔍 Resetting duty cards to position 0');
           try {
             dutyFlatListRef.current?.scrollToIndex({ index: 16, animated: true, viewPosition: 0 });
           } catch (error) {
-            console.log('🔍 Error scrolling duty cards:', error);
             dutyFlatListRef.current?.scrollToOffset({ offset: 0, animated: true });
           }
         }
         if (myShifts.length > 0) {
-          console.log('🔍 Resetting my shifts cards to position 0');
           try {
             myShiftFlatListRef.current?.scrollToIndex({ index: 16, animated: true, viewPosition: 0 });
           } catch (error) {
-            console.log('🔍 Error scrolling my shifts cards:', error);
             myShiftFlatListRef.current?.scrollToOffset({ offset: 0, animated: true });
           }
         }
         if (openShiftsFormatted.length > 0) {
-          console.log('🔍 Resetting open shifts cards to position 0');
           try {
             openShiftFlatListRef.current?.scrollToIndex({ index: 16, animated: true, viewPosition: 0 });
           } catch (error) {
-            console.log('🔍 Error scrolling open shifts cards:', error);
             openShiftFlatListRef.current?.scrollToOffset({ offset: 0, animated: true });
           }
         }
         if (leaves.length > 0) {
-          console.log('🔍 Resetting leaves cards to position 0');
           try {
             leaveFlatListRef.current?.scrollToIndex({ index: 16, animated: true, viewPosition: 0 });
           } catch (error) {
-            console.log('🔍 Error scrolling leaves cards:', error);
             leaveFlatListRef.current?.scrollToOffset({ offset: 0, animated: true });
           }
         }
