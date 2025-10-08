@@ -1,6 +1,6 @@
 // src/screens/Dashboard/index.tsx
-import React, { useState, useMemo, useEffect } from "react";
-import { SafeAreaView, ScrollView, RefreshControl, View, Pressable } from "react-native";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { SafeAreaView, ScrollView, RefreshControl, View, Pressable, FlatList } from "react-native";
 import { useNavigation, CommonActions, useFocusEffect } from "@react-navigation/native";
 
 import { sx, sy } from "@/theme/metrics";
@@ -70,9 +70,8 @@ export default function Dashboard() {
   // Get current user info (use mock data for now until authentication is properly implemented)
   const { firstName, displayName, initials, email, user } = useCurrentUser({mock: true});
   
-  // Get current month for leave requests
-  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
-  const { leaves, loading: leavesLoading, error: leavesError, refresh: refreshLeaves } = useMyLeaves(currentMonth, { mock: false });
+  // Get leaves without month filter - will be filtered in the hook
+  const { leaves, loading: leavesLoading, error: leavesError, refresh: refreshLeaves } = useMyLeaves(undefined, { mock: false });
   
   // Mock data for "Who's on duty" section (not implemented yet)
   const { duty, loading, error, refresh } =
@@ -80,6 +79,7 @@ export default function Dashboard() {
 
   // Refresh data once when dashboard screen comes into focus
   const [hasRefreshed, setHasRefreshed] = useState(false);
+  const [shouldResetScroll, setShouldResetScroll] = useState(false);
   
   useFocusEffect(
     React.useCallback(() => {
@@ -91,8 +91,19 @@ export default function Dashboard() {
         // Always refresh leave data when returning to dashboard to show new submissions
         refreshLeaves();
       }
-    }, [refreshLeaves, refresh, currentMonth, hasRefreshed])
+      
+      // Reset all card positions to first card (leftmost) when returning to dashboard
+      setDutyIdx(0);
+      setMyShiftIdx(0);
+      setOpenShiftIdx(0);
+      setLeaveIdx(0);
+      setShouldResetScroll(true);
+      
+      // Reset vertical scroll to top
+      mainScrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    }, [refreshLeaves, refresh, hasRefreshed])
   );
+
 
   // Get current user's shifts (use real data from backend)
   // Use a stable date to prevent re-loading on every render
@@ -284,10 +295,69 @@ export default function Dashboard() {
     });
   }, [openShiftsData]);
 
+  // Reset scroll positions when data changes (after data is loaded)
+  useEffect(() => {
+    const resetScrollPositions = () => {
+      setTimeout(() => {
+        if (duty.length > 0) {
+          console.log('🔍 Resetting duty cards to position 0');
+          try {
+            dutyFlatListRef.current?.scrollToIndex({ index: 16, animated: true, viewPosition: 0 });
+          } catch (error) {
+            console.log('🔍 Error scrolling duty cards:', error);
+            dutyFlatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+          }
+        }
+        if (myShifts.length > 0) {
+          console.log('🔍 Resetting my shifts cards to position 0');
+          try {
+            myShiftFlatListRef.current?.scrollToIndex({ index: 16, animated: true, viewPosition: 0 });
+          } catch (error) {
+            console.log('🔍 Error scrolling my shifts cards:', error);
+            myShiftFlatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+          }
+        }
+        if (openShiftsFormatted.length > 0) {
+          console.log('🔍 Resetting open shifts cards to position 0');
+          try {
+            openShiftFlatListRef.current?.scrollToIndex({ index: 16, animated: true, viewPosition: 0 });
+          } catch (error) {
+            console.log('🔍 Error scrolling open shifts cards:', error);
+            openShiftFlatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+          }
+        }
+        if (leaves.length > 0) {
+          console.log('🔍 Resetting leaves cards to position 0');
+          try {
+            leaveFlatListRef.current?.scrollToIndex({ index: 16, animated: true, viewPosition: 0 });
+          } catch (error) {
+            console.log('🔍 Error scrolling leaves cards:', error);
+            leaveFlatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+          }
+        }
+      }, 300);
+    };
+
+    // Only reset when we have data, are not loading, and should reset scroll
+    if (!loading && !weekLoading && !openShiftsLoading && !leavesLoading && shouldResetScroll) {
+      resetScrollPositions();
+      setShouldResetScroll(false); // Reset the flag after scrolling
+    }
+  }, [duty.length, myShifts.length, openShiftsFormatted.length, leaves.length, loading, weekLoading, openShiftsLoading, leavesLoading, shouldResetScroll]);
+
   const [dutyIdx, setDutyIdx] = useState(0);
   const [myShiftIdx, setMyShiftIdx] = useState(0);
   const [openShiftIdx, setOpenShiftIdx] = useState(0);
   const [leaveIdx, setLeaveIdx] = useState(0);
+
+  // Refs to control FlatList scroll positions
+  const dutyFlatListRef = useRef<FlatList<DutyItem>>(null);
+  const myShiftFlatListRef = useRef<FlatList<ShiftItem>>(null);
+  const openShiftFlatListRef = useRef<FlatList<any>>(null);
+  const leaveFlatListRef = useRef<FlatList<LeaveItem>>(null);
+  
+  // Ref to control main ScrollView position
+  const mainScrollViewRef = useRef<ScrollView>(null);
 
   const dutySnap = useHorizontalSnapProps<DutyItem>(setDutyIdx);
   const myShiftSnap = useHorizontalSnapProps<ShiftItem>(setMyShiftIdx);
@@ -317,9 +387,26 @@ export default function Dashboard() {
       />
 
       <ScrollView
+        ref={mainScrollViewRef}
         contentContainerStyle={{ paddingBottom: sy(8) }}
         refreshControl={
-          <RefreshControl refreshing={!!loading} onRefresh={refresh} tintColor={COLOR.brand} colors={[COLOR.brand]} />
+          <RefreshControl 
+            refreshing={!!loading} 
+            onRefresh={() => {
+              refresh();
+              // Reset card positions when user manually refreshes
+              setDutyIdx(0);
+              setMyShiftIdx(0);
+              setOpenShiftIdx(0);
+              setLeaveIdx(0);
+              setShouldResetScroll(true);
+              
+              // Reset vertical scroll to top
+              mainScrollViewRef.current?.scrollTo({ y: 0, animated: true });
+            }} 
+            tintColor={COLOR.brand} 
+            colors={[COLOR.brand]} 
+          />
         }
       >
         {error ? <ErrorBanner message={error} onRetry={refresh} /> : null}
@@ -332,16 +419,21 @@ export default function Dashboard() {
           renderItem={({ item }) => (item?.id ? <DutyCard item={item} onPress={() => console.log("duty", item.id)} /> : <DutyCardSkeleton />)}
           flatListProps={dutySnap}
           footer={<PaginationDots count={Math.max(duty.length, loading ? 3 : 0)} index={dutyIdx} />}
+          emptyText="No team members on duty"
+          flatListRef={dutyFlatListRef}
         />
 
         {/* Real data: Current user's shift assignments this week */}
-        <Section title={`My shifts this week (${myShifts.length})`}
+        <Section title={`My shifts this week (${myShifts.length})`} actionLabel="View All" 
+          onAction={() => navigation.navigate('Roster', { screen: 'MY ROSTER' })}
           data={weekLoading && myShifts.length === 0 ? placeholderArray<ShiftItem>(3) : myShifts}
           keyExtractor={(i, idx) => (i?.id ?? `myshift-skel-${idx}`)}
           contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
           renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => handleShiftPress(item)} /> : <ShiftCardSkeleton />)}
           flatListProps={myShiftSnap}
           footer={<PaginationDots count={Math.max(myShifts.length, weekLoading ? 3 : 0)} index={myShiftIdx} />}
+          emptyText="No shifts scheduled this week"
+          flatListRef={myShiftFlatListRef}
         />
 
         {/* Real data: Available open shifts this week */}
@@ -353,16 +445,21 @@ export default function Dashboard() {
           renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => handleOpenShiftPress(item)} /> : <ShiftCardSkeleton />)}
           flatListProps={openShiftSnap}
           footer={<PaginationDots count={Math.max(openShiftsFormatted.length, openShiftsLoading ? 3 : 0)} index={openShiftIdx} />}
+          emptyText="No open shifts available this week"
+          flatListRef={openShiftFlatListRef}
         />
 
         {/* Real data: Current user's leave requests this month */}
-        <Section title={`My leaves this month (${leaves.length})`}
+        <Section title={`My leaves this month (${leaves.length})`} actionLabel="View All" 
+          onAction={() => navigation.navigate('My Request')}
           data={leavesLoading && leaves.length === 0 ? placeholderArray<LeaveItem>(3) : leaves}
           keyExtractor={(i, idx) => String(i?.id ?? `leave-skel-${idx}`)}
           contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
           renderItem={({ item }) => (item?.id ? <LeaveCard item={item} onPress={() => console.log("leave", item.id)} /> : <LeaveCardSkeleton />)}
           flatListProps={leaveSnap}
           footer={<PaginationDots count={Math.max(leaves.length, leavesLoading ? 3 : 0)} index={leaveIdx} />}
+          emptyText="No leave requests this month"
+          flatListRef={leaveFlatListRef}
         />
       </ScrollView>
 
