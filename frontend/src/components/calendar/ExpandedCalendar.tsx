@@ -8,11 +8,8 @@ import { ShiftType } from "@/types/roster";
 import { useRosterPeriod } from "@/hooks/useRosterPeriod";
 
 /* ===== Sizes ===== */
-const CALENDAR_W = sx(343);
 const CELL_W = sx(40);
 const CELL_H = sx(48);
-const HEADER_H = sx(32);
-const MONTH_H = sx(24);
 
 /* ===== Helpers ===== */
 const dayKey = (d: Date) => {
@@ -98,9 +95,6 @@ interface Props {
   onChange: (d: Date) => void;
   shiftMap?: Record<string, ShiftType | ShiftType[]>; // YYYY-MM-DD -> shift type(s)
   leaveMap?: Record<string, boolean>;                 // YYYY-MM-DD -> true if approved leave exists
-  title?: string;
-  leftAction?: { icon: keyof typeof Ionicons.glyphMap; onPress: () => void };
-  rightAction?: { icon: keyof typeof Ionicons.glyphMap; onPress: () => void };
 }
 
 /* ===== Component ===== */
@@ -109,9 +103,6 @@ export default function ExpandedCalendar({
   onChange,
   shiftMap,
   leaveMap,
-  title,
-  leftAction,
-  rightAction,
 }: Props) {
   const today = useMemo(() => new Date(), []);
   const { months: rosterMonths } = useRosterPeriod(today);
@@ -127,29 +118,6 @@ export default function ExpandedCalendar({
 
   return (
     <View style={styles.container}>
-      {/* Header with title and navigation */}
-      {(title || leftAction || rightAction) && (
-        <View style={styles.header}>
-          {leftAction ? (
-            <Pressable onPress={leftAction.onPress} hitSlop={10} style={styles.headerBtn}>
-              <Ionicons name={leftAction.icon} size={sx(20)} color={COLOR.ink} />
-            </Pressable>
-          ) : (
-            <View style={styles.headerBtn} />
-          )}
-          
-          {title && <Text style={styles.headerTitle}>{title}</Text>}
-          
-          {rightAction ? (
-            <Pressable onPress={rightAction.onPress} hitSlop={10} style={styles.headerBtn}>
-              <Ionicons name={rightAction.icon} size={sx(20)} color={COLOR.ink} />
-            </Pressable>
-          ) : (
-            <View style={styles.headerBtn} />
-          )}
-        </View>
-      )}
-
       {/* Calendar Content */}
       <View style={styles.content}>
         {/* Day labels */}
@@ -227,26 +195,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     borderRadius: sx(12),
     padding: sx(16),
-  },
-
-  header: {
-    height: HEADER_H,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: sx(16),
-  },
-  headerBtn: {
-    width: sx(32),
-    height: sx(32),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: sx(16),
-    fontWeight: "600",
-    color: COLOR.ink,
-    textAlign: "center",
   },
 
   content: {

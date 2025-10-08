@@ -9,7 +9,6 @@ import { ShiftType } from "@/types/roster";
 import { useOverlayContext } from "@/contexts/OverlayContext";
 import ExpandedCalendar from "@/components/calendar/ExpandedCalendar";
 import { useApprovedLeaves } from "@/hooks/useApprovedLeaves";
-import { fmt } from "@/lib/date";
 
 export type StaffMember = {
   id: number;
@@ -186,17 +185,6 @@ export default function StaffDetails({ visible, staff, shiftMap, onClose, return
                 onChange={setDate}
                 shiftMap={shiftMap}
                 leaveMap={leaveMap}
-                title={fmt(date, { day: "2-digit", month: "long", year: "numeric" })}
-                leftAction={{ icon: "chevron-back", onPress: () => {
-                  const prevMonth = new Date(date);
-                  prevMonth.setMonth(date.getMonth() - 1);
-                  setDate(prevMonth);
-                }}}
-                rightAction={{ icon: "chevron-forward", onPress: () => {
-                  const nextMonth = new Date(date);
-                  nextMonth.setMonth(date.getMonth() + 1);
-                  setDate(nextMonth);
-                }}}
               />
             </View>
           )}
