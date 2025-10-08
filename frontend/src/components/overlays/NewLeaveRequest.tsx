@@ -5,6 +5,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { fmt as fmtDate, dayKey } from "@/lib/date";
+import { checkLeaveRequestDuplicate, getDuplicateRequestErrorMessage } from "@/lib/duplicateRequestValidation";
+import { useDashboardData } from "@/hooks/useDashboard";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { createLeaveRequest } from "@/api/leave";
 import SuccessToast from "@/components/overlays/SuccessToast";
@@ -21,6 +23,7 @@ export default function NewLeaveRequest({
 }) {
   const { user, loading, error } = useCurrentUser({ mock: false });
   const { refreshUnreadCount } = useNotificationContext();
+  const { leaves: existingLeaves } = useDashboardData();
   
   const [leaveType, setLeaveType] = React.useState<string | null>("Day Leave"); // Default to Day Leave
   const [reason, setReason] = React.useState("");
@@ -113,6 +116,14 @@ export default function NewLeaveRequest({
 
   const submit = async () => {
     if (submitting || !leaveType) return;
+    
+    // Check for duplicate requests (only APPROVED and AWAITING are considered duplicates)
+    const duplicateCheck = checkLeaveRequestDuplicate(existingLeaves, fromDate, leaveType);
+    if (duplicateCheck.isDuplicate) {
+      const errorMessage = getDuplicateRequestErrorMessage(duplicateCheck.duplicateInfo!);
+      showWarningToast(errorMessage);
+      return;
+    }
     
     try {
       setSubmitting(true);
