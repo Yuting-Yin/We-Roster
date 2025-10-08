@@ -1,0 +1,85 @@
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { getMyLeaves, LeaveRequest } from '@/api/leave';
+import { useAuth } from '@/contexts/AuthContext';
+
+/**
+ * Hook to fetch approved leaves and convert them to a date map
+ * Returns a Record<string, boolean> where keys are YYYY-MM-DD dates
+ * and values are true if the date has an approved leave
+ */
+export function useApprovedLeaves(month?: string) {
+  const { isAuthenticated, token } = useAuth();
+  
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    // Don't make API calls if not authenticated
+    if (!isAuthenticated || !token) {
+      setLoading(false);
+      return;
+    }
+
+    // Add a small delay to ensure token is properly set in the API layer
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const data = await getMyLeaves(month);
+      
+      // Filter only approved leaves
+      const approvedLeaves = data.filter((leave: LeaveRequest) => 
+        leave.status === 'APPROVED'
+      );
+      
+      setLeaves(approvedLeaves);
+    } catch (err: any) {
+      console.error('useApprovedLeaves - Error:', err);
+      setError(err?.message ?? "Failed to load approved leaves");
+      setLeaves([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [month, isAuthenticated, token]);
+
+  const refresh = useCallback(async () => {
+    await load();
+  }, [load]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Convert leaves to a date map (YYYY-MM-DD -> true)
+  const leaveMap = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    
+    leaves.forEach((leave) => {
+      const startTime = new Date(leave.startTime);
+      const endTime = new Date(leave.endTime);
+      
+      // Add all dates in the leave range
+      const currentDate = new Date(startTime);
+      currentDate.setHours(0, 0, 0, 0);
+      
+      while (currentDate <= endTime) {
+        const dateKey = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        map[dateKey] = true;
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+    });
+    
+    return map;
+  }, [leaves]);
+
+  return {
+    leaveMap,
+    loading,
+    error,
+    refresh,
+  };
+}
+

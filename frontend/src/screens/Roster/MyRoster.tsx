@@ -23,6 +23,7 @@ import { useOpenShiftsWeek } from "@/hooks/useOpenShiftsWeek";
 import { useOpenShiftApplication } from "@/hooks/useOpenShifts";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
+import { useApprovedLeaves } from "@/hooks/useApprovedLeaves";
 import { useOverlayContext } from "@/contexts/OverlayContext";
 import type { OpenShiftDto } from "@/api/openshift";
 
@@ -74,6 +75,9 @@ export default function MyRoster() {
   
   // Use useRosterData for calendar dots (shiftMap) - loads data for entire month range
   const { shiftMap, getEventsForDate: getCalendarEvents, refresh: refreshRoster, loading: calendarLoading, error: calendarError } = useRosterData(date, { mock: false, months: 2 });
+  
+  // Get approved leaves for calendar highlighting
+  const { leaveMap, refresh: refreshLeaves } = useApprovedLeaves();
   
   // Use useMyRosterData for timeline events - loads data for specific day
   const { getEventsForDate, loading: timelineLoading, error: timelineError } = useMyRosterData(date, { mock: false });
@@ -401,6 +405,7 @@ export default function MyRoster() {
           value={date}
           onChange={setDate}
           shiftMap={shiftMap}
+          leaveMap={leaveMap}
           title={
             mode === "day"
               ? `${fmt(date, { weekday: "short" })}, ${fmt(date, { day: "2-digit", month: "long", year: "numeric" })}`
@@ -414,6 +419,7 @@ export default function MyRoster() {
             setLoadingUsers(true);
             refreshRoster();
             refreshOpenShifts();
+            refreshLeaves();
             getAvailableUsers()
               .then((users) => setAvailableUsers(users))
               .catch((e) => setUserErr(e?.message ?? "Failed to load users"))

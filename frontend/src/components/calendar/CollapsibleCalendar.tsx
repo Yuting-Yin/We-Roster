@@ -78,6 +78,7 @@ type Props = {
   value: Date;                                        // Currently selected date (controlled)
   onChange: (d: Date) => void;                        // Selection change callback
   shiftMap?: Record<string, ShiftType | ShiftType[]>; // YYYY-MM-DD -> shift type(s) (undefined = no shifts)
+  leaveMap?: Record<string, boolean>;                 // YYYY-MM-DD -> true if approved leave exists
   /** The title placed in the center of the header (default: "Mon, May 12, 2025") */
   title?: string;
   /** Icon button on the left side of the head (menu) */
@@ -147,6 +148,7 @@ export default function CollapsibleCalendar({
   value,
   onChange,
   shiftMap,
+  leaveMap,
   title,
   leftAction,
   rightAction,
@@ -274,12 +276,18 @@ export default function CollapsibleCalendar({
                 {weekCells.map((item, idx) => {
                   const isSelected = dayKey(item.fullDate) === dayKey(selectedDate);
                   const isToday = dayKey(item.fullDate) === todayKey;
+                  const hasApprovedLeave = leaveMap?.[dayKey(item.fullDate)] === true;
                   const v = visualOf(item.type);
                   return (
                     <Pressable
                       key={idx}
                       onPress={() => onChange?.(item.fullDate)}
-                      style={[styles.dateContainer, isSelected && { borderColor: COLOR.brand, borderWidth: 1 }, isToday && { backgroundColor: COLOR.card }]}
+                      style={[
+                        styles.dateContainer, 
+                        isSelected && { borderColor: COLOR.brand, borderWidth: 1 }, 
+                        isToday && { backgroundColor: COLOR.card },
+                        hasApprovedLeave && { backgroundColor: '#E8F5E9' } // Light green for approved leave
+                      ]}
                     >
                       {v.labels.length > 0 && (
                         <View style={styles.labelsContainer}>
@@ -345,8 +353,16 @@ export default function CollapsibleCalendar({
                     {m.days.map((d, i) => {
                       const selected = dayKey(d) === dayKey(selectedDate);
                       const isToday = dayKey(d) === todayKey;
+                      const hasApprovedLeave = leaveMap?.[dayKey(d)] === true;
                       const t = getShiftTypeForDate(d, shiftMap);
                       const v = visualOf(t);
+                      
+                      // Determine background color priority: selected > today > approved leave
+                      let backgroundColor = "transparent";
+                      if (hasApprovedLeave) backgroundColor = "#E8F5E9"; // Light green for approved leave
+                      if (isToday) backgroundColor = COLOR.card;
+                      if (selected) backgroundColor = "#E9F4FF";
+                      
                       return (
                         <Pressable
                           key={`${dayKey(d)}-${i}`}
@@ -356,7 +372,10 @@ export default function CollapsibleCalendar({
                             toggle();
                           }}
                         >
-                          <View style={[styles.gridCellContentExpanded, (selected || isToday) && { backgroundColor: isToday ? COLOR.card : "#E9F4FF", borderWidth: selected ? 1 : 0, borderColor: selected ? COLOR.brand : "transparent" }]}>
+                          <View style={[
+                            styles.gridCellContentExpanded, 
+                            { backgroundColor, borderWidth: selected ? 1 : 0, borderColor: selected ? COLOR.brand : "transparent" }
+                          ]}>
                             {v.labels.length > 0 && (
                               <View style={styles.labelsContainer}>
                                 {v.labels.map((label, idx) => (
