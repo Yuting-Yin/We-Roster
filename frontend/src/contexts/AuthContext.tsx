@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE, setAuthTokenGetter, fetchJson } from '../lib/api';
 
@@ -14,19 +14,26 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setTokenState] = useState<string | null>(null);
+  const tokenRef = useRef<string | null>(null);
 
   useEffect(() => {
     // Load token from storage on app start
     loadToken();
   }, []);
 
+  // Update ref whenever token changes
   useEffect(() => {
-    // Set up auth token getter for API calls - this will always get the current token
+    tokenRef.current = token;
+    console.log('🔍 AuthContext - Token ref updated:', token ? 'Token present' : 'No token');
+  }, [token]);
+
+  useEffect(() => {
+    // Set up auth token getter for API calls - use ref to get current token
     console.log('🔍 AuthContext - Setting auth token getter, current token:', token ? 'Token present' : 'No token');
     setAuthTokenGetter(() => {
-      // Get the current token value from state
-      console.log('🔍 AuthContext - AuthTokenGetter called, returning:', token ? 'Token present' : 'No token');
-      return token;
+      const currentToken = tokenRef.current;
+      console.log('🔍 AuthContext - AuthTokenGetter called, returning:', currentToken ? 'Token present' : 'No token');
+      return currentToken || undefined;
     });
   }, [token]);
 

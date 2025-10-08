@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import jakarta.persistence.EntityManager;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @Component
 @Profile("!test")
@@ -63,6 +65,12 @@ public class DataInitializer implements CommandLineRunner {
     private NotificationRepository notificationRepository;
     
     @Autowired
+    private EntityManager entityManager;
+    
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+    
+    @Autowired
     private ShiftSwapRepository shiftSwapRepository;
     
     // Removed UserStaffRepository - using direct User-Staff relationship
@@ -92,6 +100,10 @@ public class DataInitializer implements CommandLineRunner {
         designationRepository.deleteAll();
         departmentRepository.deleteAll();
         hospitalRepository.deleteAll();
+        
+        // Reset AUTO_INCREMENT counters to start from 1
+        System.out.println("🔍 DataInitializer - Resetting AUTO_INCREMENT counters...");
+        resetAutoIncrementCounters();
         
         System.out.println("🔍 DataInitializer - All existing data cleared, creating fresh data...");
         createMockData();
@@ -537,7 +549,7 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("🔍 DataInitializer - Creating user for: " + staff.getFirstName() + " " + staff.getLastName());
             
             User user = User.builder()
-                    .domain("staff")
+                    .domain("test") // Use "test" domain for all users to match login attempts
                     .email(staff.getEmail())
                     .passwordHash("5d41402abc4b2a76b9719d911017c592") // "hello" in MD5
                     .salt("")
@@ -1835,7 +1847,7 @@ public class DataInitializer implements CommandLineRunner {
             
             // Use an existing staff user as the "admin" for notifications
             // Find Dr. Emily Rodriguez (manager) to use as the notification sender
-            User managerUser = userRepository.findByDomainAndEmail("staff", "emily.rodriguez@weroster.com")
+            User managerUser = userRepository.findByDomainAndEmail("test", "emily.rodriguez@weroster.com")
                 .orElseThrow(() -> new RuntimeException("Manager user not found"));
             
             // Get staff members (for validation)
@@ -1949,6 +1961,48 @@ public class DataInitializer implements CommandLineRunner {
             
         } catch (Exception e) {
             System.err.println("❌ ERROR creating test notifications: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    private void resetAutoIncrementCounters() {
+        try {
+            // Use JdbcTemplate to execute DDL statements for resetting AUTO_INCREMENT
+            System.out.println("🔍 DataInitializer - Resetting AUTO_INCREMENT for all tables...");
+            
+            // Reset AUTO_INCREMENT for all tables in dependency order
+            String[] resetQueries = {
+                "ALTER TABLE notification AUTO_INCREMENT = 1",
+                "ALTER TABLE shift_swap AUTO_INCREMENT = 1", 
+                "ALTER TABLE open_shift_request AUTO_INCREMENT = 1",
+                "ALTER TABLE shift_designation_requirements AUTO_INCREMENT = 1",
+                "ALTER TABLE shift_assignment AUTO_INCREMENT = 1",
+                "ALTER TABLE open_shift AUTO_INCREMENT = 1",
+                "ALTER TABLE shift AUTO_INCREMENT = 1",
+                "ALTER TABLE leave_request AUTO_INCREMENT = 1",
+                "ALTER TABLE staff AUTO_INCREMENT = 1",
+                "ALTER TABLE users AUTO_INCREMENT = 1",
+                "ALTER TABLE location AUTO_INCREMENT = 1",
+                "ALTER TABLE designation AUTO_INCREMENT = 1",
+                "ALTER TABLE dept AUTO_INCREMENT = 1",
+                "ALTER TABLE hospital AUTO_INCREMENT = 1"
+            };
+            
+            for (String query : resetQueries) {
+                try {
+                    // Use JdbcTemplate to execute DDL statements
+                    jdbcTemplate.execute(query);
+                    System.out.println("✅ Reset AUTO_INCREMENT: " + query);
+                } catch (Exception e) {
+                    System.out.println("⚠️ Could not reset AUTO_INCREMENT for query: " + query + " - " + e.getMessage());
+                    // Continue with other tables even if one fails
+                }
+            }
+            
+            System.out.println("🔍 DataInitializer - AUTO_INCREMENT reset completed!");
+            
+        } catch (Exception e) {
+            System.err.println("❌ ERROR resetting AUTO_INCREMENT counters: " + e.getMessage());
             e.printStackTrace();
         }
     }
