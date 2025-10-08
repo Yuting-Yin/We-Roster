@@ -4,10 +4,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { fmt as fmtDate, dayKey } from "@/lib/date";
-import { checkLeaveRequestDuplicate, getDuplicateRequestErrorMessage } from "@/lib/duplicateRequestValidation";
 import { isDateInPast, getPastDateErrorMessage } from "@/lib/dateValidation";
 import Chip from "@/components/common/Chip";
-import { useDashboardData } from "@/hooks/useDashboard";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { createLeaveRequest } from "@/api/leave";
 import SuccessToast from "@/components/overlays/SuccessToast";
@@ -27,7 +25,6 @@ export default function RequestLeave({
 }) {
   const { user, loading, error } = useCurrentUser({ mock: false });
   const { refreshUnreadCount } = useNotificationContext();
-  const { leaves: existingLeaves } = useDashboardData();
   
   // Debug logging for user data
   React.useEffect(() => {
@@ -109,14 +106,6 @@ export default function RequestLeave({
     // Check if the date is in the past
     if (isDateInPast(date)) {
       showWarningToast(getPastDateErrorMessage(date));
-      return;
-    }
-    
-    // Check for duplicate requests (only APPROVED and AWAITING are considered duplicates)
-    const duplicateCheck = checkLeaveRequestDuplicate(existingLeaves, date, leaveType);
-    if (duplicateCheck.isDuplicate) {
-      const errorMessage = getDuplicateRequestErrorMessage(duplicateCheck.duplicateInfo!);
-      showWarningToast(errorMessage);
       return;
     }
     
