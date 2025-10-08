@@ -56,8 +56,9 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
     
     // Check if the date is in the past
     if (isDateStringInPast(shift.date)) {
-      const date = new Date(shift.date + 'T00:00:00.000Z');
-      showWarningToast(getPastDateErrorMessage(date));
+      const errorMessage = getPastDateErrorMessage(shift.date);
+      console.log('🔍 OpenShiftDetails - Past date detected:', shift.date, 'Error message:', errorMessage);
+      showWarningToast(errorMessage);
       return;
     }
     

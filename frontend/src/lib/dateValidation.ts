@@ -28,13 +28,22 @@ export const isDateStringInPast = (dateString: string | undefined | null): boole
 
 /**
  * Get a user-friendly error message for past date requests
- * @param date - The invalid date
+ * @param date - The invalid date (Date object or date string)
  * @returns Error message string
  */
-export const getPastDateErrorMessage = (date: Date): string => {
+export const getPastDateErrorMessage = (date: Date | string): string => {
   const today = new Date();
   const todayStr = today.toLocaleDateString();
-  const dateStr = date.toLocaleDateString();
+  
+  let dateStr: string;
+  if (typeof date === 'string') {
+    // Handle date string (YYYY-MM-DD format)
+    const dateObj = new Date(date + 'T00:00:00.000Z');
+    dateStr = dateObj.toLocaleDateString();
+  } else {
+    // Handle Date object
+    dateStr = date.toLocaleDateString();
+  }
   
   return `Cannot submit requests for past dates. Selected date: ${dateStr}, Today: ${todayStr}`;
 };
