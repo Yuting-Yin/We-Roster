@@ -1847,7 +1847,7 @@ public class DataInitializer implements CommandLineRunner {
             
             // Use an existing staff user as the "admin" for notifications
             // Find Dr. Emily Rodriguez (manager) to use as the notification sender
-            User managerUser = userRepository.findByDomainAndEmail("staff", "emily.rodriguez@weroster.com")
+            User managerUser = userRepository.findByDomainAndEmail("test", "emily.rodriguez@weroster.com")
                 .orElseThrow(() -> new RuntimeException("Manager user not found"));
             
             // Get staff members (for validation)
