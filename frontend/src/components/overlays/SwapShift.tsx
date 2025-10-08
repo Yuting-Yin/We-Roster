@@ -58,6 +58,28 @@ export default function SwapShift({
     setTimeout(() => setWarningToast(false), 1800); 
   };
 
+
+  // Clear user shifts when component unmounts or visible changes
+  React.useEffect(() => {
+    if (!visible) {
+      setUserShifts(new Map());
+      setLoadingShifts(new Set());
+    }
+  }, [visible]);
+
+  // candidates = all available users for swap (excluding current user)
+  const candidates = React.useMemo(() => {
+    const currentUserId = user?.id;
+    return availableUsers.filter(u => u.id !== currentUserId);
+  }, [availableUsers, user?.id]);
+
+  // searching users (case insensitive)
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return candidates;
+    return candidates.filter(u => u.name.toLowerCase().includes(q));
+  }, [candidates, query]);
+
   // Load shift data for all filtered users
   React.useEffect(() => {
     if (filtered.length === 0) return;
@@ -97,27 +119,6 @@ export default function SwapShift({
 
     loadShiftsForUsers();
   }, [filtered, getShiftForUser, date, slot]);
-
-  // Clear user shifts when component unmounts or visible changes
-  React.useEffect(() => {
-    if (!visible) {
-      setUserShifts(new Map());
-      setLoadingShifts(new Set());
-    }
-  }, [visible]);
-
-  // candidates = all available users for swap (excluding current user)
-  const candidates = React.useMemo(() => {
-    const currentUserId = user?.id;
-    return availableUsers.filter(u => u.id !== currentUserId);
-  }, [availableUsers, user?.id]);
-
-  // searching users (case insensitive)
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return candidates;
-    return candidates.filter(u => u.name.toLowerCase().includes(q));
-  }, [candidates, query]);
 
   if (!visible) return null;
 
