@@ -7,7 +7,7 @@ import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { ShiftType } from "@/types/roster";
 import { useOverlayContext } from "@/contexts/OverlayContext";
-import { CollapsibleCalendar } from "@/components/calendar/CollapsibleCalendar";
+import CollapsibleCalendar from "@/components/calendar/CollapsibleCalendar";
 import { useApprovedLeaves } from "@/hooks/useApprovedLeaves";
 import { fmt } from "@/lib/date";
 
