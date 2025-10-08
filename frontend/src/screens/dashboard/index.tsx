@@ -67,6 +67,27 @@ export default function Dashboard() {
     });
   };
 
+  // Handle leave card press - navigate to My Request with leave details
+  const handleLeavePress = (leave: LeaveItem) => {
+    // Navigate to My Request tab
+    navigation.navigate('My Request');
+    
+    // Determine which sub-page to show based on leave state
+    const subPage = leave.state === 'Approved' || leave.state === 'APPROVED' ? 'HISTORY' : 'IN ACTION';
+    
+    // Navigate to the specific sub-page
+    setTimeout(() => {
+      navigation.navigate('My Request', { 
+        screen: subPage,
+        params: { 
+          showLeaveDetail: true, 
+          leaveId: leave.id,
+          leaveData: leave 
+        }
+      });
+    }, 100); // Small delay to ensure tab navigation completes first
+  };
+
   // Get current user info (connected to backend database)
   const { firstName, displayName, initials, email, user } = useCurrentUser({mock: false});
   
@@ -455,7 +476,7 @@ export default function Dashboard() {
           data={leavesLoading && leaves.length === 0 ? placeholderArray<LeaveItem>(3) : leaves}
           keyExtractor={(i, idx) => String(i?.id ?? `leave-skel-${idx}`)}
           contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
-          renderItem={({ item }) => (item?.id ? <LeaveCard item={item} onPress={() => console.log("leave", item.id)} /> : <LeaveCardSkeleton />)}
+          renderItem={({ item }) => (item?.id ? <LeaveCard item={item} onPress={() => handleLeavePress(item)} /> : <LeaveCardSkeleton />)}
           flatListProps={leaveSnap}
           footer={<PaginationDots count={Math.max(leaves.length, leavesLoading ? 3 : 0)} index={leaveIdx} />}
           emptyText="No leave requests this month"

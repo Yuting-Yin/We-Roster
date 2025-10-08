@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRoute } from "@react-navigation/native";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { RequestCardData, RequestStatus, RequestFilterValue } from "@/types/request";
@@ -19,6 +20,7 @@ import RequestDetail from "@/components/overlays/RequestDetail";
 import RequestFilter from "@/components/overlays/RequestFilter";
 
 export default function InAction() {
+  const route = useRoute<any>();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [newLeaveRequestVisible, setNewLeaveRequestVisible] = useState(false);
   const [requestDetailVisible, setRequestDetailVisible] = useState(false);
@@ -44,6 +46,29 @@ export default function InAction() {
     
     return () => clearTimeout(timer);
   }, []); // Only run once when component mounts
+
+  // Handle route parameters for showing leave detail
+  React.useEffect(() => {
+    const params = route.params;
+    if (params?.showLeaveDetail && params?.leaveData) {
+      // Convert LeaveItem to RequestCardData format
+      const requestData: RequestCardData = {
+        id: params.leaveId.toString(),
+        type: params.leaveData.type,
+        status: params.leaveData.state === 'Approved' || params.leaveData.state === 'APPROVED' ? 'APPROVED' : 'AWAITING',
+        date: params.leaveData.date,
+        time: params.leaveData.category,
+        reason: params.leaveData.reason || '',
+        requestDate: params.leaveData.requestDate || '',
+        startTime: params.leaveData.startTime || '',
+        endTime: params.leaveData.endTime || '',
+        shiftId: '', // Leave requests don't have shift IDs
+      };
+      
+      setSelectedRequest(requestData);
+      setRequestDetailVisible(true);
+    }
+  }, [route.params]);
 
   const handlePreviousMonth = () => {
     const newDate = new Date(selectedMonth);
