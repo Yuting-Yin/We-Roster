@@ -74,55 +74,13 @@ public class DataInitializer implements CommandLineRunner {
             return;
         }
         
-        // Clear ALL existing data for clean setup (testing only)
-        System.out.println("🔍 DataInitializer - Clearing ALL existing data for clean setup...");
-        
-        // Clear in reverse dependency order
-        System.out.println("🔍 DataInitializer - Clearing open shift requests...");
-        openShiftRequestRepository.deleteAll();
-        
-        System.out.println("🔍 DataInitializer - Clearing shift designation requirements...");
-        shiftDesignationRequirementsRepository.deleteAll();
-        
-        System.out.println("🔍 DataInitializer - Clearing open shifts...");
-        openShiftRepository.deleteAll();
-        
-        System.out.println("🔍 DataInitializer - Clearing shift assignments...");
-        shiftAssignmentRepository.deleteAll();
-        
-        System.out.println("🔍 DataInitializer - Clearing shifts...");
-        shiftRepository.deleteAll();
-        
-        System.out.println("🔍 DataInitializer - Clearing leave requests...");
-        leaveRequestRepository.deleteAll();
-        
-        System.out.println("🔍 DataInitializer - Clearing swap requests...");
-        shiftSwapRepository.deleteAll();
-        
-        System.out.println("🔍 DataInitializer - Clearing staff...");
-        staffRepository.deleteAll();
-        
-        System.out.println("🔍 DataInitializer - Clearing users...");
-        userRepository.deleteAll();
-        
-        System.out.println("🔍 DataInitializer - Clearing departments...");
-        departmentRepository.deleteAll();
-        
-        System.out.println("🔍 DataInitializer - Clearing locations...");
-        locationRepository.deleteAll();
-        
-        System.out.println("🔍 DataInitializer - Clearing designations...");
-        designationRepository.deleteAll();
-        
-        System.out.println("🔍 DataInitializer - Clearing hospitals...");
-        hospitalRepository.deleteAll();
-        
-        System.out.println("🔍 DataInitializer - All data cleared successfully");
-        
-        // Always create mock data to ensure User-Staff links exist
-        // TODO: Change back to conditional check after initial setup
-        System.out.println("🔍 DataInitializer - Forcing mock data creation...");
-        createMockData();
+        // Only initialize if database is empty (production ready)
+        if (userRepository.count() == 0) {
+            System.out.println("🔍 DataInitializer - Database is empty, creating initial data...");
+            createMockData();
+        } else {
+            System.out.println("🔍 DataInitializer - Database already has data, skipping initialization");
+        }
         
         // Always create test leave requests (for testing purposes)
         createTestLeaveRequests();
