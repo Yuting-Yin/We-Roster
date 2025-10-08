@@ -29,7 +29,7 @@ export async function fetchJson<T>(
     timeoutMs?: number;
   } = {}
 ): Promise<T> {
-  const { method = "GET", body, signal, headers = {}, timeoutMs = 15000 } =
+  const { method = "GET", body, signal, headers = {}, timeoutMs = 30000 } =
     options;
 
   const controller = new AbortController();
@@ -62,7 +62,14 @@ export async function fetchJson<T>(
 
     return (await res.json()) as T;
   } catch (e: any) {
-    if (e?.name === "AbortError") throw new ApiError(408, "Request timeout");
+    if (e?.name === "AbortError") {
+      console.log('🔍 fetchJson - Request timed out after', timeoutMs, 'ms');
+      throw new ApiError(408, "Request timeout");
+    }
+    if (e?.message?.includes('fetch')) {
+      console.log('🔍 fetchJson - Network error:', e.message);
+      throw new ApiError(0, "Network error - backend may be starting up");
+    }
     throw e;
   } finally {
     clearTimeout(timer);
