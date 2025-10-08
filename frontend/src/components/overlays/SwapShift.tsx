@@ -146,7 +146,7 @@ export default function SwapShift({
         {/* Requested by */}
         <View style={{ marginHorizontal: sx(16), marginTop: sy(18) }}>
           <Text style={styles.sectionLabel}>Requested by</Text>
-          <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Avatar initials={initials} />
             <View style={{ marginLeft: sx(10), flex: 1 }}>
               <Text style={{ color: COLOR.ink, fontSize: sx(14), fontWeight: "700" }}>{displayName} (You)</Text>
