@@ -562,6 +562,7 @@ export default function MyRoster() {
         onSubmitted={() => { setSwapVisible(false); showToast(); }}
         date={date}
         slot={reqSlot}
+        currentEvent={detailEvent}
         availableUsers={availableUIUsers}
         // loading={loadingUsers}
         // error={userErr}
