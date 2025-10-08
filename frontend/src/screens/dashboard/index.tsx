@@ -185,6 +185,12 @@ export default function Dashboard() {
         const weekData: Record<string, any[]> = {};
         console.log('🔍 Dashboard loading week data for dates:');
         
+        // Calculate the end of the current week (Sunday)
+        const weekEndDate = new Date(weekStartDate);
+        weekEndDate.setDate(weekStartDate.getDate() + 6);
+        
+        console.log('🔍 Week range:', weekStartDate.toDateString(), 'to', weekEndDate.toDateString());
+        
         for (let i = 0; i < 7; i++) {
           const date = new Date(weekStartDate);
           date.setDate(weekStartDate.getDate() + i);
@@ -192,7 +198,8 @@ export default function Dashboard() {
           
           console.log(`  Day ${i}: ${date.toDateString()} (${dateKey})`);
           
-          if (res.events && res.events[dateKey]) {
+          // Double-check that this date is actually within the current week
+          if (date >= weekStartDate && date <= weekEndDate && res.events && res.events[dateKey]) {
             // Convert raw shift data to events format
             const events = res.events[dateKey].map((shift: any) => {
               // Handle overnight shifts properly
@@ -251,14 +258,23 @@ export default function Dashboard() {
     
     const weekShifts: any[] = [];
     
+    // Calculate the end of the current week (Sunday) for validation
+    const weekEndDate = new Date(weekStartDate);
+    weekEndDate.setDate(weekStartDate.getDate() + 6);
+    
+    console.log('🔍 Processing myShifts for range:', weekStartDate.toDateString(), 'to', weekEndDate.toDateString());
+    
     for (let i = 0; i < 7; i++) {
       const date = new Date(weekStartDate);
       date.setDate(weekStartDate.getDate() + i);
       const dateKey = date.toISOString().split('T')[0];
       const dayEvents = weekEvents[dateKey] || [];
       
+      console.log(`🔍 Processing day ${i}: ${date.toDateString()} (${dateKey}) - ${dayEvents.length} events`);
       
-      dayEvents.forEach(event => {
+      // Validate that this date is within the current week
+      if (date >= weekStartDate && date <= weekEndDate) {
+        dayEvents.forEach(event => {
         if (event && event.id) {
           // Format date for display using the same approach as Roster page
           const dateObj = new Date(dateKey + 'T00:00:00'); // Add time to avoid timezone issues
@@ -283,6 +299,7 @@ export default function Dashboard() {
           });
         }
       });
+      } // Close the if statement for date validation
     }
     return weekShifts;
   }, [weekEvents, weekStartDate]);
@@ -299,8 +316,24 @@ export default function Dashboard() {
 
   // Convert open shifts to display format and sort by date (Monday to Sunday)
   const openShiftsFormatted = useMemo(() => {
+    // Calculate the end of the current week (Sunday) for validation
+    const weekEndDate = new Date(weekStartDate);
+    weekEndDate.setDate(weekStartDate.getDate() + 6);
+    
+    console.log('🔍 Processing openShifts for range:', weekStartDate.toDateString(), 'to', weekEndDate.toDateString());
+    
+    // Filter shifts to only include current week
+    const currentWeekShifts = openShiftsData.filter(shift => {
+      const shiftDate = new Date(shift.date + 'T00:00:00');
+      const isInCurrentWeek = shiftDate >= weekStartDate && shiftDate <= weekEndDate;
+      console.log(`🔍 Open shift ${shift.date}: ${isInCurrentWeek ? 'INCLUDED' : 'EXCLUDED'} (${shiftDate.toDateString()})`);
+      return isInCurrentWeek;
+    });
+    
+    console.log(`🔍 Filtered ${currentWeekShifts.length} open shifts for current week from ${openShiftsData.length} total`);
+    
     // First, sort the shifts by date chronologically
-    const sortedShifts = [...openShiftsData].sort((a, b) => {
+    const sortedShifts = [...currentWeekShifts].sort((a, b) => {
       // Compare dates, then start times
       const dateCompare = a.date.localeCompare(b.date);
       if (dateCompare !== 0) return dateCompare;
