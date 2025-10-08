@@ -516,6 +516,8 @@ export default function MyRoster() {
           rightAction={{ 
             icon: "refresh", 
             onPress: async () => {
+              if (isRefreshing) return; // Prevent multiple simultaneous refreshes
+              
               startRefreshAnimation();
               setLoadingUsers(true);
               
@@ -542,7 +544,7 @@ export default function MyRoster() {
         {isRefreshing && (
           <View style={styles.refreshOverlay}>
             <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
-              <Ionicons name="refresh" size={sx(20)} color={COLOR.brand} />
+              <Ionicons name="refresh" size={sx(18)} color={COLOR.brand} />
             </Animated.View>
           </View>
         )}
@@ -721,10 +723,10 @@ const styles = StyleSheet.create({
   calendarStack: { position: "relative", zIndex: 2, elevation: 4 },
   refreshOverlay: {
     position: "absolute",
-    top: 0,
-    right: 0,
-    width: sx(44),
-    height: sx(44),
+    top: sx(8),
+    right: sx(50),
+    width: sx(32),
+    height: sx(32),
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
