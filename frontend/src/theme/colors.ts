@@ -1,5 +1,5 @@
 // src/theme/colors.ts
-export const COLOR = {
+export const COLOR_LIGHT = {
   brand: "#0078D4",
   brandAlt: "#005A9E",
 
@@ -28,3 +28,6 @@ export const COLOR = {
   //
   skeleton: "#ebe8e8ff",
 };
+
+// Default to light theme for backward compatibility
+export const COLOR = COLOR_LIGHT;

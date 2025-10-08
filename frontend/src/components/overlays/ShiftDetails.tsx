@@ -136,7 +136,11 @@ export default function ShiftDetails({
               <Pressable 
                 key={c.id ?? i} 
                 style={{ flexDirection: "row", alignItems: "center", marginBottom: sy(10) }}
-                onPress={() => onCoworkerPress?.(c)}
+                onPress={() => onCoworkerPress?.({ 
+                  id: c.id, 
+                  name: c.name, 
+                  initials: c.initials ?? coworkerInitials(c.name) 
+                })}
                 disabled={!onCoworkerPress}
               >
                 <Avatar initials={c.initials ?? coworkerInitials(c.name)} />

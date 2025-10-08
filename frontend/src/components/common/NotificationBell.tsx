@@ -3,6 +3,7 @@ import { View, Pressable, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { sx, sy } from "@/theme/metrics";
 import { COLOR } from "@/theme/colors";
+import { useSettings } from "@/contexts/SettingsContext";
 
 interface NotificationBellProps {
   onPress: () => void;
@@ -21,7 +22,8 @@ export default function NotificationBell({
   hitSlop = 8,
   accessibilityLabel = "Open notifications",
 }: NotificationBellProps) {
-  const hasUnread = unreadCount > 0;
+  const { notificationsEnabled } = useSettings();
+  const hasUnread = notificationsEnabled && unreadCount > 0;
   
   return (
     <Pressable
