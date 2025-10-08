@@ -1,7 +1,8 @@
 // src/lib/api.ts
+import { API_CONFIG } from '../config/api';
 
 export const API_BASE: string =
-  process.env.EXPO_PUBLIC_API_BASE ?? "http://localhost:8080";
+  process.env.EXPO_PUBLIC_API_BASE ?? API_CONFIG.BASE_URL;
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -35,14 +36,21 @@ export async function fetchJson<T>(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   const token = authTokenGetter?.();
+  console.log('🔍 fetchJson - Request URL:', `${API_BASE}${path}`);
+  console.log('🔍 fetchJson - AuthTokenGetter available:', !!authTokenGetter);
+  console.log('🔍 fetchJson - Token retrieved:', token ? `Token present (${token.substring(0, 20)}...)` : 'No token');
+  
+  const requestHeaders = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...headers,
+  };
+  console.log('🔍 fetchJson - Request headers:', requestHeaders);
+  
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       method,
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...headers,
-      },
+      headers: requestHeaders,
       body: body ? JSON.stringify(body) : undefined,
       signal: mergeSignals(signal, controller.signal),
     });

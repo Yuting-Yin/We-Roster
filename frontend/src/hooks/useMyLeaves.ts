@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getMyLeaves, LeaveRequest } from '@/api/leave';
 import { LeaveItem } from '@/types/dashboard';
 import { fmt } from '@/lib/date';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Options {
   mock?: boolean;
@@ -10,12 +11,15 @@ interface Options {
 
 export function useMyLeaves(month?: string, opts: Options = {}) {
   const { mock = false, delayMs = 0 } = opts;
+  const { isAuthenticated, token } = useAuth();
   
   const [leaves, setLeaves] = useState<LeaveItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    console.log('🔍 useMyLeaves - Load called, isAuthenticated:', isAuthenticated, 'token:', token ? 'present' : 'missing');
+    
     if (mock) {
       // Mock data for testing
       setTimeout(() => {
@@ -49,10 +53,18 @@ export function useMyLeaves(month?: string, opts: Options = {}) {
       return;
     }
 
+    // Don't make API calls if not authenticated
+    if (!isAuthenticated || !token) {
+      console.log('🔍 useMyLeaves - Skipping API call, not authenticated or no token');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       
+      console.log('🔍 useMyLeaves - Making API call with token:', token ? 'present' : 'missing');
       const data = await getMyLeaves(month);
       const convertedLeaves: LeaveItem[] = data.map((leave: LeaveRequest) => {
         const requestDate = new Date(leave.requestDate);
@@ -106,11 +118,11 @@ export function useMyLeaves(month?: string, opts: Options = {}) {
     } finally {
       setLoading(false);
     }
-  }, [mock, delayMs, month]);
+  }, [mock, delayMs, month, isAuthenticated, token]);
 
   const refresh = useCallback(async () => {
     await load();
-  }, [load, month, leaves.length]);
+  }, [load]);
 
   useEffect(() => {
     load();

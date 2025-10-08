@@ -74,26 +74,34 @@ public class DataInitializer implements CommandLineRunner {
             return;
         }
         
-        // Clear leave requests for testing (real version should not do this)
-        System.out.println("🔍 DataInitializer - Clearing existing leave requests for testing...");
-        leaveRequestRepository.deleteAll();
-        System.out.println("🔍 DataInitializer - Leave requests cleared");
+        System.out.println("🔍 DataInitializer - Force regenerating database with fresh data...");
         
-        // Clear swap requests for testing (real version should not do this)
-        System.out.println("🔍 DataInitializer - Clearing existing swap requests for testing...");
+        // Clear all existing data in reverse dependency order
+        System.out.println("🔍 DataInitializer - Clearing all existing data...");
+        notificationRepository.deleteAll();
         shiftSwapRepository.deleteAll();
-        System.out.println("🔍 DataInitializer - Swap requests cleared");
+        openShiftRequestRepository.deleteAll();
+        shiftDesignationRequirementsRepository.deleteAll();
+        shiftAssignmentRepository.deleteAll();
+        openShiftRepository.deleteAll();
+        shiftRepository.deleteAll();
+        leaveRequestRepository.deleteAll();
+        staffRepository.deleteAll();
+        userRepository.deleteAll();
+        locationRepository.deleteAll();
+        designationRepository.deleteAll();
+        departmentRepository.deleteAll();
+        hospitalRepository.deleteAll();
         
-        // Only initialize if database is empty
-        if (userRepository.count() == 0) {
-            createMockData();
-        }
+        System.out.println("🔍 DataInitializer - All existing data cleared, creating fresh data...");
+        createMockData();
         
-        // Always create test leave requests (for testing purposes)
+        // Create test data
+        System.out.println("🔍 DataInitializer - Creating test data...");
         createTestLeaveRequests();
-        
-        // Always create test swap requests (for testing purposes)
         createTestSwapRequests();
+        
+        System.out.println("🔍 DataInitializer - Database regeneration completed successfully!");
     }
     
     private void createMockData() {
@@ -416,6 +424,7 @@ public class DataInitializer implements CommandLineRunner {
         offCampusTrainee = staffRepository.save(offCampusTrainee);
         
         // Create Test User and link directly to nurse1
+        System.out.println("🔍 DataInitializer - Creating test user for nurse1...");
         User testUser = User.builder()
                 .domain("test")
                 .email("test@example.com")
@@ -428,10 +437,12 @@ public class DataInitializer implements CommandLineRunner {
                 .loginAttempts(0)
                 .build();
         testUser = userRepository.save(testUser);
+        System.out.println("🔍 DataInitializer - Created test user ID: " + testUser.getId());
         
         // Link test user directly to nurse1
         nurse1.setUser(testUser);
         nurse1 = staffRepository.save(nurse1);
+        System.out.println("🔍 DataInitializer - Linked test user to nurse1");
         
         System.out.println("🔗 Created direct User-Staff link:");
         System.out.println("   User ID: " + testUser.getId() + " (" + testUser.getEmail() + ")");
@@ -520,7 +531,11 @@ public class DataInitializer implements CommandLineRunner {
         List<Staff> staffNeedingUsers = Arrays.asList(nurse2, doctor1, nurse3, surgeon, anaesCoordinator, 
                 nurseConsultant, trainee, medStudent, offCampusTrainee, nurse4, nurse5, doctor2, nurse6);
         
+        System.out.println("🔍 DataInitializer - Creating users for " + staffNeedingUsers.size() + " staff members...");
+        
         for (Staff staff : staffNeedingUsers) {
+            System.out.println("🔍 DataInitializer - Creating user for: " + staff.getFirstName() + " " + staff.getLastName());
+            
             User user = User.builder()
                     .domain("staff")
                     .email(staff.getEmail())
@@ -533,11 +548,15 @@ public class DataInitializer implements CommandLineRunner {
                     .loginAttempts(0)
                     .build();
             user = userRepository.save(user);
+            System.out.println("🔍 DataInitializer - Created user ID: " + user.getId());
             
             // Link user directly to staff
             staff.setUser(user);
-            staffRepository.save(staff);
+            staff = staffRepository.save(staff);
+            System.out.println("🔍 DataInitializer - Linked user " + user.getId() + " to staff " + staff.getId());
         }
+        
+        System.out.println("🔍 DataInitializer - Completed User-Staff linking for all staff members");
         
         // Create comprehensive mock data for the last 2 months
         System.out.println("📅 Creating comprehensive mock data for the last 2 months...");
