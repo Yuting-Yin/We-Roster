@@ -58,34 +58,39 @@ export function useApprovedLeaves(month?: string) {
     const map: Record<string, boolean> = {};
     
     leaves.forEach((leave) => {
-      // Parse dates as local time to avoid timezone conversion issues
       // Extract date components directly from the ISO string to avoid timezone shifts
       const startDateStr = leave.startTime.split('T')[0]; // "2025-10-15"
       const endDateStr = leave.endTime.split('T')[0]; // "2025-10-21"
-      
-      // Create dates using the date string directly (local time)
-      const startDate = new Date(startDateStr + 'T00:00:00');
-      const endDate = new Date(endDateStr + 'T00:00:00');
       
       console.log('🔍 Leave processing:', {
         leaveId: leave.id,
         originalStartTime: leave.startTime,
         originalEndTime: leave.endTime,
         extractedStartDate: startDateStr,
-        extractedEndDate: endDateStr,
-        startDateLocal: startDate.toDateString(),
-        endDateLocal: endDate.toDateString()
+        extractedEndDate: endDateStr
       });
       
-      // Add all dates in the leave range (inclusive)
-      const currentDate = new Date(startDate);
+      // Add all dates in the leave range (inclusive) using simple date strings
       const datesAdded: string[] = [];
+      const [startYear, startMonth, startDay] = startDateStr.split('-').map(Number);
+      const [endYear, endMonth, endDay] = endDateStr.split('-').map(Number);
+      
+      // Create date objects for comparison (use UTC to avoid timezone issues)
+      const currentDate = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+      const endDate = new Date(Date.UTC(endYear, endMonth - 1, endDay));
       
       while (currentDate <= endDate) {
-        const dateKey = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        // Format date as YYYY-MM-DD using UTC methods to avoid timezone conversion
+        const year = currentDate.getUTCFullYear();
+        const month = String(currentDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(currentDate.getUTCDate()).padStart(2, '0');
+        const dateKey = `${year}-${month}-${day}`;
+        
         map[dateKey] = true;
         datesAdded.push(dateKey);
-        currentDate.setDate(currentDate.getDate() + 1);
+        
+        // Increment date using UTC
+        currentDate.setUTCDate(currentDate.getUTCDate() + 1);
       }
       
       console.log('🔍 Dates added to map:', datesAdded);
