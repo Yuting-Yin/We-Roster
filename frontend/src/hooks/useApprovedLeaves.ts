@@ -58,26 +58,21 @@ export function useApprovedLeaves(month?: string) {
     const map: Record<string, boolean> = {};
     
     leaves.forEach((leave) => {
-      const startTime = new Date(leave.startTime);
-      const endTime = new Date(leave.endTime);
+      // Parse dates as local time to avoid timezone conversion issues
+      // Extract date components directly from the ISO string to avoid timezone shifts
+      const startDateStr = leave.startTime.split('T')[0]; // "2025-10-15"
+      const endDateStr = leave.endTime.split('T')[0]; // "2025-10-21"
+      
+      // Create dates using the date string directly (local time)
+      const startDate = new Date(startDateStr + 'T00:00:00');
+      const endDate = new Date(endDateStr + 'T00:00:00');
       
       console.log('🔍 Leave processing:', {
         leaveId: leave.id,
         originalStartTime: leave.startTime,
         originalEndTime: leave.endTime,
-        parsedStartTime: startTime.toISOString(),
-        parsedEndTime: endTime.toISOString(),
-        startTimeLocal: startTime.toDateString(),
-        endTimeLocal: endTime.toDateString()
-      });
-      
-      // Normalize both dates to midnight for proper date-only comparison
-      const startDate = new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate());
-      const endDate = new Date(endTime.getFullYear(), endTime.getMonth(), endTime.getDate());
-      
-      console.log('🔍 Normalized dates:', {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
+        extractedStartDate: startDateStr,
+        extractedEndDate: endDateStr,
         startDateLocal: startDate.toDateString(),
         endDateLocal: endDate.toDateString()
       });
