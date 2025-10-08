@@ -26,7 +26,7 @@ type SwapShiftProps = {
   availableUsers: User[];
   loading?: boolean;                  // optional
   error?: string | null;              // optional
-  getShiftForUser?: (userId: string, date: Date, slot?: { start: string; end: string }) => EventItem | null | undefined;
+  getShiftForUser?: (userId: string, date: Date, slot?: { start: string; end: string }) => Promise<EventItem | null | undefined>;
 };
 
 export default function SwapShift({
@@ -205,14 +205,39 @@ export default function SwapShift({
             ) : (
               filtered.map((p) => {
                 const active = selected === p.id;
-                const resolver = getShiftForUser ?? getMockShiftForUser;
-                const otherShift = resolver(p.id, date, slot);
-                const isUnallocated = !otherShift;
+                const [userShift, setUserShift] = React.useState<EventItem | null | undefined>(undefined);
+                const [loadingShift, setLoadingShift] = React.useState(true);
+                
+                // Load shift data for this user
+                React.useEffect(() => {
+                  if (!getShiftForUser) {
+                    // Fallback to mock data
+                    const mockShift = getMockShiftForUser(p.id, date, slot);
+                    setUserShift(mockShift);
+                    setLoadingShift(false);
+                    return;
+                  }
+                  
+                  setLoadingShift(true);
+                  getShiftForUser(p.id, date, slot)
+                    .then((shift) => {
+                      setUserShift(shift);
+                    })
+                    .catch((error) => {
+                      console.error('Error loading shift for user:', error);
+                      setUserShift(null);
+                    })
+                    .finally(() => {
+                      setLoadingShift(false);
+                    });
+                }, [p.id, date, slot]);
+                
+                const isUnallocated = !userShift;
                 
                 // Get shift information for display
-                const shiftTime = otherShift ? `${otherShift.start}-${otherShift.end}` : null;
-                const shiftCampus = otherShift?.campus || null;
-                const shiftRoom = otherShift?.room || null;
+                const shiftTime = userShift ? `${userShift.start}-${userShift.end}` : null;
+                const shiftCampus = userShift?.campus || null;
+                const shiftRoom = userShift?.room || null;
                 
                 return (
                   <Pressable
@@ -230,7 +255,11 @@ export default function SwapShift({
                       <Avatar initials={p.initials} />
                       <View style={{ marginLeft: sx(10), flex: 1, justifyContent: "center" }}>
                         <Text style={{ color: COLOR.ink, fontSize: sx(14), fontWeight: "600" }}>{p.name}</Text>
-                        {isUnallocated ? (
+                        {loadingShift ? (
+                          <Text style={{ color: COLOR.label, fontSize: sx(12), marginTop: sy(2) }}>
+                            Loading...
+                          </Text>
+                        ) : isUnallocated ? (
                           <Text style={{ color: COLOR.brandAlt, fontSize: sx(12), marginTop: sy(2) }}>
                             Unallocated
                           </Text>
@@ -241,9 +270,13 @@ export default function SwapShift({
                                 {shiftTime}
                               </Text>
                             )}
+                            {shiftCampus && shiftRoom && (
+                              <>
+                                <Text style={styles.dimStrong}>{shiftCampus}</Text>
+                                <Text style={styles.dim}>{shiftRoom}</Text>
+                              </>
+                            )}
                             {!!p.title && <Text style={styles.dim}>{p.title}</Text>}
-                            {shiftCampus && <Text style={styles.dimStrong}>{shiftCampus}</Text>}
-                            {shiftRoom && <Text style={styles.dim}>{shiftRoom}</Text>}
                           </>
                         )}
                       </View>

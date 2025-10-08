@@ -17,6 +17,7 @@ import { fmt } from "@/lib/date";
 
 // users for swap
 import { getAvailableUsers, type ApiUser } from "@/api/user";
+import { getTeamRoster, type TeamRosterResponse } from "@/api/teamroster";
 import { useMyRosterData } from "@/hooks/useMyRoster";
 import { useRosterData } from "@/hooks/useRoster";
 import { useOpenShiftsWeek } from "@/hooks/useOpenShiftsWeek";
@@ -236,6 +237,85 @@ export default function MyRoster() {
   
   // Open shift application
   const { applyForShift, submitting } = useOpenShiftApplication();
+
+  // Function to get shift data for a specific user on a specific date
+  const getShiftForUser = React.useCallback(async (userId: string, targetDate: Date, slot?: { start: string; end: string }): Promise<EventItem | null> => {
+    try {
+      const dateStr = targetDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+      const teamRoster = await getTeamRoster(dateStr);
+      
+      // Look for the user in the team roster data
+      for (const table of teamRoster.tables) {
+        for (const cell of table.cells) {
+          for (const shift of cell.shifts) {
+            const assignedStaff = shift.assignedStaff.find(staff => staff.id === userId);
+            if (assignedStaff) {
+              // Found the user's shift
+              const startTime = shift.startTime.slice(0, 5); // HH:MM format
+              const endTime = shift.endTime.slice(0, 5); // HH:MM format
+              
+              // Check if this shift overlaps with the requested time slot
+              if (slot) {
+                const slotStart = slot.start;
+                const slotEnd = slot.end;
+                
+                // Simple overlap check: if either start or end is within the other's range
+                const overlaps = (startTime <= slotEnd && endTime >= slotStart);
+                if (!overlaps) {
+                  continue; // This shift doesn't overlap with the requested slot
+                }
+              }
+              
+              // Parse campus and room from shift location
+              const { campus, room } = parseCampusAndRoom(shift.shiftName || cell.room);
+              
+              return {
+                id: shift.id,
+                start: startTime,
+                end: endTime,
+                title: `${shift.shiftName || cell.room} - ${table.hospital}`,
+                location: cell.room,
+                role: assignedStaff.designation,
+                teammates: `working with ${shift.assignedStaff.length - 1} others`,
+                coworkers: shift.assignedStaff
+                  .filter(staff => staff.id !== userId)
+                  .map(staff => ({
+                    id: staff.id,
+                    name: staff.name,
+                    initials: staff.initials
+                  })),
+                action: "arrow",
+                campus,
+                room,
+                campusAddress: table.hospital,
+                shiftName: shift.shiftName,
+              };
+            }
+          }
+        }
+      }
+      
+      // User not found in any shift for this date
+      return null;
+    } catch (error) {
+      console.error('Error getting shift for user:', error);
+      return null;
+    }
+  }, []);
+
+  // Helper function to parse campus and room from location string
+  const parseCampusAndRoom = (location: string): { campus: string; room: string } => {
+    if (!location) return { campus: '', room: '' };
+    
+    // Try to split on common patterns
+    const parts = location.split(' - ');
+    if (parts.length >= 2) {
+      return { campus: parts[0], room: parts[1] };
+    }
+    
+    // If no clear split, assume it's all room
+    return { campus: '', room: location };
+  };
 
   // Register overlays with context for auto-close functionality
   const { registerOverlay, unregisterOverlay, requestTeamMemberNav, teamMemberNavRequest, clearTeamMemberNavRequest } = useOverlayContext();
@@ -564,6 +644,7 @@ export default function MyRoster() {
         slot={reqSlot}
         currentEvent={detailEvent}
         availableUsers={availableUIUsers}
+        getShiftForUser={getShiftForUser}
         // loading={loadingUsers}
         // error={userErr}
       />
