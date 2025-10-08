@@ -29,7 +29,7 @@ import { useOverlayContext } from "@/contexts/OverlayContext";
 import type { OpenShiftDto } from "@/api/openshift";
 
 // user infos that only used for UI/SwapShift
-type UIUser = { id: string; name: string; initials: string };
+type UIUser = { id: string; name: string; initials: string; title?: string };
 
 export default function MyRoster() {
   const rootRef = useRef<View>(null);
@@ -434,7 +434,7 @@ export default function MyRoster() {
   };
   const toUIUser = (u: ApiUser): UIUser => {
     const name = (u as any).displayName ?? (u as any).name ?? "";
-    return { id: String(u.id), name, initials: initialsOf(name) };
+    return { id: String(u.id), name, initials: initialsOf(name), title: u.title };
   };
   const availableUIUsers = React.useMemo<UIUser[]>(
     () => {
