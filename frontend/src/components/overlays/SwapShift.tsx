@@ -252,6 +252,7 @@ export default function SwapShift({
       
       <WarningToast visible={warningToast} message={toastMessage} />
     </View>
+  );
 }
 
 const styles = StyleSheet.create({
