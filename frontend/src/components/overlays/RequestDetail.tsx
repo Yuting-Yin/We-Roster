@@ -11,6 +11,7 @@ import { getShiftDetails } from "@/api/myroster";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE, fetchJson } from '@/lib/api';
 import { useOverlayContext } from "@/contexts/OverlayContext";
+import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 
 interface RequestDetailProps {
   visible: boolean;
@@ -38,6 +39,10 @@ export default function RequestDetail({
   const [shiftDetails, setShiftDetails] = React.useState<any>(null);
   const [loadingShift, setLoadingShift] = React.useState(false);
   const [shiftError, setShiftError] = React.useState<string | null>(null);
+  
+  // State for confirmation dialog
+  const [showConfirmDialog, setShowConfirmDialog] = React.useState(false);
+  const [showWarningDialog, setShowWarningDialog] = React.useState(false);
 
   const anim = React.useRef(new Animated.Value(0)).current;
   React.useEffect(() => {
@@ -181,37 +186,15 @@ export default function RequestDetail({
     console.log("🔍 HandleCancelRequest - Can cancel:", canCancel);
     
     if (!canCancel) {
-      // Show warning toast for non-cancellable requests
-      console.log("🔍 HandleCancelRequest - Showing warning alert");
-      Alert.alert(
-        "Cannot Cancel Request",
-        `This request has already been ${request.status.toLowerCase()} and cannot be cancelled.`,
-        [{ text: "OK" }]
-      );
+      // Show warning dialog for non-cancellable requests
+      console.log("🔍 HandleCancelRequest - Showing warning dialog");
+      setShowWarningDialog(true);
       return;
     }
     
     // Show confirmation dialog for cancellable requests
     console.log("🔍 HandleCancelRequest - Showing confirmation dialog");
-    Alert.alert(
-      "Cancel Request",
-      "Are you sure you want to cancel this request? This action cannot be undone.",
-      [
-        {
-          text: "Keep Request",
-          style: "cancel"
-        },
-        {
-          text: "Cancel Request",
-          style: "destructive",
-          onPress: () => {
-            console.log("🔍 HandleCancelRequest - User confirmed cancellation");
-            confirmCancelRequest();
-          }
-        }
-      ],
-      { cancelable: false } // Prevent dismissing by tapping outside
-    );
+    setShowConfirmDialog(true);
   };
 
   const confirmCancelRequest = async () => {
@@ -231,6 +214,7 @@ export default function RequestDetail({
       
       if (response.success) {
         console.log("🔍 ConfirmCancelRequest - Request cancelled successfully:", response.message);
+        setShowConfirmDialog(false);
         Alert.alert(
           "Success",
           response.message || "Request cancelled successfully",
@@ -415,6 +399,35 @@ export default function RequestDetail({
             </Pressable>
           )}
         </View>
+        
+        {/* Custom Confirmation Dialog */}
+        <ConfirmationDialog
+          visible={showConfirmDialog}
+          title="Cancel Request"
+          message="Are you sure you want to cancel this request? This action cannot be undone."
+          confirmText="Cancel Request"
+          cancelText="Keep Request"
+          confirmStyle="destructive"
+          onConfirm={() => {
+            console.log("🔍 HandleCancelRequest - User confirmed cancellation");
+            confirmCancelRequest();
+          }}
+          onCancel={() => {
+            console.log("🔍 HandleCancelRequest - User cancelled");
+            setShowConfirmDialog(false);
+          }}
+        />
+        
+        {/* Custom Warning Dialog */}
+        <ConfirmationDialog
+          visible={showWarningDialog}
+          title="Cannot Cancel Request"
+          message={`This request has already been ${request?.status.toLowerCase()} and cannot be cancelled.`}
+          confirmText="OK"
+          confirmStyle="default"
+          onConfirm={() => setShowWarningDialog(false)}
+          onCancel={() => setShowWarningDialog(false)}
+        />
     </Animated.View>
   );
 }
