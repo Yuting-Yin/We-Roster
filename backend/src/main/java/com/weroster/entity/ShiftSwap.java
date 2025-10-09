@@ -28,11 +28,11 @@ public class ShiftSwap {
     @Column(name = "date_made", nullable = false)
     private LocalDateTime dateMade;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "requester_id")
     private Staff requester;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "target_id")
     private Staff target;
     
