@@ -45,6 +45,8 @@ export default function RequestDetail({
   // State for confirmation dialog
   const [showConfirmDialog, setShowConfirmDialog] = React.useState(false);
   const [showWarningDialog, setShowWarningDialog] = React.useState(false);
+  const [showErrorDialog, setShowErrorDialog] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState('');
 
   const anim = React.useRef(new Animated.Value(0)).current;
   React.useEffect(() => {
@@ -217,19 +219,10 @@ export default function RequestDetail({
       if (response.success) {
         console.log("🔍 ConfirmCancelRequest - Request cancelled successfully:", response.message);
         setShowConfirmDialog(false);
-        Alert.alert(
-          "Success",
-          response.message || "Request cancelled successfully",
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                onClose();
-                // TODO: Trigger parent component refresh to update the request list
-              }
-            }
-          ]
-        );
+        
+        // Automatically close overlay and refresh the screen
+        onClose();
+        onRefresh?.();
       } else {
         throw new Error(response.error || "Unknown error occurred");
       }
@@ -247,20 +240,8 @@ export default function RequestDetail({
         }
       }
       
-      Alert.alert(
-        "Cannot Cancel Request",
-        errorMessage,
-        [
-          { text: "OK" },
-          ...(onRefresh ? [{
-            text: "Refresh Data",
-            onPress: () => {
-              onRefresh();
-              onClose();
-            }
-          }] : [])
-        ]
-      );
+      setErrorMessage(errorMessage);
+      setShowErrorDialog(true);
     }
   };
 
@@ -450,6 +431,24 @@ export default function RequestDetail({
           confirmStyle="default"
           onConfirm={() => setShowWarningDialog(false)}
           onCancel={() => setShowWarningDialog(false)}
+        />
+        
+        {/* Custom Error Dialog */}
+        <ConfirmationDialog
+          visible={showErrorDialog}
+          title="Cannot Cancel Request"
+          message={errorMessage}
+          confirmText="OK"
+          cancelText={onRefresh ? "Refresh Data" : undefined}
+          confirmStyle="default"
+          onConfirm={() => setShowErrorDialog(false)}
+          onCancel={() => {
+            if (onRefresh) {
+              onRefresh();
+              onClose();
+            }
+            setShowErrorDialog(false);
+          }}
         />
     </Animated.View>
   );
