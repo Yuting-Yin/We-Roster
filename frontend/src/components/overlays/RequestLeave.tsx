@@ -33,7 +33,10 @@ export default function RequestLeave({
     console.log('🔍 RequestLeave - Error:', error);
   }, [user, loading, error]);
 
-  const [leaveType] = React.useState<string | null>(null);
+  // Determine leave type based on allDay toggle
+  const leaveType = React.useMemo(() => {
+    return allDay ? "Day Leave" : "Partial Leave";
+  }, [allDay]);
   const [reason, setReason] = React.useState("");
   const [allDay, setAllDay] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
