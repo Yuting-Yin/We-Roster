@@ -141,12 +141,28 @@ export default function RequestDetail({
     // TODO: Implement cancel functionality
   };
 
+  // Generate dynamic title based on request type and subtype
+  const getRequestTitle = () => {
+    if (!request) return "Request";
+    
+    switch (request.requestType) {
+      case "Leave Request":
+        return "Leave Request";
+      case "Swap Request":
+        return request.requestSubType || "Swap Request";
+      case "Open Shift Request":
+        return "Open Shift Request";
+      default:
+        return "Request";
+    }
+  };
+
   return (
     <Animated.View style={[styles.wrap, { transform: [{ translateY }] }]}>
         {/* Header */}
         <View style={styles.header}>
           <View style={{ width: sx(24) }} />
-          <Text style={styles.title}>Leave Request</Text>
+          <Text style={styles.title}>{getRequestTitle()}</Text>
           <Pressable onPress={onClose} hitSlop={10}>
             <Ionicons name="close-outline" size={sx(28)} color={COLOR.ink} />
           </Pressable>
