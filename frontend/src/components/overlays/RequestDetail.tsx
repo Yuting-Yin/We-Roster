@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE, fetchJson } from '@/lib/api';
 import { useOverlayContext } from "@/contexts/OverlayContext";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
+import { acceptSwapRequest, declineSwapRequest } from "@/api/swap";
 
 interface RequestDetailProps {
   visible: boolean;
@@ -47,6 +48,10 @@ export default function RequestDetail({
   const [showWarningDialog, setShowWarningDialog] = React.useState(false);
   const [showErrorDialog, setShowErrorDialog] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState('');
+  
+  // State for swap response confirmation dialogs
+  const [showAcceptDialog, setShowAcceptDialog] = React.useState(false);
+  const [showDeclineDialog, setShowDeclineDialog] = React.useState(false);
 
   const anim = React.useRef(new Animated.Value(0)).current;
   React.useEffect(() => {
@@ -164,13 +169,41 @@ export default function RequestDetail({
   console.log("🔍 RequestDetail - request.requestSubType:", request.requestSubType);
 
   const handleDecline = () => {
-    console.log("Decline swap request:", request.id);
-    // TODO: Implement decline functionality
+    console.log("🔍 HandleDecline - Button clicked for swap request:", request?.id);
+    
+    if (!request) {
+      console.log("🔍 HandleDecline - No request data available");
+      return;
+    }
+    
+    // Check if request has already been processed
+    if (request.status === "APPROVED" || request.status === "DECLINED") {
+      console.log("🔍 HandleDecline - Request already processed, showing warning");
+      setShowWarningDialog(true);
+      return;
+    }
+    
+    // Show confirmation dialog
+    setShowDeclineDialog(true);
   };
 
   const handleAccept = () => {
-    console.log("Accept swap request:", request.id);
-    // TODO: Implement accept functionality
+    console.log("🔍 HandleAccept - Button clicked for swap request:", request?.id);
+    
+    if (!request) {
+      console.log("🔍 HandleAccept - No request data available");
+      return;
+    }
+    
+    // Check if request has already been processed
+    if (request.status === "APPROVED" || request.status === "DECLINED") {
+      console.log("🔍 HandleAccept - Request already processed, showing warning");
+      setShowWarningDialog(true);
+      return;
+    }
+    
+    // Show confirmation dialog
+    setShowAcceptDialog(true);
   };
 
   const handleCancelRequest = () => {
@@ -238,6 +271,72 @@ export default function RequestDetail({
         } else {
           errorMessage = error.message;
         }
+      }
+      
+      setErrorMessage(errorMessage);
+      setShowErrorDialog(true);
+    }
+  };
+
+  // Handle accepting swap request
+  const confirmAcceptSwap = async () => {
+    if (!request) return;
+    
+    try {
+      console.log("🔍 ConfirmAcceptSwap - Starting accept for swap request:", request.id);
+      
+      const response = await acceptSwapRequest(request.id);
+      
+      if (response.success) {
+        console.log("🔍 ConfirmAcceptSwap - Swap request accepted successfully:", response.message);
+        setShowAcceptDialog(false);
+        
+        // Automatically close overlay and refresh the screen
+        onClose();
+        onRefresh?.();
+      } else {
+        throw new Error(response.message || "Failed to accept swap request");
+      }
+    } catch (error) {
+      console.error("🔍 ConfirmAcceptSwap - Error accepting swap request:", error);
+      setShowAcceptDialog(false);
+      
+      let errorMessage = "Failed to accept the swap request. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      setErrorMessage(errorMessage);
+      setShowErrorDialog(true);
+    }
+  };
+
+  // Handle declining swap request
+  const confirmDeclineSwap = async () => {
+    if (!request) return;
+    
+    try {
+      console.log("🔍 ConfirmDeclineSwap - Starting decline for swap request:", request.id);
+      
+      const response = await declineSwapRequest(request.id);
+      
+      if (response.success) {
+        console.log("🔍 ConfirmDeclineSwap - Swap request declined successfully:", response.message);
+        setShowDeclineDialog(false);
+        
+        // Automatically close overlay and refresh the screen
+        onClose();
+        onRefresh?.();
+      } else {
+        throw new Error(response.message || "Failed to decline swap request");
+      }
+    } catch (error) {
+      console.error("🔍 ConfirmDeclineSwap - Error declining swap request:", error);
+      setShowDeclineDialog(false);
+      
+      let errorMessage = "Failed to decline the swap request. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
       }
       
       setErrorMessage(errorMessage);
@@ -379,11 +478,31 @@ export default function RequestDetail({
             return isIncomingSwap;
           })() ? (
             <View style={styles.swapButtonRow}>
-              <Pressable style={styles.declineButton} onPress={handleDecline}>
-                <Text style={styles.declineButtonText}>Decline</Text>
+              <Pressable 
+                style={[
+                  styles.declineButton, 
+                  (request?.status === "APPROVED" || request?.status === "DECLINED") && styles.disabledButton
+                ]} 
+                onPress={handleDecline}
+                disabled={request?.status === "APPROVED" || request?.status === "DECLINED"}
+              >
+                <Text style={[
+                  styles.declineButtonText,
+                  (request?.status === "APPROVED" || request?.status === "DECLINED") && styles.disabledButtonText
+                ]}>Decline</Text>
               </Pressable>
-              <Pressable style={styles.acceptButton} onPress={handleAccept}>
-                <Text style={styles.acceptButtonText}>Accept</Text>
+              <Pressable 
+                style={[
+                  styles.acceptButton,
+                  (request?.status === "APPROVED" || request?.status === "DECLINED") && styles.disabledButton
+                ]} 
+                onPress={handleAccept}
+                disabled={request?.status === "APPROVED" || request?.status === "DECLINED"}
+              >
+                <Text style={[
+                  styles.acceptButtonText,
+                  (request?.status === "APPROVED" || request?.status === "DECLINED") && styles.disabledButtonText
+                ]}>Accept</Text>
               </Pressable>
             </View>
           ) : (
@@ -425,8 +544,11 @@ export default function RequestDetail({
         {/* Custom Warning Dialog */}
         <ConfirmationDialog
           visible={showWarningDialog}
-          title="Cannot Cancel Request"
-          message={`This request has already been ${request?.status.toLowerCase()} and cannot be cancelled.`}
+          title="Request Already Processed"
+          message={isIncomingSwap 
+            ? `This swap request has already been ${request?.status.toLowerCase()}. You can only respond once to each request.`
+            : `This request has already been ${request?.status.toLowerCase()} and cannot be cancelled.`
+          }
           confirmText="OK"
           confirmStyle="default"
           onConfirm={() => setShowWarningDialog(false)}
@@ -448,6 +570,38 @@ export default function RequestDetail({
               onClose();
             }
             setShowErrorDialog(false);
+          }}
+        />
+        
+        {/* Swap Accept Confirmation Dialog */}
+        <ConfirmationDialog
+          visible={showAcceptDialog}
+          title="Accept Swap Request"
+          message="Are you sure you want to accept this swap request? You can only respond once to each request."
+          confirmText="Accept"
+          cancelText="Cancel"
+          confirmStyle="default"
+          onConfirm={() => {
+            confirmAcceptSwap();
+          }}
+          onCancel={() => {
+            setShowAcceptDialog(false);
+          }}
+        />
+        
+        {/* Swap Decline Confirmation Dialog */}
+        <ConfirmationDialog
+          visible={showDeclineDialog}
+          title="Decline Swap Request"
+          message="Are you sure you want to decline this swap request? You can only respond once to each request."
+          confirmText="Decline"
+          cancelText="Cancel"
+          confirmStyle="destructive"
+          onConfirm={() => {
+            confirmDeclineSwap();
+          }}
+          onCancel={() => {
+            setShowDeclineDialog(false);
           }}
         />
     </Animated.View>
@@ -617,6 +771,12 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: sx(16),
     fontWeight: "600",
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  disabledButtonText: {
+    opacity: 0.7,
   },
   loadingContainer: {
     flexDirection: "row",

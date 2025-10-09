@@ -217,6 +217,8 @@ CREATE TABLE shift_swap (
     to_time DATETIME NOT NULL,
     message TEXT,
     status VARCHAR(20) NOT NULL DEFAULT 'AWAITING',
+    target_response VARCHAR(20),
+    target_response_at DATETIME,
     date_made DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (requester_id) REFERENCES staff(id) ON DELETE CASCADE,
     FOREIGN KEY (target_id) REFERENCES staff(id) ON DELETE CASCADE,

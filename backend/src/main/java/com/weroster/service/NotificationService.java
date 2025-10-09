@@ -116,6 +116,24 @@ public class NotificationService {
         );
     }
     
+    // Create notification for swap accept
+    public void createSwapAcceptNotification(ShiftSwap swapRequest) {
+        String message = String.format("Your swap request on %s - %s has been accepted by %s. Waiting for admin approval.",
+            formatDate(swapRequest.getFromTime()),
+            getShiftTime(swapRequest.getFromTime()),
+            getStaffName(swapRequest.getTarget()));
+            
+        createNotification(
+            swapRequest.getRequester().getUser(),
+            Notification.NotificationType.SWAP_ACCEPTED.name(),
+            "Swap Accepted",
+            message,
+            Notification.RelatedEntityType.SHIFT_SWAP.getValue(),
+            swapRequest.getId(),
+            swapRequest.getTarget().getUser()
+        );
+    }
+    
     // Create notification for swap decline
     public void createSwapDeclineNotification(ShiftSwap swapRequest, Staff declinedBy) {
         String message = String.format("Your swap request on %s - %s has been declined by %s",

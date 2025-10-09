@@ -46,4 +46,10 @@ public class ShiftSwap {
     @Column(name = "status", length = 30)
     @Builder.Default
     private String status = "AWAITING";
+    
+    @Column(name = "target_response", length = 30)
+    private String targetResponse; // "ACCEPTED", "DECLINED", or null
+    
+    @Column(name = "target_response_at")
+    private LocalDateTime targetResponseAt;
 }

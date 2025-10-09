@@ -4,9 +4,11 @@ import com.weroster.dto.CreateSwapRequestInput;
 import com.weroster.entity.Shift;
 import com.weroster.entity.ShiftSwap;
 import com.weroster.entity.Staff;
+import com.weroster.entity.User;
 import com.weroster.repository.ShiftRepository;
 import com.weroster.repository.ShiftSwapRepository;
 import com.weroster.repository.StaffRepository;
+import com.weroster.repository.UserRepository;
 import com.weroster.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +34,116 @@ public class SwapController {
     private ShiftRepository shiftRepository;
     
     @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
     private NotificationService notificationService;
+    
+    /**
+     * Accept an incoming swap request (target user responds)
+     */
+    @PostMapping("/{swapId}/accept")
+    public ResponseEntity<Map<String, Object>> acceptSwapRequest(
+            @PathVariable Long swapId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            System.out.println("🔍 SwapController - acceptSwapRequest called for swap ID: " + swapId);
+            
+            // Get current user from auth header
+            User currentUser = getCurrentUser(authHeader);
+            Staff currentStaff = findStaffByUser(currentUser);
+            
+            // Find the swap request
+            ShiftSwap swapRequest = shiftSwapRepository.findById(swapId)
+                    .orElseThrow(() -> new RuntimeException("Swap request not found"));
+            
+            // Verify this is an incoming swap request for the current user
+            if (!swapRequest.getTarget().getId().equals(currentStaff.getId())) {
+                return ResponseEntity.status(403).body(Map.of("error", "Access denied - not your incoming swap request"));
+            }
+            
+            // Check if already responded
+            if (!"AWAITING".equals(swapRequest.getStatus())) {
+                return ResponseEntity.status(400).body(Map.of("error", "Swap request has already been responded to"));
+            }
+            
+            // Update status to indicate target user accepted (but still needs admin approval)
+            swapRequest.setStatus("AWAITING"); // Keep as AWAITING since admin still needs to approve
+            swapRequest.setTargetResponse("ACCEPTED");
+            swapRequest.setTargetResponseAt(LocalDateTime.now());
+            
+            ShiftSwap saved = shiftSwapRepository.save(swapRequest);
+            
+            // Create notification for requester
+            notificationService.createSwapAcceptNotification(saved);
+            
+            System.out.println("🔍 SwapController - Swap request accepted by target user, waiting for admin approval");
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Swap request accepted. Waiting for admin approval.",
+                "swapId", swapId,
+                "status", "AWAITING"
+            ));
+            
+        } catch (Exception e) {
+            System.out.println("🔍 SwapController - Error accepting swap request: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    /**
+     * Decline an incoming swap request (target user responds)
+     */
+    @PostMapping("/{swapId}/decline")
+    public ResponseEntity<Map<String, Object>> declineSwapRequest(
+            @PathVariable Long swapId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            System.out.println("🔍 SwapController - declineSwapRequest called for swap ID: " + swapId);
+            
+            // Get current user from auth header
+            User currentUser = getCurrentUser(authHeader);
+            Staff currentStaff = findStaffByUser(currentUser);
+            
+            // Find the swap request
+            ShiftSwap swapRequest = shiftSwapRepository.findById(swapId)
+                    .orElseThrow(() -> new RuntimeException("Swap request not found"));
+            
+            // Verify this is an incoming swap request for the current user
+            if (!swapRequest.getTarget().getId().equals(currentStaff.getId())) {
+                return ResponseEntity.status(403).body(Map.of("error", "Access denied - not your incoming swap request"));
+            }
+            
+            // Check if already responded
+            if (!"AWAITING".equals(swapRequest.getStatus())) {
+                return ResponseEntity.status(400).body(Map.of("error", "Swap request has already been responded to"));
+            }
+            
+            // Update status to DECLINED
+            swapRequest.setStatus("DECLINED");
+            swapRequest.setTargetResponse("DECLINED");
+            swapRequest.setTargetResponseAt(LocalDateTime.now());
+            
+            ShiftSwap saved = shiftSwapRepository.save(swapRequest);
+            
+            // Create notification for requester
+            notificationService.createSwapDeclineNotification(saved, currentStaff);
+            
+            System.out.println("🔍 SwapController - Swap request declined by target user");
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Swap request declined.",
+                "swapId", swapId,
+                "status", "DECLINED"
+            ));
+            
+        } catch (Exception e) {
+            System.out.println("🔍 SwapController - Error declining swap request: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
     
     @PostMapping
     public ResponseEntity<Map<String, Object>> createSwapRequest(@RequestBody CreateSwapRequestInput input) {
@@ -125,5 +236,48 @@ public class SwapController {
             response.put("error", e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
+    }
+    
+    /**
+     * Helper method to get current user from Authorization header
+     */
+    private User getCurrentUser(String authHeader) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                throw new RuntimeException("Missing or invalid authorization header");
+            }
+            
+            String token = authHeader.substring(7); // Remove "Bearer " prefix
+            
+            if (!token.startsWith("jwt_token_")) {
+                throw new RuntimeException("Invalid token format");
+            }
+            
+            String[] parts = token.split("_");
+            if (parts.length < 3) {
+                throw new RuntimeException("Invalid token format");
+            }
+            
+            Long userId = Long.parseLong(parts[2]);
+            
+            return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+                
+        } catch (Exception e) {
+            throw new RuntimeException("Authentication failed: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Helper method to find staff by user
+     */
+    private Staff findStaffByUser(User user) {
+        if (user.getStaff() != null) {
+            return user.getStaff();
+        }
+        
+        // Fallback: find staff by user ID
+        return staffRepository.findByUserId(user.getId())
+            .orElseThrow(() -> new RuntimeException("Staff not found for user: " + user.getEmail()));
     }
 }

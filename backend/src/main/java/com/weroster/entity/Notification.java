@@ -59,6 +59,7 @@ public class Notification {
         LEAVE_APPROVAL("Leave Approved"),
         LEAVE_DECLINED("Leave Declined"),
         SWAP_REQUEST("Swap Request"),
+        SWAP_ACCEPTED("Swap Accepted"),
         SWAP_APPROVED("Swap Approved"),
         SWAP_DECLINED("Swap Declined"),
         OPEN_SHIFT_APPROVED("Open Shift Approved"),
