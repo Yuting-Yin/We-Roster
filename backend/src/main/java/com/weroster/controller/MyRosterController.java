@@ -35,6 +35,36 @@ public class MyRosterController {
     private UserRepository userRepository;
     
     /**
+     * Helper method to get current user from Authorization header
+     */
+    private User getCurrentUser(String authHeader) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                throw new RuntimeException("Missing or invalid authorization header");
+            }
+            
+            String token = authHeader.substring(7); // Remove "Bearer " prefix
+            
+            // Simplified token parsing - in production, use proper JWT library
+            if (!token.startsWith("jwt_token_")) {
+                throw new RuntimeException("Invalid token format");
+            }
+            
+            String[] parts = token.split("_");
+            if (parts.length < 3) {
+                throw new RuntimeException("Invalid token format");
+            }
+            
+            Long userId = Long.parseLong(parts[2]);
+            return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+                
+        } catch (Exception e) {
+            throw new RuntimeException("Authentication failed: " + e.getMessage());
+        }
+    }
+    
+    /**
      * Helper method to find staff linked to a user using direct relationship
      */
     private Staff findStaffByUser(User user) {
@@ -58,7 +88,9 @@ public class MyRosterController {
     }
     
     @GetMapping("/day")
-    public ResponseEntity<DayRosterDto> getDayRoster(@RequestParam(required = false) String date) {
+    public ResponseEntity<DayRosterDto> getDayRoster(
+            @RequestParam(required = false) String date,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
             LocalDateTime targetDate = date != null ? 
                 LocalDate.parse(date).atStartOfDay() : 
@@ -66,10 +98,8 @@ public class MyRosterController {
             
             System.out.println("🔍 Looking for shifts on date: " + targetDate);
             
-            // For now, get the test user (test@example.com)
-            // In a real app, this would come from authentication context
-            User currentUser = userRepository.findByDomainAndEmail("test", "test@example.com")
-                .orElseThrow(() -> new RuntimeException("Test user not found"));
+            // Get current user from JWT token
+            User currentUser = getCurrentUser(authHeader);
             
             System.out.println("👤 Current user: " + currentUser.getEmail());
             
@@ -298,13 +328,15 @@ public class MyRosterController {
      */
     @GetMapping("/shift/{id}")
     @Transactional(readOnly = true)
-    public ResponseEntity<ShiftDetailsDto> getShiftDetails(@PathVariable Long id) {
+    public ResponseEntity<ShiftDetailsDto> getShiftDetails(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
             System.out.println("🔍 MyRosterController - getShiftDetails called for shift ID: " + id);
             
-            // Get current user from JWT token (simplified for now)
-            User currentUser = userRepository.findByDomainAndEmail("test", "test@example.com")
-                .orElseThrow(() -> new RuntimeException("Test user not found"));
+            // Get current user from JWT token
+            User currentUser = getCurrentUser(authHeader);
+            System.out.println("👤 Current user: " + currentUser.getEmail());
             
             Staff staff = findStaffByUser(currentUser);
             System.out.println("🔍 MyRosterController - Found staff: " + staff.getId());
@@ -537,11 +569,16 @@ public class MyRosterController {
     }
 
     @GetMapping("/refresh")
-    public ResponseEntity<RefreshResponse> refreshRoster(@RequestParam(required = false) String date) {
+    public ResponseEntity<RefreshResponse> refreshRoster(
+            @RequestParam(required = false) String date,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
             LocalDateTime targetDate = date != null ? 
                 LocalDate.parse(date).atStartOfDay() : 
                 LocalDate.now().atStartOfDay();
+            
+            // Get current user from JWT token
+            User currentUser = getCurrentUser(authHeader);
             
             // Get shifts for the week
             List<Shift> shifts = shiftRepository.findByDate(targetDate);
