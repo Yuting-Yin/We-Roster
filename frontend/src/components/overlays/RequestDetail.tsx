@@ -193,7 +193,8 @@ export default function RequestDetail({
             </View>
           </View>
 
-          {(workingStaff.length > 0 || (shiftDetails?.coworkers && shiftDetails.coworkers.length > 0)) && (
+          {/* Always show "Working with" section for shift-related requests */}
+          {request?.shiftId && (
             <>
               <View style={styles.divider} />
               <View style={styles.section}>
