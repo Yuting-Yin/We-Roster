@@ -209,7 +209,8 @@ export default function RequestDetail({
             confirmCancelRequest();
           }
         }
-      ]
+      ],
+      { cancelable: false } // Prevent dismissing by tapping outside
     );
   };
 
