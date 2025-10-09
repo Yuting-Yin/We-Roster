@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE, fetchJson } from '@/lib/api';
 import { useOverlayContext } from "@/contexts/OverlayContext";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
+import WarningToast from "@/components/overlays/WarningToast";
 import { acceptSwapRequest, declineSwapRequest } from "@/api/swap";
 
 interface RequestDetailProps {
@@ -52,11 +53,22 @@ export default function RequestDetail({
   // State for swap response confirmation dialogs
   const [showAcceptDialog, setShowAcceptDialog] = React.useState(false);
   const [showDeclineDialog, setShowDeclineDialog] = React.useState(false);
+  
+  // State for warning toast
+  const [showWarningToast, setShowWarningToast] = React.useState(false);
+  const [warningToastMessage, setWarningToastMessage] = React.useState("");
 
   const anim = React.useRef(new Animated.Value(0)).current;
   React.useEffect(() => {
     Animated.timing(anim, { toValue: visible ? 1 : 0, duration: 220, useNativeDriver: true }).start();
   }, [visible]);
+
+  // Helper function to show warning toast
+  const showWarningToastMessage = (message: string) => {
+    setWarningToastMessage(message);
+    setShowWarningToast(true);
+    setTimeout(() => setShowWarningToast(false), 3000);
+  };
 
   // Test authentication endpoint
   const testAuth = async () => {
@@ -163,10 +175,15 @@ export default function RequestDetail({
 
   const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
   const isIncomingSwap = request.isIncomingSwap || request.requestSubType === "Incoming Swap Request";
+  // Check if user has already responded by looking at needsResponse field
+  const hasAlreadyResponded = request.status === "APPROVED" || request.status === "DECLINED" || 
+                              (isIncomingSwap && !request.needsResponse);
   
   console.log("🔍 RequestDetail - isIncomingSwap:", isIncomingSwap);
   console.log("🔍 RequestDetail - request.isIncomingSwap:", request.isIncomingSwap);
   console.log("🔍 RequestDetail - request.requestSubType:", request.requestSubType);
+  console.log("🔍 RequestDetail - request.needsResponse:", request.needsResponse);
+  console.log("🔍 RequestDetail - hasAlreadyResponded:", hasAlreadyResponded);
 
   const handleDecline = () => {
     console.log("🔍 HandleDecline - Button clicked for swap request:", request?.id);
@@ -178,8 +195,8 @@ export default function RequestDetail({
     
     // Check if request has already been processed
     if (request.status === "APPROVED" || request.status === "DECLINED") {
-      console.log("🔍 HandleDecline - Request already processed, showing warning");
-      setShowWarningDialog(true);
+      console.log("🔍 HandleDecline - Request already processed, showing warning toast");
+      showWarningToastMessage("You have already responded to this swap request. You can only respond once.");
       return;
     }
     
@@ -197,8 +214,8 @@ export default function RequestDetail({
     
     // Check if request has already been processed
     if (request.status === "APPROVED" || request.status === "DECLINED") {
-      console.log("🔍 HandleAccept - Request already processed, showing warning");
-      setShowWarningDialog(true);
+      console.log("🔍 HandleAccept - Request already processed, showing warning toast");
+      showWarningToastMessage("You have already responded to this swap request. You can only respond once.");
       return;
     }
     
@@ -481,27 +498,27 @@ export default function RequestDetail({
               <Pressable 
                 style={[
                   styles.declineButton, 
-                  (request?.status === "APPROVED" || request?.status === "DECLINED") && styles.disabledButton
+                  hasAlreadyResponded && styles.disabledButton
                 ]} 
                 onPress={handleDecline}
-                disabled={request?.status === "APPROVED" || request?.status === "DECLINED"}
+                disabled={hasAlreadyResponded}
               >
                 <Text style={[
                   styles.declineButtonText,
-                  (request?.status === "APPROVED" || request?.status === "DECLINED") && styles.disabledButtonText
+                  hasAlreadyResponded && styles.disabledButtonText
                 ]}>Decline</Text>
               </Pressable>
               <Pressable 
                 style={[
                   styles.acceptButton,
-                  (request?.status === "APPROVED" || request?.status === "DECLINED") && styles.disabledButton
+                  hasAlreadyResponded && styles.disabledButton
                 ]} 
                 onPress={handleAccept}
-                disabled={request?.status === "APPROVED" || request?.status === "DECLINED"}
+                disabled={hasAlreadyResponded}
               >
                 <Text style={[
                   styles.acceptButtonText,
-                  (request?.status === "APPROVED" || request?.status === "DECLINED") && styles.disabledButtonText
+                  hasAlreadyResponded && styles.disabledButtonText
                 ]}>Accept</Text>
               </Pressable>
             </View>
@@ -603,6 +620,12 @@ export default function RequestDetail({
           onCancel={() => {
             setShowDeclineDialog(false);
           }}
+        />
+        
+        {/* Warning Toast */}
+        <WarningToast 
+          visible={showWarningToast} 
+          text={warningToastMessage} 
         />
     </Animated.View>
   );
@@ -773,10 +796,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   disabledButton: {
-    opacity: 0.5,
+    opacity: 0.4,
+    backgroundColor: "#E0E0E0", // Gray background for disabled state
   },
   disabledButtonText: {
-    opacity: 0.7,
+    opacity: 0.6,
+    color: "#9E9E9E", // Gray text for disabled state
   },
   loadingContainer: {
     flexDirection: "row",

@@ -296,6 +296,7 @@ public class RequestController {
             .date(date)
             .timeRange(timeRange)
             .isIncomingSwap(false)
+            .needsResponse(false) // Leave requests never need response from other users
             .createdAt(leave.getCreatedAt())
             .reviewedAt(leave.getApprovedAt())
             .reviewedBy(leave.getApprovedBy() != null ? leave.getApprovedBy().getFirstName() + " " + leave.getApprovedBy().getLastName() : null)
@@ -314,6 +315,7 @@ public class RequestController {
         String requestType = "Swap Request";
         String requestSubType;
         boolean isIncomingSwap = false;
+        boolean needsResponse = false;
         
         // Determine if this is an incoming or outgoing swap request
         if (swap.getRequester().getId().equals(currentStaffId)) {
@@ -321,6 +323,9 @@ public class RequestController {
         } else {
             requestSubType = "Incoming Swap Request";
             isIncomingSwap = true;
+            // For incoming swaps, check if target user still needs to respond
+            // needsResponse = true if status is AWAITING AND targetResponse is null (user hasn't responded yet)
+            needsResponse = "AWAITING".equals(swap.getStatus()) && swap.getTargetResponse() == null;
         }
         
         String date = formatDate(swap.getFromTime().toLocalDate());
@@ -358,6 +363,7 @@ public class RequestController {
             .date(date)
             .timeRange(timeRange)
             .isIncomingSwap(isIncomingSwap)
+            .needsResponse(needsResponse)
             .createdAt(swap.getDateMade())
             .reviewedAt(null) // ShiftSwap doesn't have reviewed date
             .reviewedBy(null)
@@ -413,6 +419,7 @@ public class RequestController {
             .date(date)
             .timeRange(timeRange)
             .isIncomingSwap(false) // Open shift requests are never incoming swaps
+            .needsResponse(false) // Open shift requests never need response from other users
             .createdAt(openShiftRequest.getCreatedAt())
             .reviewedAt(openShiftRequest.getReviewedAt())
             .reviewedBy(openShiftRequest.getReviewedBy() != null ? 

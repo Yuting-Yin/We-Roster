@@ -120,8 +120,8 @@ public class SwapController {
                 return ResponseEntity.status(400).body(Map.of("error", "Swap request has already been responded to"));
             }
             
-            // Update status to DECLINED
-            swapRequest.setStatus("DECLINED");
+            // Update status to indicate target user declined
+            swapRequest.setStatus("AWAITING"); // Keep as AWAITING since admin still needs to approve
             swapRequest.setTargetResponse("DECLINED");
             swapRequest.setTargetResponseAt(LocalDateTime.now());
             
