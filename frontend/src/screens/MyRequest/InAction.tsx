@@ -18,6 +18,8 @@ import { useRequestByStatus } from "@/hooks/useRequests";
 import NewLeaveRequest from "@/components/overlays/NewLeaveRequest";
 import RequestDetail from "@/components/overlays/RequestDetail";
 import RequestFilter from "@/components/overlays/RequestFilter";
+import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
+import { useOverlayContext } from "@/contexts/OverlayContext";
 
 export default function InAction() {
   const route = useRoute<any>();
@@ -31,6 +33,28 @@ export default function InAction() {
     openShiftRequest: false,
   });
   const [showFilter, setShowFilter] = useState(false);
+
+  // Register overlays with context for auto-close functionality
+  const { registerOverlay, unregisterOverlay } = useOverlayContext();
+  
+  React.useEffect(() => {
+    registerOverlay('myrequest-new-leave', () => setNewLeaveRequestVisible(false));
+    registerOverlay('myrequest-detail', () => setRequestDetailVisible(false));
+    registerOverlay('myrequest-filter', () => setShowFilter(false));
+    
+    return () => {
+      unregisterOverlay('myrequest-new-leave');
+      unregisterOverlay('myrequest-detail');
+      unregisterOverlay('myrequest-filter');
+    };
+  }, [registerOverlay, unregisterOverlay]);
+
+  // Auto-close overlays when navigating to other tabs
+  useAutoCloseOverlays([
+    () => setNewLeaveRequestVisible(false),
+    () => setRequestDetailVisible(false),
+    () => setShowFilter(false)
+  ]);
   const { requests, loading, error, refresh } = useRequestByStatus(
     "AWAITING",
     selectedMonth.getMonth() + 1,

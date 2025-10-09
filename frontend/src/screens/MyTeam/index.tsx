@@ -7,6 +7,7 @@ import { sx, sy } from "@/theme/metrics";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useFilterMetadata } from "@/hooks/useFilterMetadata";
 import { useOverlayContext } from "@/contexts/OverlayContext";
+import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import TeamFilter, { TeamFilterValue } from "@/components/overlays/TeamFilter";
 import StaffDetails, { StaffMember } from "@/components/overlays/StaffDetails";
@@ -42,6 +43,12 @@ export default function MyTeam() {
       unregisterOverlay('myteam-staff-details');
     };
   }, [registerOverlay, unregisterOverlay]);
+
+  // Auto-close overlays when navigating to other tabs
+  useAutoCloseOverlays([
+    () => setFilterVisible(false),
+    () => setStaffDetailsVisible(false)
+  ]);
 
   // Listen for navigation requests from other tabs
   useEffect(() => {

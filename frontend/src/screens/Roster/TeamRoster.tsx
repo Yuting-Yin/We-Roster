@@ -7,6 +7,7 @@ import { sx, sy } from "@/theme/metrics";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useOverlayContext } from "@/contexts/OverlayContext";
+import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
 import { useTeamRosterData } from "@/hooks/useTeamRoster";
 import TeamRosterFilter from "@/components/overlays/TeamRosterFilter";
 import { fmt } from "@/lib/date";
@@ -86,6 +87,11 @@ export default function TeamRoster() {
       unregisterOverlay('team-roster-filter');
     };
   }, [registerOverlay, unregisterOverlay]);
+
+  // Auto-close overlays when navigating to other tabs
+  useAutoCloseOverlays([
+    () => setFilterVisible(false)
+  ]);
 
   // Filter data based on filter values
   const filteredData = useMemo(() => {

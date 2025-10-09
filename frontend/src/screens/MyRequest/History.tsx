@@ -16,6 +16,8 @@ import RequestCard from "@/components/overlays/RequestCard";
 import { useRequests } from "@/hooks/useRequests";
 import RequestDetail from "@/components/overlays/RequestDetail";
 import RequestFilter from "@/components/overlays/RequestFilter";
+import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
+import { useOverlayContext } from "@/contexts/OverlayContext";
 
 export default function History() {
   const route = useRoute<any>();
@@ -28,6 +30,25 @@ export default function History() {
     openShiftRequest: false,
   });
   const [showFilter, setShowFilter] = useState(false);
+
+  // Register overlays with context for auto-close functionality
+  const { registerOverlay, unregisterOverlay } = useOverlayContext();
+  
+  React.useEffect(() => {
+    registerOverlay('myrequest-history-detail', () => setRequestDetailVisible(false));
+    registerOverlay('myrequest-history-filter', () => setShowFilter(false));
+    
+    return () => {
+      unregisterOverlay('myrequest-history-detail');
+      unregisterOverlay('myrequest-history-filter');
+    };
+  }, [registerOverlay, unregisterOverlay]);
+
+  // Auto-close overlays when navigating to other tabs
+  useAutoCloseOverlays([
+    () => setRequestDetailVisible(false),
+    () => setShowFilter(false)
+  ]);
   const { historyRequests: requests, loading, error, refreshRequests: refresh } = useRequests(
     selectedMonth.getMonth() + 1, 
     selectedMonth.getFullYear()
