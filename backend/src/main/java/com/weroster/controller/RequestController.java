@@ -478,20 +478,7 @@ public class RequestController {
      * Determine leave request sub-type based on duration and type
      */
     private String determineLeaveSubType(LeaveRequest leave) {
-        // Check if it's an overnight leave (starts one day, ends next day)
-        LocalDateTime start = leave.getStartTime();
-        LocalDateTime end = leave.getEndTime();
-        
-        if (!start.toLocalDate().equals(end.toLocalDate())) {
-            return "Shift Leave"; // Overnight leave is always a shift leave
-        }
-        
-        // If it's linked to a shift, it's a shift leave
-        if (leave.getShift() != null) {
-            return "Shift Leave";
-        }
-        
-        // Map database request_type values to frontend display values
+        // First, respect the original request type from the database
         if (leave.getRequestType() != null) {
             String requestType = leave.getRequestType().trim();
             
@@ -525,6 +512,20 @@ public class RequestController {
                     }
             }
         }
+        
+        // Fallback logic: Check if it's an overnight leave (starts one day, ends next day)
+        LocalDateTime start = leave.getStartTime();
+        LocalDateTime end = leave.getEndTime();
+        
+        if (!start.toLocalDate().equals(end.toLocalDate())) {
+            return "Shift Leave"; // Overnight leave is always a shift leave
+        }
+        
+        // If it's linked to a shift and no explicit request type, it's a shift leave
+        if (leave.getShift() != null) {
+            return "Shift Leave";
+        }
+        
         return "Day Leave"; // Default fallback
     }
     

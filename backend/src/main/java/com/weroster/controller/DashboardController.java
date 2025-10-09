@@ -109,15 +109,45 @@ public class DashboardController {
     }
     
     /**
-     * Determine leave type based on shift and timing
+     * Determine leave type based on request type, shift and timing
      */
     private String determineLeaveType(LeaveRequest leaveRequest) {
-        // If it's linked to a shift, it's a shift leave
-        if (leaveRequest.getShift() != null) {
-            return "Shift Leave";
+        // First, respect the original request type from the database
+        if (leaveRequest.getRequestType() != null) {
+            String requestType = leaveRequest.getRequestType().trim();
+            
+            // Handle exact matches first (new descriptive format)
+            switch (requestType) {
+                case "Day Leave":
+                    return "Day Leave";
+                case "Week Leave":
+                    return "Week Leave";
+                case "Month Leave":
+                    return "Month Leave";
+                case "Annual Leave":
+                    return "Annual Leave";
+                case "All Day Leave":
+                    return "Day Leave";
+                case "Shift Leave":
+                    return "Shift Leave";
+                default:
+                    // Handle legacy abbreviated format
+                    switch (requestType.toLowerCase()) {
+                        case "day":
+                            return "Day Leave";
+                        case "week":
+                            return "Week Leave";
+                        case "month":
+                            return "Month Leave";
+                        case "annual":
+                            return "Annual Leave";
+                        default:
+                            return "Day Leave";
+                    }
+            }
         }
         
-        // Check if it's an overnight leave (starts one day, ends next day)
+        // Fallback logic: Check if it's an overnight leave (starts one day, ends next day)
         LocalDateTime start = leaveRequest.getStartTime();
         LocalDateTime end = leaveRequest.getEndTime();
         
@@ -125,10 +155,9 @@ public class DashboardController {
             return "Shift Leave"; // Overnight leave is a shift leave
         }
         
-        // Check if it spans a significant portion of the day
-        long durationHours = java.time.Duration.between(start, end).toHours();
-        if (durationHours >= 8) {
-            return "Day Leave";
+        // If it's linked to a shift and no explicit request type, it's a shift leave
+        if (leaveRequest.getShift() != null) {
+            return "Shift Leave";
         }
         
         return "Day Leave"; // Default fallback
