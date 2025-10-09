@@ -9,7 +9,7 @@ import { useNavigation } from "@react-navigation/native";
 import Avatar from "@/components/common/Avatar";
 import { getShiftDetails } from "@/api/myroster";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE } from '@/lib/api';
+import { API_BASE, fetchJson } from '@/lib/api';
 import { useOverlayContext } from "@/contexts/OverlayContext";
 
 interface RequestDetailProps {
@@ -149,6 +149,10 @@ export default function RequestDetail({
 
   const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
   const isIncomingSwap = request.isIncomingSwap || request.requestSubType === "Incoming Swap Request";
+  
+  console.log("🔍 RequestDetail - isIncomingSwap:", isIncomingSwap);
+  console.log("🔍 RequestDetail - request.isIncomingSwap:", request.isIncomingSwap);
+  console.log("🔍 RequestDetail - request.requestSubType:", request.requestSubType);
 
   const handleDecline = () => {
     console.log("Decline swap request:", request.id);
@@ -161,15 +165,24 @@ export default function RequestDetail({
   };
 
   const handleCancelRequest = () => {
-    if (!request) return;
+    console.log("🔍 HandleCancelRequest - Button clicked!");
     
-    console.log("Cancel request:", request.id, "Status:", request.status);
+    if (!request) {
+      console.log("🔍 HandleCancelRequest - No request data available");
+      return;
+    }
+    
+    console.log("🔍 HandleCancelRequest - Request ID:", request.id);
+    console.log("🔍 HandleCancelRequest - Request Status:", request.status);
+    console.log("🔍 HandleCancelRequest - Request Type:", request.requestType);
     
     // Check if request can be cancelled
     const canCancel = request.status === "AWAITING";
+    console.log("🔍 HandleCancelRequest - Can cancel:", canCancel);
     
     if (!canCancel) {
       // Show warning toast for non-cancellable requests
+      console.log("🔍 HandleCancelRequest - Showing warning alert");
       Alert.alert(
         "Cannot Cancel Request",
         `This request has already been ${request.status.toLowerCase()} and cannot be cancelled.`,
@@ -179,6 +192,7 @@ export default function RequestDetail({
     }
     
     // Show confirmation dialog for cancellable requests
+    console.log("🔍 HandleCancelRequest - Showing confirmation dialog");
     Alert.alert(
       "Cancel Request",
       "Are you sure you want to cancel this request? This action cannot be undone.",
@@ -190,7 +204,10 @@ export default function RequestDetail({
         {
           text: "Cancel Request",
           style: "destructive",
-          onPress: () => confirmCancelRequest()
+          onPress: () => {
+            console.log("🔍 HandleCancelRequest - User confirmed cancellation");
+            confirmCancelRequest();
+          }
         }
       ]
     );
@@ -200,30 +217,40 @@ export default function RequestDetail({
     if (!request) return;
     
     try {
-      console.log("Confirming cancellation of request:", request.id);
+      console.log("🔍 ConfirmCancelRequest - Starting cancellation for request:", request.id);
+      console.log("🔍 ConfirmCancelRequest - Request type:", request.requestType);
+      console.log("🔍 ConfirmCancelRequest - Request status:", request.status);
       
-      // Call API to cancel/delete the request
-      const response = await fetch(`${API_BASE}/api/v1/requests/${request.id}`, {
+      // Call API to cancel/delete the request using centralized fetchJson
+      const response = await fetchJson(`/api/v1/requests/${request.id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${await AsyncStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json',
-        },
       });
       
-      if (response.ok) {
-        console.log("Request cancelled successfully");
-        // Close the overlay and refresh the parent component
-        onClose();
-        // TODO: Trigger parent component refresh to update the request list
+      console.log("🔍 ConfirmCancelRequest - API response:", response);
+      
+      if (response.success) {
+        console.log("🔍 ConfirmCancelRequest - Request cancelled successfully:", response.message);
+        Alert.alert(
+          "Success",
+          response.message || "Request cancelled successfully",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                onClose();
+                // TODO: Trigger parent component refresh to update the request list
+              }
+            }
+          ]
+        );
       } else {
-        throw new Error(`Failed to cancel request: ${response.status}`);
+        throw new Error(response.error || "Unknown error occurred");
       }
     } catch (error) {
-      console.error("Error cancelling request:", error);
+      console.error("🔍 ConfirmCancelRequest - Error cancelling request:", error);
       Alert.alert(
         "Error",
-        "Failed to cancel the request. Please try again.",
+        error instanceof Error ? error.message : "Failed to cancel the request. Please try again.",
         [{ text: "OK" }]
       );
     }
@@ -358,7 +385,10 @@ export default function RequestDetail({
 
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
-          {isIncomingSwap ? (
+          {(() => {
+            console.log("🔍 RequestDetail - Rendering buttons, isIncomingSwap:", isIncomingSwap);
+            return isIncomingSwap;
+          })() ? (
             <View style={styles.swapButtonRow}>
               <Pressable style={styles.declineButton} onPress={handleDecline}>
                 <Text style={styles.declineButtonText}>Decline</Text>
