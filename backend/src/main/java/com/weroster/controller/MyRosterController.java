@@ -451,6 +451,40 @@ public class MyRosterController {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
+    
+    @GetMapping("/test-auth")
+    public ResponseEntity<?> testAuth(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            System.out.println("🔍 MyRosterController - testAuth endpoint called");
+            System.out.println("🔍 MyRosterController - Authorization header: " + (authHeader != null ? "present" : "missing"));
+            
+            if (authHeader == null) {
+                return ResponseEntity.ok(Map.of("message", "No authorization header", "status", "no_auth"));
+            }
+            
+            // Try to get current user
+            try {
+                User currentUser = getCurrentUser(authHeader);
+                return ResponseEntity.ok(Map.of(
+                    "message", "Authentication successful",
+                    "user", Map.of(
+                        "id", currentUser.getId(),
+                        "email", currentUser.getEmail(),
+                        "status", currentUser.getStatus()
+                    ),
+                    "status", "success"
+                ));
+            } catch (Exception e) {
+                return ResponseEntity.ok(Map.of(
+                    "message", "Authentication failed: " + e.getMessage(),
+                    "status", "auth_failed"
+                ));
+            }
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
 
     @GetMapping("/roster")
     public ResponseEntity<Map<String, Object>> getRoster(
