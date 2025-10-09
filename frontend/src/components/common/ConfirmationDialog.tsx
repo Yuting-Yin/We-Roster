@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, Animated } from 'react-native';
+import { View, Text, StyleSheet, Modal, Pressable, Animated, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLOR } from '@/theme/colors';
 import { sx, sy } from '@/theme/metrics';
@@ -85,18 +85,24 @@ export default function ConfirmationDialog({
             }
           ]}
         >
-          <View style={styles.header}>
-            <View style={styles.iconContainer}>
-              <Ionicons 
-                name={confirmStyle === 'destructive' ? 'warning' : 'help-circle'} 
-                size={sx(24)} 
-                color={confirmStyle === 'destructive' ? COLOR.error : COLOR.brand} 
-              />
+          <ScrollView 
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.header}>
+              <View style={styles.iconContainer}>
+                <Ionicons 
+                  name={confirmStyle === 'destructive' ? 'warning' : 'help-circle'} 
+                  size={sx(24)} 
+                  color={confirmStyle === 'destructive' ? COLOR.error : COLOR.brand} 
+                />
+              </View>
+              <Text style={styles.title}>{title}</Text>
             </View>
-            <Text style={styles.title}>{title}</Text>
-          </View>
-          
-          <Text style={styles.message}>{message}</Text>
+            
+            <Text style={styles.message}>{message}</Text>
+          </ScrollView>
           
           <View style={styles.buttonContainer}>
             <Pressable 
@@ -134,6 +140,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: sx(20),
+    minHeight: '100vh', // Ensure full height coverage
   },
   backdrop: {
     position: 'absolute',
@@ -145,14 +152,22 @@ const styles = StyleSheet.create({
   dialog: {
     backgroundColor: '#fff',
     borderRadius: sx(16),
-    padding: sx(24),
+    padding: sx(16), // Reduced padding
     width: '100%',
-    maxWidth: sx(400),
+    maxWidth: sx(380),
+    maxHeight: '80vh', // Prevent dialog from being too tall
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 8,
+  },
+  scrollView: {
+    flexGrow: 1,
+    maxHeight: '60vh', // Limit scroll area height
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   header: {
     flexDirection: 'row',
@@ -171,8 +186,8 @@ const styles = StyleSheet.create({
   message: {
     fontSize: sx(16),
     color: COLOR.label,
-    lineHeight: sy(24),
-    marginBottom: sy(24),
+    lineHeight: sy(22), // Reduced line height
+    marginBottom: sy(20), // Reduced margin
   },
   buttonContainer: {
     flexDirection: 'row',
