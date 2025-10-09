@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Animated, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Animated, ActivityIndicator, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
@@ -161,8 +161,72 @@ export default function RequestDetail({
   };
 
   const handleCancelRequest = () => {
-    console.log("Cancel request:", request.id);
-    // TODO: Implement cancel functionality
+    if (!request) return;
+    
+    console.log("Cancel request:", request.id, "Status:", request.status);
+    
+    // Check if request can be cancelled
+    const canCancel = request.status === "AWAITING";
+    
+    if (!canCancel) {
+      // Show warning toast for non-cancellable requests
+      Alert.alert(
+        "Cannot Cancel Request",
+        `This request has already been ${request.status.toLowerCase()} and cannot be cancelled.`,
+        [{ text: "OK" }]
+      );
+      return;
+    }
+    
+    // Show confirmation dialog for cancellable requests
+    Alert.alert(
+      "Cancel Request",
+      "Are you sure you want to cancel this request? This action cannot be undone.",
+      [
+        {
+          text: "Keep Request",
+          style: "cancel"
+        },
+        {
+          text: "Cancel Request",
+          style: "destructive",
+          onPress: () => confirmCancelRequest()
+        }
+      ]
+    );
+  };
+
+  const confirmCancelRequest = async () => {
+    if (!request) return;
+    
+    try {
+      console.log("Confirming cancellation of request:", request.id);
+      
+      // Call API to cancel/delete the request
+      const response = await fetch(`${API_BASE}/api/v1/requests/${request.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${await AsyncStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        console.log("Request cancelled successfully");
+        // Close the overlay and refresh the parent component
+        onClose();
+        // TODO: Trigger parent component refresh to update the request list
+      } else {
+        throw new Error(`Failed to cancel request: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Error cancelling request:", error);
+      Alert.alert(
+        "Error",
+        "Failed to cancel the request. Please try again.",
+        [{ text: "OK" }]
+      );
+    }
   };
 
   // Generate dynamic title based on request type and subtype
@@ -304,8 +368,19 @@ export default function RequestDetail({
               </Pressable>
             </View>
           ) : (
-            <Pressable style={styles.cancelButton} onPress={handleCancelRequest}>
-              <Text style={styles.cancelButtonText}>Cancel Request</Text>
+            <Pressable 
+              style={[
+                styles.cancelButton, 
+                request?.status !== "AWAITING" && styles.cancelButtonDisabled
+              ]} 
+              onPress={handleCancelRequest}
+            >
+              <Text style={[
+                styles.cancelButtonText,
+                request?.status !== "AWAITING" && styles.cancelButtonTextDisabled
+              ]}>
+                Cancel Request
+              </Text>
             </Pressable>
           )}
         </View>
@@ -437,6 +512,13 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: sx(16),
     fontWeight: "600",
+  },
+  cancelButtonDisabled: {
+    backgroundColor: COLOR.brand + "40", // Lower saturation
+    opacity: 0.6,
+  },
+  cancelButtonTextDisabled: {
+    color: "#fff" + "80", // Lower opacity text
   },
   swapButtonRow: {
     flexDirection: "row",

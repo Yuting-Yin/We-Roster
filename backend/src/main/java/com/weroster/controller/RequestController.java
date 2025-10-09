@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -528,5 +529,129 @@ public class RequestController {
     private String formatTimeRange(LocalDateTime start, LocalDateTime end) {
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mm a");
         return start.format(timeFormatter) + " - " + end.format(timeFormatter);
+    }
+    
+    @DeleteMapping("/{requestId}")
+    public ResponseEntity<Map<String, Object>> deleteRequest(
+            @PathVariable Long requestId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            System.out.println("🔍 Delete Request - Request ID: " + requestId);
+            
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body(Map.of("error", "Missing or invalid authorization header"));
+            }
+            
+            String token = authHeader.substring(7); // Remove "Bearer " prefix
+            User user = getUserFromToken(token);
+            if (user == null) {
+                return ResponseEntity.status(401).body(Map.of("error", "Invalid token"));
+            }
+            
+            Staff staff = user.getStaff();
+            if (staff == null) {
+                return ResponseEntity.status(404).body(Map.of("error", "No staff linked to user"));
+            }
+            
+            System.out.println("🔍 Delete Request - Staff ID: " + staff.getId());
+            
+            // Try to find and delete the request from different repositories
+            boolean deleted = false;
+            String requestType = "";
+            
+            // Try LeaveRequest first
+            try {
+                LeaveRequest leaveRequest = leaveRequestRepository.findById(requestId).orElse(null);
+                if (leaveRequest != null && leaveRequest.getStaff().getId().equals(staff.getId())) {
+                    // Check if request can be deleted (only AWAITING status)
+                    if (!"AWAITING".equals(leaveRequest.getStatus())) {
+                        return ResponseEntity.status(400).body(Map.of(
+                            "error", "Cannot delete request with status: " + leaveRequest.getStatus()
+                        ));
+                    }
+                    leaveRequestRepository.deleteById(requestId);
+                    deleted = true;
+                    requestType = "Leave Request";
+                    System.out.println("🔍 Delete Request - Deleted LeaveRequest ID: " + requestId);
+                }
+            } catch (Exception e) {
+                System.out.println("🔍 Delete Request - LeaveRequest not found or error: " + e.getMessage());
+            }
+            
+            // Try ShiftSwap if not found in LeaveRequest
+            if (!deleted) {
+                try {
+                    ShiftSwap shiftSwap = shiftSwapRepository.findById(requestId).orElse(null);
+                    if (shiftSwap != null && 
+                        (shiftSwap.getRequester().getId().equals(staff.getId()) || 
+                         shiftSwap.getTarget().getId().equals(staff.getId()))) {
+                        // Check if request can be deleted (only AWAITING status)
+                        if (!"AWAITING".equals(shiftSwap.getStatus())) {
+                            return ResponseEntity.status(400).body(Map.of(
+                                "error", "Cannot delete request with status: " + shiftSwap.getStatus()
+                            ));
+                        }
+                        shiftSwapRepository.deleteById(requestId);
+                        deleted = true;
+                        requestType = "Swap Request";
+                        System.out.println("🔍 Delete Request - Deleted ShiftSwap ID: " + requestId);
+                    }
+                } catch (Exception e) {
+                    System.out.println("🔍 Delete Request - ShiftSwap not found or error: " + e.getMessage());
+                }
+            }
+            
+            // Try OpenShiftRequest if not found in previous repositories
+            if (!deleted) {
+                try {
+                    OpenShiftRequest openShiftRequest = openShiftRequestRepository.findById(requestId).orElse(null);
+                    if (openShiftRequest != null && openShiftRequest.getStaff().getId().equals(staff.getId())) {
+                        // Check if request can be deleted (only AWAITING status)
+                        if (!"AWAITING".equals(openShiftRequest.getStatus())) {
+                            return ResponseEntity.status(400).body(Map.of(
+                                "error", "Cannot delete request with status: " + openShiftRequest.getStatus()
+                            ));
+                        }
+                        openShiftRequestRepository.deleteById(requestId);
+                        deleted = true;
+                        requestType = "Open Shift Request";
+                        System.out.println("🔍 Delete Request - Deleted OpenShiftRequest ID: " + requestId);
+                    }
+                } catch (Exception e) {
+                    System.out.println("🔍 Delete Request - OpenShiftRequest not found or error: " + e.getMessage());
+                }
+            }
+            
+            if (!deleted) {
+                return ResponseEntity.status(404).body(Map.of("error", "Request not found or access denied"));
+            }
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", requestType + " deleted successfully",
+                "requestId", requestId
+            ));
+            
+        } catch (Exception e) {
+            System.out.println("🔍 Delete Request - Error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to delete request: " + e.getMessage()));
+        }
+    }
+    
+    private User getUserFromToken(String token) {
+        try {
+            if (!token.startsWith("jwt_token_")) {
+                return null;
+            }
+            String[] parts = token.split("_");
+            if (parts.length < 3) {
+                return null;
+            }
+            Long userId = Long.parseLong(parts[2]);
+            return userRepository.findById(userId).orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
