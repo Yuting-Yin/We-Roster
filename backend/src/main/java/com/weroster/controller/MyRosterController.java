@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,27 +40,41 @@ public class MyRosterController {
      */
     private User getCurrentUser(String authHeader) {
         try {
+            System.out.println("🔍 MyRosterController - getCurrentUser called with authHeader: " + 
+                (authHeader != null ? authHeader.substring(0, Math.min(20, authHeader.length())) + "..." : "null"));
+            
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                System.out.println("🔍 MyRosterController - Missing or invalid authorization header");
                 throw new RuntimeException("Missing or invalid authorization header");
             }
             
             String token = authHeader.substring(7); // Remove "Bearer " prefix
+            System.out.println("🔍 MyRosterController - Extracted token: " + token);
             
             // Simplified token parsing - in production, use proper JWT library
             if (!token.startsWith("jwt_token_")) {
+                System.out.println("🔍 MyRosterController - Invalid token format");
                 throw new RuntimeException("Invalid token format");
             }
             
             String[] parts = token.split("_");
+            System.out.println("🔍 MyRosterController - Token parts: " + Arrays.toString(parts));
             if (parts.length < 3) {
+                System.out.println("🔍 MyRosterController - Not enough token parts");
                 throw new RuntimeException("Invalid token format");
             }
             
             Long userId = Long.parseLong(parts[2]);
-            return userRepository.findById(userId)
+            System.out.println("🔍 MyRosterController - Parsed userId: " + userId);
+            
+            User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+            System.out.println("🔍 MyRosterController - Found user: " + user.getEmail());
+            return user;
                 
         } catch (Exception e) {
+            System.out.println("🔍 MyRosterController - Authentication error: " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Authentication failed: " + e.getMessage());
         }
     }
@@ -333,6 +348,7 @@ public class MyRosterController {
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
             System.out.println("🔍 MyRosterController - getShiftDetails called for shift ID: " + id);
+            System.out.println("🔍 MyRosterController - Authorization header present: " + (authHeader != null));
             
             // Get current user from JWT token
             User currentUser = getCurrentUser(authHeader);
