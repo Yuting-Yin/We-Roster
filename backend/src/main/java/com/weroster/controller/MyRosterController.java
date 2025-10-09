@@ -35,6 +35,15 @@ public class MyRosterController {
     @Autowired
     private UserRepository userRepository;
     
+    @Autowired
+    private LeaveRequestRepository leaveRequestRepository;
+    
+    @Autowired
+    private ShiftSwapRepository shiftSwapRepository;
+    
+    @Autowired
+    private OpenShiftRequestRepository openShiftRequestRepository;
+    
     /**
      * Helper method to get current user from Authorization header
      */
@@ -363,15 +372,42 @@ public class MyRosterController {
             
             System.out.println("🔍 MyRosterController - Found shift: " + shift.getId());
             
-            // Check if the staff member is assigned to this shift
+            // Check if the staff member has access to this shift
+            // Access is granted if:
+            // 1. Staff is assigned to this shift, OR
+            // 2. Staff has a request related to this shift (leave, swap, or open shift)
             List<ShiftAssignment> assignments = shiftAssignmentRepository.findByShiftId(id);
             boolean isAssigned = assignments.stream()
                 .anyMatch(assignment -> assignment.getStaff().getId().equals(staff.getId()));
             
+            boolean hasRelatedRequest = false;
             if (!isAssigned) {
-                System.out.println("🔍 MyRosterController - Staff not assigned to this shift");
+                // Check if staff has any requests related to this shift
+                // Check leave requests
+                hasRelatedRequest = leaveRequestRepository.findByStaffId(staff.getId()).stream()
+                    .anyMatch(request -> request.getShift() != null && request.getShift().getId().equals(id));
+                
+                // Check swap requests (as requester or target)
+                if (!hasRelatedRequest) {
+                    hasRelatedRequest = shiftSwapRepository.findByStaffId(staff.getId()).stream()
+                        .anyMatch(swap -> swap.getShift() != null && swap.getShift().getId().equals(id));
+                }
+                
+                // Check open shift requests
+                if (!hasRelatedRequest) {
+                    hasRelatedRequest = openShiftRequestRepository.findByStaffIdOrderByCreatedAtDesc(staff.getId()).stream()
+                        .anyMatch(request -> request.getOpenShift() != null && 
+                                   request.getOpenShift().getShift() != null && 
+                                   request.getOpenShift().getShift().getId().equals(id));
+                }
+            }
+            
+            if (!isAssigned && !hasRelatedRequest) {
+                System.out.println("🔍 MyRosterController - Staff has no access to this shift (not assigned and no related requests)");
                 return ResponseEntity.status(403).body(null);
             }
+            
+            System.out.println("🔍 MyRosterController - Access granted - Assigned: " + isAssigned + ", Related Request: " + hasRelatedRequest);
             
             // Get all coworkers for this shift
             List<CoworkerDto> coworkers = assignments.stream()
