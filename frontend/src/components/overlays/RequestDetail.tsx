@@ -8,6 +8,8 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNavigation } from "@react-navigation/native";
 import Avatar from "@/components/common/Avatar";
 import { getShiftDetails } from "@/api/myroster";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE } from '@/lib/api';
 
 interface RequestDetailProps {
   visible: boolean;
@@ -40,9 +42,31 @@ export default function RequestDetail({
     Animated.timing(anim, { toValue: visible ? 1 : 0, duration: 220, useNativeDriver: true }).start();
   }, [visible]);
 
+  // Test authentication endpoint
+  const testAuth = async () => {
+    try {
+      console.log("🧪 Testing authentication endpoint...");
+      const response = await fetch(`${API_BASE}/api/v1/myroster/test-auth`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await AsyncStorage.getItem('auth_token')}`
+        }
+      });
+      
+      const data = await response.json();
+      console.log("🧪 Auth test result:", data);
+    } catch (error) {
+      console.error("🧪 Auth test error:", error);
+    }
+  };
+
   // Fetch shift details when request changes and has a shift ID
   React.useEffect(() => {
     if (request?.shiftId && visible) {
+      // Test auth first
+      testAuth();
+      
       setLoadingShift(true);
       setShiftError(null);
       
