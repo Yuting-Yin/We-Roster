@@ -194,6 +194,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: sy(40),
+    backgroundColor: COLOR.brand, // Fallback background color
   },
   cancelButton: {
     backgroundColor: '#f5f5f5',
@@ -214,7 +215,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   confirmButtonDestructive: {
-    backgroundColor: COLOR.error,
+    backgroundColor: COLOR.red,
   },
   confirmButtonTextDestructive: {
     color: '#fff',
