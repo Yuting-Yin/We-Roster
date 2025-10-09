@@ -48,6 +48,7 @@ export default function RequestDetail({
   const [showConfirmDialog, setShowConfirmDialog] = React.useState(false);
   const [showWarningDialog, setShowWarningDialog] = React.useState(false);
   const [showErrorDialog, setShowErrorDialog] = React.useState(false);
+  const [showDisabledActionDialog, setShowDisabledActionDialog] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState('');
   
   // State for swap response confirmation dialogs
@@ -194,9 +195,9 @@ export default function RequestDetail({
     }
     
     // Check if request has already been processed
-    if (request.status === "APPROVED" || request.status === "DECLINED") {
-      console.log("🔍 HandleDecline - Request already processed, showing warning toast");
-      showWarningToastMessage("You have already responded to this swap request. You can only respond once.");
+    if (hasAlreadyResponded) {
+      console.log("🔍 HandleDecline - Request already processed, showing warning dialog");
+      setShowDisabledActionDialog(true);
       return;
     }
     
@@ -213,9 +214,9 @@ export default function RequestDetail({
     }
     
     // Check if request has already been processed
-    if (request.status === "APPROVED" || request.status === "DECLINED") {
-      console.log("🔍 HandleAccept - Request already processed, showing warning toast");
-      showWarningToastMessage("You have already responded to this swap request. You can only respond once.");
+    if (hasAlreadyResponded) {
+      console.log("🔍 HandleAccept - Request already processed, showing warning dialog");
+      setShowDisabledActionDialog(true);
       return;
     }
     
@@ -570,6 +571,17 @@ export default function RequestDetail({
           confirmStyle="default"
           onConfirm={() => setShowWarningDialog(false)}
           onCancel={() => setShowWarningDialog(false)}
+        />
+        
+        {/* Disabled Action Warning Dialog */}
+        <ConfirmationDialog
+          visible={showDisabledActionDialog}
+          title="Request Already Processed"
+          message="You have already responded to this swap request. You can only respond once."
+          confirmText="OK"
+          confirmStyle="default"
+          onConfirm={() => setShowDisabledActionDialog(false)}
+          onCancel={() => setShowDisabledActionDialog(false)}
         />
         
         {/* Custom Error Dialog */}
