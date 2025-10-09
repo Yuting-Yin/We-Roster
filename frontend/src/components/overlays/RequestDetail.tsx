@@ -796,12 +796,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   disabledButton: {
-    opacity: 0.4,
-    backgroundColor: "#E0E0E0", // Gray background for disabled state
+    backgroundColor: "#F5F5F5", // Light gray background for disabled state
+    opacity: 0.8,
   },
   disabledButtonText: {
-    opacity: 0.6,
     color: "#9E9E9E", // Gray text for disabled state
+    opacity: 0.8,
   },
   loadingContainer: {
     flexDirection: "row",
