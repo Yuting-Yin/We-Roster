@@ -478,6 +478,19 @@ public class RequestController {
      * Determine leave request sub-type based on duration and type
      */
     private String determineLeaveSubType(LeaveRequest leave) {
+        // Check if it's an overnight leave (starts one day, ends next day)
+        LocalDateTime start = leave.getStartTime();
+        LocalDateTime end = leave.getEndTime();
+        
+        if (!start.toLocalDate().equals(end.toLocalDate())) {
+            return "Shift Leave"; // Overnight leave is always a shift leave
+        }
+        
+        // If it's linked to a shift, it's a shift leave
+        if (leave.getShift() != null) {
+            return "Shift Leave";
+        }
+        
         // Map database request_type values to frontend display values
         if (leave.getRequestType() != null) {
             String requestType = leave.getRequestType().trim();
@@ -495,7 +508,7 @@ public class RequestController {
                 case "All Day Leave":
                     return "Day Leave";
                 case "Shift Leave":
-                    return "Day Leave";
+                    return "Shift Leave";
                 default:
                     // Handle legacy abbreviated format
                     switch (requestType.toLowerCase()) {
@@ -528,7 +541,15 @@ public class RequestController {
      */
     private String formatTimeRange(LocalDateTime start, LocalDateTime end) {
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mm a");
-        return start.format(timeFormatter) + " - " + end.format(timeFormatter);
+        String startTime = start.format(timeFormatter);
+        String endTime = end.format(timeFormatter);
+        
+        // Check if it's overnight (different dates)
+        if (!start.toLocalDate().equals(end.toLocalDate())) {
+            return startTime + " - " + endTime + " (+1)";
+        }
+        
+        return startTime + " - " + endTime;
     }
     
     @DeleteMapping("/{requestId}")
