@@ -10,6 +10,7 @@ import Avatar from "@/components/common/Avatar";
 import { getShiftDetails } from "@/api/myroster";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE } from '@/lib/api';
+import { useOverlayContext } from "@/contexts/OverlayContext";
 
 interface RequestDetailProps {
   visible: boolean;
@@ -31,6 +32,7 @@ export default function RequestDetail({
 }: RequestDetailProps) {
   const { user } = useCurrentUser({ mock: false });
   const navigation = useNavigation<any>();
+  const { requestTeamMemberNav, teamMemberNavRequest, clearTeamMemberNavRequest } = useOverlayContext();
   
   // State for shift details
   const [shiftDetails, setShiftDetails] = React.useState<any>(null);
@@ -86,13 +88,35 @@ export default function RequestDetail({
     }
   }, [request?.shiftId, visible]);
 
+  // Handle returning from staff details overlay
+  React.useEffect(() => {
+    if (teamMemberNavRequest?.returnToTab === "My Request" && 
+        teamMemberNavRequest?.overlayState?.type === 'request-details' &&
+        teamMemberNavRequest?.overlayState?.request?.id === request?.id) {
+      // Staff details overlay was closed, we should restore this request detail overlay
+      // The overlay should already be visible, but we ensure it stays open
+      if (!visible && request) {
+        // If somehow the overlay was closed while viewing staff details, we could restore it here
+        // But typically the overlay stays open in the background
+      }
+      clearTeamMemberNavRequest();
+    }
+  }, [teamMemberNavRequest, request, visible, clearTeamMemberNavRequest]);
+
   const handleStaffPress = (staffId: string, staffName: string, initials: string) => {
-    // Navigate to staff profile page
-    navigation.navigate("My Team", { 
-      staffId: parseInt(staffId),
-      staffName,
-      initials,
-    });
+    // Request team member navigation to show staff profile overlay
+    // This will navigate to My Team tab, show the staff details overlay, and return to current tab when closed
+    requestTeamMemberNav(
+      parseInt(staffId), 
+      staffName, 
+      initials, 
+      "My Request", // return to My Request tab when staff details overlay closes
+      {
+        type: 'request-details',
+        request: request,
+        timestamp: Date.now()
+      }
+    );
   };
 
   const getStatusColor = (status: string) => {
