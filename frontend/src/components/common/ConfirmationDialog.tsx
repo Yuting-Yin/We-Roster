@@ -90,8 +90,8 @@ export default function ConfirmationDialog({
               <View style={styles.iconContainer}>
                 <Ionicons 
                   name={confirmStyle === 'destructive' ? 'warning' : 'help-circle'} 
-                  size={sx(18)} 
-                  color={confirmStyle === 'destructive' ? COLOR.error : COLOR.brand} 
+                  size={sx(22)} 
+                  color={confirmStyle === 'destructive' ? COLOR.red : COLOR.brand} 
                 />
               </View>
               <Text style={styles.title}>{title}</Text>
@@ -147,10 +147,10 @@ const styles = StyleSheet.create({
   },
   dialog: {
     backgroundColor: '#fff',
-    borderRadius: sx(8),
-    padding: sx(12),
-    width: '85%',
-    maxWidth: sx(320),
+    borderRadius: sx(12),
+    padding: sx(20),
+    width: '90%',
+    maxWidth: sx(400),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
@@ -163,37 +163,37 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: sy(8),
+    marginBottom: sy(16),
   },
   iconContainer: {
-    marginRight: sx(6),
+    marginRight: sx(12),
   },
   title: {
-    fontSize: sx(16),
+    fontSize: sx(18),
     fontWeight: '600',
     color: COLOR.ink,
     flex: 1,
   },
   message: {
-    fontSize: sx(14),
+    fontSize: sx(16),
     color: COLOR.label,
-    lineHeight: sy(18),
-    marginBottom: sy(12),
+    lineHeight: sy(22),
+    marginBottom: sy(20),
     textAlign: 'center',
   },
   buttonContainer: {
     flexDirection: 'row',
-    gap: sx(8),
-    marginTop: sx(2),
+    gap: sx(12),
+    marginTop: sx(4),
   },
   button: {
     flex: 1,
-    paddingVertical: sy(8),
-    paddingHorizontal: sx(10),
-    borderRadius: sx(6),
+    paddingVertical: sy(12),
+    paddingHorizontal: sx(16),
+    borderRadius: sx(8),
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: sy(40),
+    minHeight: sy(44),
     backgroundColor: COLOR.brand, // Fallback background color
   },
   cancelButton: {
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     borderColor: COLOR.divider,
   },
   cancelButtonText: {
-    fontSize: sx(14),
+    fontSize: sx(15),
     fontWeight: '500',
     color: COLOR.label,
   },
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLOR.brand,
   },
   confirmButtonText: {
-    fontSize: sx(14),
+    fontSize: sx(15),
     fontWeight: '500',
     color: '#fff',
   },
