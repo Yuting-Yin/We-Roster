@@ -1,5 +1,5 @@
 // src/components/overlays/StaffDetails.tsx
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { View, Text, StyleSheet, Modal, Pressable, ScrollView, Platform, Linking, SafeAreaView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -36,6 +36,13 @@ export default function StaffDetails({ visible, staff, shiftMap, onClose, return
   const navigation = useNavigation<any>();
   const { teamMemberNavRequest, clearTeamMemberNavRequest } = useOverlayContext();
   const { leaveMap } = useStaffLeaves(staff?.id || 0);
+
+  // Reset tab to "about" when staff changes
+  useEffect(() => {
+    if (staff) {
+      setActiveTab("about");
+    }
+  }, [staff?.id]);
 
   const handlePhonePress = () => {
     if (staff?.phone) {
