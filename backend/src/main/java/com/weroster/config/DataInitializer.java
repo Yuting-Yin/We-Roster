@@ -1078,6 +1078,34 @@ public class DataInitializer implements CommandLineRunner {
         testLeaves.add(dayLeave);
         System.out.println("🔍 DataInitializer - Created Day Leave request (AWAITING) for " + nextDay);
         
+        // 4. Create leave requests for other staff members for testing
+        // Get a few other staff members to create diverse leave data
+        List<Staff> allStaff = staffRepository.findAll();
+        List<Staff> otherStaff = allStaff.stream()
+            .filter(s -> !s.getId().equals(testStaff.getId()))
+            .limit(3)
+            .collect(java.util.stream.Collectors.toList());
+        
+        for (int i = 0; i < otherStaff.size(); i++) {
+            Staff staff = otherStaff.get(i);
+            LocalDate leaveStart = today.plusDays(10 + (i * 3)); // Different dates for each staff
+            LocalDate leaveEnd = leaveStart.plusDays(2); // 3-day leave
+            
+            LeaveRequest staffLeave = LeaveRequest.builder()
+                .staff(staff)
+                .shift(null)
+                .startTime(leaveStart.atStartOfDay())
+                .endTime(leaveEnd.atTime(23, 59))
+                .requestType("Annual Leave")
+                .reason("Personal time off")
+                .status("APPROVED")
+                .createdAt(LocalDateTime.now().minusDays(7 + i))
+                .build();
+            testLeaves.add(staffLeave);
+            System.out.println("🔍 DataInitializer - Created Annual Leave request (APPROVED) for " + 
+                staff.getFirstName() + " " + staff.getLastName() + " from " + leaveStart + " to " + leaveEnd);
+        }
+        
         // Save all test leave requests
         leaveRequestRepository.saveAll(testLeaves);
         System.out.println("🔍 DataInitializer - Saved " + testLeaves.size() + " test leave requests");

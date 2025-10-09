@@ -8,6 +8,7 @@ import { sx, sy } from "@/theme/metrics";
 import { ShiftType } from "@/types/roster";
 import { useOverlayContext } from "@/contexts/OverlayContext";
 import ExpandedCalendar from "@/components/calendar/ExpandedCalendar";
+import { useStaffLeaves } from "@/hooks/useStaffLeaves";
 
 export type StaffMember = {
   id: number;
@@ -34,6 +35,7 @@ export default function StaffDetails({ visible, staff, shiftMap, onClose, return
   const [date, setDate] = useState(new Date());
   const navigation = useNavigation<any>();
   const { teamMemberNavRequest, clearTeamMemberNavRequest } = useOverlayContext();
+  const { leaveMap } = useStaffLeaves(staff?.id || 0);
 
   const handlePhonePress = () => {
     if (staff?.phone) {
@@ -182,6 +184,7 @@ export default function StaffDetails({ visible, staff, shiftMap, onClose, return
                 value={date}
                 onChange={setDate}
                 shiftMap={shiftMap}
+                leaveMap={leaveMap}
               />
             </View>
           )}
