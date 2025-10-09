@@ -92,8 +92,8 @@ public class DataInitializer implements CommandLineRunner {
         shiftDesignationRequirementsRepository.deleteAll();
         shiftAssignmentRepository.deleteAll();
         openShiftRepository.deleteAll();
+        leaveRequestRepository.deleteAll(); // Delete leave requests BEFORE shifts
         shiftRepository.deleteAll();
-        leaveRequestRepository.deleteAll();
         staffRepository.deleteAll();
         userRepository.deleteAll();
         locationRepository.deleteAll();
