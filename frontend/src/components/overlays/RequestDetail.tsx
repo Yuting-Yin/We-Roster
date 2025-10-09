@@ -23,6 +23,7 @@ interface RequestDetailProps {
     initials: string;
     designation: string;
   }>;
+  onRefresh?: () => void; // Callback to refresh request data
 }
 
 export default function RequestDetail({
@@ -30,6 +31,7 @@ export default function RequestDetail({
   onClose,
   request,
   workingStaff = [],
+  onRefresh,
 }: RequestDetailProps) {
   const { user } = useCurrentUser({ mock: false });
   const navigation = useNavigation<any>();
@@ -233,10 +235,31 @@ export default function RequestDetail({
       }
     } catch (error) {
       console.error("🔍 ConfirmCancelRequest - Error cancelling request:", error);
+      setShowConfirmDialog(false);
+      
+      // Parse error message to show user-friendly message
+      let errorMessage = "Failed to cancel the request. Please try again.";
+      if (error instanceof Error) {
+        if (error.message.includes("Cannot delete request with status")) {
+          errorMessage = "This request cannot be cancelled because it has already been processed. Please refresh the page to see the current status.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Failed to cancel the request. Please try again.",
-        [{ text: "OK" }]
+        "Cannot Cancel Request",
+        errorMessage,
+        [
+          { text: "OK" },
+          ...(onRefresh ? [{
+            text: "Refresh Data",
+            onPress: () => {
+              onRefresh();
+              onClose();
+            }
+          }] : [])
+        ]
       );
     }
   };
