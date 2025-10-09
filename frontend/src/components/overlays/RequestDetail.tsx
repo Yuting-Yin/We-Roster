@@ -211,40 +211,55 @@ export default function RequestDetail({
                   <Text style={styles.errorText}>{shiftError}</Text>
                 ) : (
                   <View style={styles.staffList}>
-                    {/* Show staff from workingStaff prop first */}
-                    {workingStaff.map((staff) => (
-                      <Pressable
-                        key={staff.id}
-                        style={styles.staffItem}
-                        onPress={() => handleStaffPress(staff.id, staff.name, staff.initials)}
-                      >
-                        <Avatar initials={staff.initials} />
-                        <View style={styles.staffInfo}>
-                          <Text style={styles.staffName}>{staff.name}</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={sx(20)} color={COLOR.label} />
-                      </Pressable>
-                    ))}
-                    
-                    {/* Show staff from shift details */}
-                    {shiftDetails?.coworkers?.map((coworker: any) => (
-                      <Pressable
-                        key={coworker.id}
-                        style={styles.staffItem}
-                        onPress={() => handleStaffPress(coworker.id.toString(), coworker.name, coworker.initials)}
-                      >
-                        <Avatar initials={coworker.initials} />
-                        <View style={styles.staffInfo}>
-                          <Text style={styles.staffName}>{coworker.name}</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={sx(20)} color={COLOR.label} />
-                      </Pressable>
-                    ))}
-                    
-                    {/* Show message if no staff */}
-                    {workingStaff.length === 0 && (!shiftDetails?.coworkers || shiftDetails.coworkers.length === 0) && (
-                      <Text style={styles.noStaffText}>No staff assigned to this shift</Text>
-                    )}
+                    {/* Filter out current user and combine all staff */}
+                    {(() => {
+                      // Combine staff from workingStaff prop and shift details
+                      const allStaff = [
+                        ...workingStaff.map(staff => ({
+                          id: staff.id,
+                          name: staff.name,
+                          initials: staff.initials,
+                          source: 'workingStaff' as const
+                        })),
+                        ...(shiftDetails?.coworkers || []).map((coworker: any) => ({
+                          id: coworker.id.toString(),
+                          name: coworker.name,
+                          initials: coworker.initials,
+                          source: 'shiftDetails' as const
+                        }))
+                      ];
+
+                      // Filter out current user (by name matching)
+                      const otherStaff = allStaff.filter(staff => 
+                        staff.name !== user?.name && 
+                        staff.name !== `${user?.firstName} ${user?.lastName}` &&
+                        staff.name !== user?.firstName &&
+                        staff.name !== user?.lastName
+                      );
+
+                      // Remove duplicates (same person from different sources)
+                      const uniqueStaff = otherStaff.filter((staff, index, self) => 
+                        index === self.findIndex(s => s.name === staff.name)
+                      );
+
+                      return uniqueStaff.length > 0 ? (
+                        uniqueStaff.map((staff) => (
+                          <Pressable
+                            key={`${staff.source}-${staff.id}`}
+                            style={styles.staffItem}
+                            onPress={() => handleStaffPress(staff.id, staff.name, staff.initials)}
+                          >
+                            <Avatar initials={staff.initials} />
+                            <View style={styles.staffInfo}>
+                              <Text style={styles.staffName}>{staff.name}</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={sx(20)} color={COLOR.label} />
+                          </Pressable>
+                        ))
+                      ) : (
+                        <Text style={styles.noStaffText}>No other staff assigned to this shift</Text>
+                      );
+                    })()}
                   </View>
                 )}
               </View>
