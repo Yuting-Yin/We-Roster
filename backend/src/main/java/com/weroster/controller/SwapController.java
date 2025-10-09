@@ -1,8 +1,10 @@
 package com.weroster.controller;
 
 import com.weroster.dto.CreateSwapRequestInput;
+import com.weroster.entity.Shift;
 import com.weroster.entity.ShiftSwap;
 import com.weroster.entity.Staff;
+import com.weroster.repository.ShiftRepository;
 import com.weroster.repository.ShiftSwapRepository;
 import com.weroster.repository.StaffRepository;
 import com.weroster.service.NotificationService;
@@ -27,6 +29,9 @@ public class SwapController {
     private StaffRepository staffRepository;
     
     @Autowired
+    private ShiftRepository shiftRepository;
+    
+    @Autowired
     private NotificationService notificationService;
     
     @PostMapping
@@ -41,6 +46,10 @@ public class SwapController {
                 throw new RuntimeException("Target ID is required");
             }
             
+            if (input.getShiftId() == null || input.getShiftId().trim().isEmpty()) {
+                throw new RuntimeException("Shift ID is required");
+            }
+            
             // Check if requester and target are the same
             if (input.getRequesterId().equals(input.getTargetUserId())) {
                 throw new RuntimeException("Cannot swap with yourself");
@@ -53,10 +62,13 @@ public class SwapController {
             Staff target = staffRepository.findById(Long.parseLong(input.getTargetUserId()))
                     .orElseThrow(() -> new RuntimeException("Target user not found"));
             
-            // Check for existing swap request between these two users for the same time
-            // Parse the actual shift date and time, not the creation time
-            LocalDateTime fromTime = LocalDateTime.parse(input.getDate() + "T" + input.getStart());
-            LocalDateTime toTime = LocalDateTime.parse(input.getDate() + "T" + input.getEnd());
+            // Fetch shift - now required
+            Shift shift = shiftRepository.findById(Long.parseLong(input.getShiftId()))
+                    .orElseThrow(() -> new RuntimeException("Shift not found"));
+            
+            // Use shift's start and end times to ensure consistency
+            LocalDateTime fromTime = shift.getStartTs();
+            LocalDateTime toTime = shift.getEndTs();
             
             // Check if there's already a pending swap request between these users for the same time
             List<ShiftSwap> existingSwaps = shiftSwapRepository.findByStaffId(requester.getId());
@@ -73,6 +85,7 @@ public class SwapController {
             ShiftSwap swapRequest = ShiftSwap.builder()
                     .requester(requester)
                     .target(target)
+                    .shift(shift)
                     .fromTime(fromTime)
                     .toTime(toTime)
                     .message(input.getMessage())

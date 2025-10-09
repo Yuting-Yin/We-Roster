@@ -36,6 +36,10 @@ public class ShiftSwap {
     @JoinColumn(name = "target_id")
     private Staff target;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shift_id", nullable = false)
+    private Shift shift;
+    
     @Column(name = "message", columnDefinition = "TEXT")
     private String message;
     

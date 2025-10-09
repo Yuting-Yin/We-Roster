@@ -208,6 +208,7 @@ CREATE TABLE shift_swap (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     requester_id BIGINT NOT NULL,
     target_id BIGINT NOT NULL,
+    shift_id BIGINT NOT NULL,
     from_time DATETIME NOT NULL,
     to_time DATETIME NOT NULL,
     message TEXT,
@@ -215,8 +216,10 @@ CREATE TABLE shift_swap (
     date_made DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (requester_id) REFERENCES staff(id) ON DELETE CASCADE,
     FOREIGN KEY (target_id) REFERENCES staff(id) ON DELETE CASCADE,
+    FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE,
     INDEX idx_shift_swap_requester (requester_id),
     INDEX idx_shift_swap_target (target_id),
+    INDEX idx_shift_swap_shift (shift_id),
     INDEX idx_shift_swap_status (status),
     CHECK (status IN ('AWAITING', 'APPROVED', 'REJECTED', 'CANCELLED'))
 );

@@ -142,7 +142,7 @@ export default function RequestDetail({
               <DetailRow label="Designation" value={user?.designation || "Unknown Designation"} />
               <DetailRow label="Date" value={request.date} />
               <DetailRow label="Time" value={request.timeRange || ""} />
-              <DetailRow label="Address" value={request.address || shiftDetails?.location?.address || ""} />
+              <DetailRow label="Address" value={request.address || ""} />
               <DetailRow label="Location" value={request.location || shiftDetails?.location?.name || ""} />
               <DetailRow 
                 label="Status" 

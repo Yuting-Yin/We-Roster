@@ -325,8 +325,30 @@ public class RequestController {
         String date = formatDate(swap.getFromTime().toLocalDate());
         String timeRange = formatTimeRange(swap.getFromTime(), swap.getToTime());
         
-        // For swap requests, we don't have direct shift reference, so we'll leave shift info as null
-        // TODO: In the future, we could find the shift by matching the time range
+        // Get shift information from the linked shift
+        String shiftId = null;
+        String location = null;
+        String address = null;
+        
+        try {
+            if (swap.getShift() != null) {
+                shiftId = swap.getShift().getId().toString();
+                
+                // Safely access location
+                if (swap.getShift().getLocation() != null) {
+                    location = swap.getShift().getLocation().getName();
+                    
+                    // Safely access hospital address
+                    if (swap.getShift().getLocation().getHospital() != null) {
+                        address = swap.getShift().getLocation().getHospital().getAddress();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("🔍 RequestController - Error accessing swap shift details: " + e.getMessage());
+            // Continue with null values for shift details
+        }
+        
         return RequestCardDto.builder()
             .id(swap.getId().toString())
             .status(status)
@@ -339,9 +361,9 @@ public class RequestController {
             .reviewedAt(null) // ShiftSwap doesn't have reviewed date
             .reviewedBy(null)
             .reason(swap.getMessage())
-            .shiftId(null) // TODO: Find shift by time range if needed
-            .location(null) // TODO: Get from shift if found
-            .address(null) // TODO: Get from shift if found
+            .shiftId(shiftId)
+            .location(location)
+            .address(address)
             .build();
     }
     
@@ -365,7 +387,7 @@ public class RequestController {
                 Shift shift = openShiftRequest.getOpenShift().getShift();
                 date = formatDate(shift.getStartTs().toLocalDate());
                 timeRange = formatTimeRange(shift.getStartTs(), shift.getEndTs());
-                shiftId = openShiftRequest.getOpenShift().getId().toString();
+                shiftId = shift.getId().toString(); // Return the actual shift ID, not open shift ID
                 
                 // Safely access location
                 if (shift.getLocation() != null) {
