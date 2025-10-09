@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, Animated, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Modal, Pressable, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLOR } from '@/theme/colors';
 import { sx, sy } from '@/theme/metrics';
@@ -85,16 +85,12 @@ export default function ConfirmationDialog({
             }
           ]}
         >
-          <ScrollView 
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
+          <View style={styles.content}>
             <View style={styles.header}>
               <View style={styles.iconContainer}>
                 <Ionicons 
                   name={confirmStyle === 'destructive' ? 'warning' : 'help-circle'} 
-                  size={sx(24)} 
+                  size={sx(22)} 
                   color={confirmStyle === 'destructive' ? COLOR.error : COLOR.brand} 
                 />
               </View>
@@ -102,7 +98,7 @@ export default function ConfirmationDialog({
             </View>
             
             <Text style={styles.message}>{message}</Text>
-          </ScrollView>
+          </View>
           
           <View style={styles.buttonContainer}>
             <Pressable 
@@ -151,55 +147,53 @@ const styles = StyleSheet.create({
   },
   dialog: {
     backgroundColor: '#fff',
-    borderRadius: sx(16),
-    padding: sx(16), // Reduced padding
-    width: '100%',
-    maxWidth: sx(380),
-    maxHeight: '80vh', // Prevent dialog from being too tall
+    borderRadius: sx(12),
+    padding: sx(16),
+    width: '90%',
+    maxWidth: sx(350),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 8,
   },
-  scrollView: {
-    flexGrow: 1,
-    maxHeight: '60vh', // Limit scroll area height
-  },
-  scrollContent: {
-    flexGrow: 1,
+  content: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: sy(16),
+    marginBottom: sy(12),
   },
   iconContainer: {
-    marginRight: sx(12),
+    marginRight: sx(8),
   },
   title: {
-    fontSize: sx(20),
+    fontSize: sx(18),
     fontWeight: '600',
     color: COLOR.ink,
     flex: 1,
   },
   message: {
-    fontSize: sx(16),
+    fontSize: sx(15),
     color: COLOR.label,
-    lineHeight: sy(22), // Reduced line height
-    marginBottom: sy(20), // Reduced margin
+    lineHeight: sy(20),
+    marginBottom: sy(16),
+    textAlign: 'center',
   },
   buttonContainer: {
     flexDirection: 'row',
-    gap: sx(12),
+    gap: sx(10),
+    marginTop: sx(4), // Ensure buttons are always visible
   },
   button: {
     flex: 1,
-    paddingVertical: sy(12),
-    paddingHorizontal: sx(16),
+    paddingVertical: sy(10),
+    paddingHorizontal: sx(12),
     borderRadius: sx(8),
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: sy(44), // Ensure minimum touch target
   },
   cancelButton: {
     backgroundColor: '#f5f5f5',
