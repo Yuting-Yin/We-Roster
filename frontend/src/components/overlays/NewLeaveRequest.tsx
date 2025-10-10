@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   webDateInput: {
-    width: "100%",
+    width: "90%",
     padding: sx(12),
     borderWidth: 1,
     borderColor: COLOR.divider,
