@@ -83,7 +83,6 @@ export default function NewLeaveRequest({
   const measureDropdownPosition = () => {
     if (dropdownRef.current) {
       dropdownRef.current.measure((x, y, width, height, pageX, pageY) => {
-        console.log('Dropdown position measurements:', { x, y, width, height, pageX, pageY });
         setDropdownPosition({
           top: y + height, // Position below the selection box
           left: x, // Align with left edge of selection box
@@ -541,6 +540,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     zIndex: 9999,
     elevation: 20,
+    alignItems: "flex-start", // Prevent centering
+    justifyContent: "flex-start", // Prevent centering
   },
   dropdownOptions: {
     position: "absolute",
@@ -553,6 +554,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     maxHeight: sy(200), // Limit height to prevent overflow
+    alignSelf: "flex-start", // Ensure no centering
   },
   dropdownOption: {
     paddingHorizontal: sx(16),
