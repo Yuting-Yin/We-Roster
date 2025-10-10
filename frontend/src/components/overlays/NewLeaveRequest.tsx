@@ -95,6 +95,7 @@ export default function NewLeaveRequest({
   const [toastMessage, setToastMessage] = React.useState("");
   
   const showSuccessToast = (message: string) => { 
+    console.log('🔍 NewLeaveRequest - Showing success toast:', message);
     setToastMessage(message); 
     setSuccessToast(true); 
     setTimeout(() => setSuccessToast(false), 1800); 
@@ -218,7 +219,11 @@ export default function NewLeaveRequest({
       
       // Refresh notification count after successful submission
       refreshUnreadCount();
-      onSubmitted?.();
+      
+      // Delay closing the modal to allow toast to show
+      setTimeout(() => {
+        onSubmitted?.();
+      }, 1000);
     } catch (e: any) {
       console.error('🔍 New Leave Request - Error:', e);
       showFailToast('Failed to submit: Network error or server issue');
