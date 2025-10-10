@@ -260,8 +260,7 @@ export default function NewLeaveRequest({
             keyboardShouldPersistTaps="handled"
             style={{ flex: 1 }}
             contentContainerStyle={{ 
-              paddingBottom: sy(120), // Extra padding to ensure content is scrollable above keyboard
-              flexGrow: 1 
+              paddingBottom: sy(80), // Reduced padding but still enough for keyboard
             }}
             showsVerticalScrollIndicator={true}
             scrollEventThrottle={16}
@@ -269,6 +268,7 @@ export default function NewLeaveRequest({
             bounces={true}
             scrollsToTop={false}
             keyboardDismissMode="on-drag"
+            nestedScrollEnabled={true}
           >
             {/* Select Leave Type */}
             <View style={styles.section}>
@@ -315,7 +315,7 @@ export default function NewLeaveRequest({
             </View>
 
             {/* Reason For Leave */}
-            <View style={[styles.section, { marginBottom: sy(10) }]}>
+            <View style={[styles.section, { marginBottom: sy(20) }]}>
               <Text style={styles.sectionLabel}>Reason For Leave</Text>
               <View style={styles.reasonBox}>
                 <TextInput
@@ -332,7 +332,7 @@ export default function NewLeaveRequest({
                     setTimeout(() => {
                       // Scroll to ensure the reason input is visible above keyboard
                       scrollViewRef.current?.scrollTo({ 
-                        y: 250, // Scroll down enough to show the text input above keyboard
+                        y: 200, // Scroll down enough to show the text input above keyboard
                         animated: true 
                       });
                     }, 100); // Faster response time
@@ -340,10 +340,9 @@ export default function NewLeaveRequest({
                 />
               </View>
             </View>
-          </ScrollView>
 
-          {/* Submit Button */}
-          <View style={styles.submitContainer}>
+            {/* Submit Button - Now inside ScrollView */}
+            <View style={styles.submitContainer}>
             <Pressable 
               style={[styles.submitButton, (!leaveType || submitting) && styles.submitButtonDisabled]} 
               onPress={submit}
@@ -356,6 +355,7 @@ export default function NewLeaveRequest({
               )}
             </Pressable>
           </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Animated.View>
       
@@ -502,8 +502,8 @@ const styles = StyleSheet.create({
     paddingBottom: sy(8), 
     zIndex: 52, 
     elevation: 16,
-    maxHeight: '95%',
-    minHeight: '60%',
+    maxHeight: '85%', // Reduced to ensure it doesn't overlap with bottom navigation
+    minHeight: '70%',
   },
   header: { 
     flexDirection: "row", 
@@ -632,6 +632,7 @@ const styles = StyleSheet.create({
   submitContainer: {
     paddingHorizontal: sx(16),
     paddingVertical: sy(16),
+    paddingBottom: sy(20), // Extra padding for better spacing
   },
   submitButton: {
     backgroundColor: COLOR.brand,
