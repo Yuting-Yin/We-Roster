@@ -244,10 +244,10 @@ export default function NewLeaveRequest({
                 
                 <View style={styles.dateField}>
                   <Text style={styles.dateLabel}>To</Text>
-                  <View style={[styles.dateInput, styles.dateInputReadOnly]}>
+                  <Pressable style={[styles.dateInput, styles.dateInputReadOnly]} onPress={() => setShowToDatePicker(true)}>
                     <Text style={styles.dateInputText}>{formatDate(toDate)}</Text>
                     <Ionicons name="calendar-outline" size={sx(20)} color="#CCCCCC" />
-                  </View>
+                  </Pressable>
                 </View>
               </View>
             </View>
@@ -311,23 +311,75 @@ export default function NewLeaveRequest({
       
       {/* Date Pickers */}
       {showFromDatePicker && (
-        <DateTimePicker
-          value={fromDate}
-          mode="date"
-          display="default"
-          onChange={handleFromDateChange}
-          minimumDate={new Date()}
-        />
+        Platform.OS === 'web' ? (
+          <View style={styles.webDatePickerOverlay}>
+            <View style={styles.webDatePickerContainer}>
+              <Text style={styles.webDatePickerTitle}>Select Start Date</Text>
+              <input
+                type="date"
+                value={fromDate.toISOString().split('T')[0]}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={(e) => {
+                  const selectedDate = new Date(e.target.value);
+                  handleFromDateChange(null, selectedDate);
+                }}
+                style={styles.webDateInput}
+              />
+              <View style={styles.webDatePickerButtons}>
+                <Pressable 
+                  style={styles.webDatePickerButton}
+                  onPress={() => setShowFromDatePicker(false)}
+                >
+                  <Text style={styles.webDatePickerButtonText}>Cancel</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <DateTimePicker
+            value={fromDate}
+            mode="date"
+            display="default"
+            onChange={handleFromDateChange}
+            minimumDate={new Date()}
+          />
+        )
       )}
       
       {showToDatePicker && (
-        <DateTimePicker
-          value={toDate}
-          mode="date"
-          display="default"
-          onChange={handleToDateChange}
-          minimumDate={fromDate}
-        />
+        Platform.OS === 'web' ? (
+          <View style={styles.webDatePickerOverlay}>
+            <View style={styles.webDatePickerContainer}>
+              <Text style={styles.webDatePickerTitle}>Select End Date</Text>
+              <input
+                type="date"
+                value={toDate.toISOString().split('T')[0]}
+                min={fromDate.toISOString().split('T')[0]}
+                onChange={(e) => {
+                  const selectedDate = new Date(e.target.value);
+                  handleToDateChange(null, selectedDate);
+                }}
+                style={styles.webDateInput}
+              />
+              <View style={styles.webDatePickerButtons}>
+                <Pressable 
+                  style={styles.webDatePickerButton}
+                  onPress={() => setShowToDatePicker(false)}
+                >
+                  <Text style={styles.webDatePickerButtonText}>Cancel</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <DateTimePicker
+            value={toDate}
+            mode="date"
+            display="default"
+            onChange={handleToDateChange}
+            minimumDate={fromDate}
+          />
+        )
       )}
       
       {/* Toast notifications */}
@@ -491,6 +543,62 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: "#fff",
     fontSize: sx(16),
+    fontWeight: "600",
+  },
+  // Web date picker styles
+  webDatePickerOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    zIndex: 1000,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  webDatePickerContainer: {
+    backgroundColor: "#fff",
+    borderRadius: sx(12),
+    padding: sx(20),
+    marginHorizontal: sx(20),
+    minWidth: sx(300),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 16,
+  },
+  webDatePickerTitle: {
+    fontSize: sx(18),
+    fontWeight: "600",
+    color: COLOR.ink,
+    marginBottom: sy(16),
+    textAlign: "center",
+  },
+  webDateInput: {
+    width: "100%",
+    padding: sx(12),
+    borderWidth: 1,
+    borderColor: COLOR.divider,
+    borderRadius: sx(8),
+    fontSize: sx(16),
+    marginBottom: sy(16),
+  },
+  webDatePickerButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: sx(12),
+  },
+  webDatePickerButton: {
+    paddingHorizontal: sx(16),
+    paddingVertical: sy(8),
+    borderRadius: sx(8),
+    backgroundColor: COLOR.brand,
+  },
+  webDatePickerButtonText: {
+    color: "#fff",
+    fontSize: sx(14),
     fontWeight: "600",
   },
 });
