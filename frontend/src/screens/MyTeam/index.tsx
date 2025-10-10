@@ -13,7 +13,7 @@ import TeamFilter, { TeamFilterValue } from "@/components/overlays/TeamFilter";
 import StaffDetails, { StaffMember } from "@/components/overlays/StaffDetails";
 import type { TeamMember } from "@/api/team";
 import { getStaffShifts } from "@/api/team";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import NotificationBell from "@/components/common/NotificationBell";
 import { useNotificationContext } from "@/contexts/NotificationContext";
 
@@ -51,28 +51,35 @@ export default function MyTeam() {
   ]);
 
   // Listen for navigation requests from other tabs
-  useEffect(() => {
-    if (teamMemberNavRequest) {
-      const { staffId, staffName, staffInitials } = teamMemberNavRequest;
-      const member = members.find(m => m.id === staffId);
-      
-      if (member) {
-        // Found the full member, use it
-        handleStaffPress(member);
-      } else {
-        // Member not in list (shouldn't happen), but show what we have
-        const initials = staffInitials || staffName.split(' ').map(n => n[0]).join('').toUpperCase();
-        handleStaffPress({
-          id: staffId,
-          name: staffName,
-          firstName: staffName.split(' ')[0] || staffName,
-          lastName: staffName.split(' ').slice(1).join(' ') || '',
-          initials,
-          email: '',
-        });
+  // Use useFocusEffect to ensure this runs when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (teamMemberNavRequest) {
+        const { staffId, staffName, staffInitials } = teamMemberNavRequest;
+        
+        // Add a small delay to ensure the screen is fully focused and members are loaded
+        setTimeout(() => {
+          const member = members.find(m => m.id === staffId);
+          
+          if (member) {
+            // Found the full member, use it
+            handleStaffPress(member);
+          } else {
+            // Member not in list (might still be loading), show what we have
+            const initials = staffInitials || staffName.split(' ').map(n => n[0]).join('').toUpperCase();
+            handleStaffPress({
+              id: staffId,
+              name: staffName,
+              firstName: staffName.split(' ')[0] || staffName,
+              lastName: staffName.split(' ').slice(1).join(' ') || '',
+              initials,
+              email: '',
+            });
+          }
+        }, 100); // Small delay to ensure proper mounting
       }
-    }
-  }, [teamMemberNavRequest, members]);
+    }, [teamMemberNavRequest, members])
+  );
 
   // Handle return navigation when staff details overlay closes
   const handleStaffDetailsClose = () => {
@@ -168,7 +175,7 @@ export default function MyTeam() {
   const renderMember = ({ item }: { item: TeamMember }) => {
     // Check if this is the current user (match by staff ID)
     const currentStaffId = currentUser?.staffId;
-    const isCurrentUser = currentStaffId && item.id === currentStaffId;
+    const isCurrentUser = !!(currentStaffId && item.id === currentStaffId);
     
     return (
       <Pressable 

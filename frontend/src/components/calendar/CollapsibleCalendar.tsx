@@ -72,7 +72,7 @@ function buildMonths(anchor: Date, count = 2) {
 /* =================== Types =================== */
 // Use ShiftType for actual shifts, undefined for no shifts
 
-type Action = { icon: "menu" | "refresh"; onPress: () => void; animated?: boolean };
+type Action = { icon: "menu" | "refresh" | "chevron-back" | "chevron-forward"; onPress: () => void; animated?: boolean };
 
 type Props = {
   value: Date;                                        // Currently selected date (controlled)
@@ -141,7 +141,15 @@ function getShiftTypeForDate(d: Date, shiftMap?: Props["shiftMap"]): ShiftType |
   return result;
 }
 
-const iconFor = (name: Action["icon"]) => (name === "menu" ? "menu-outline" : "refresh");
+const iconFor = (name: Action["icon"]) => {
+  switch (name) {
+    case "menu": return "menu-outline";
+    case "refresh": return "refresh";
+    case "chevron-back": return "chevron-back";
+    case "chevron-forward": return "chevron-forward";
+    default: return "refresh";
+  }
+};
 
 /* =================== Component =================== */
 export default function CollapsibleCalendar({
