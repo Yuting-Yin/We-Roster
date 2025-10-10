@@ -118,6 +118,7 @@ public class TeamRosterController {
 
     /**
      * Get today's duty assignments for dashboard
+     * Only returns assignments where is_lead = true
      */
     @GetMapping("/duty-today")
     public ResponseEntity<List<DutyAssignmentDto>> getTodayDutyAssignments() {
@@ -129,13 +130,18 @@ public class TeamRosterController {
             // Get all shifts for today
             List<Shift> shifts = shiftRepository.findByDateRange(startOfDay, endOfDay);
             
-            // Get all assignments for today's shifts
+            // Get all assignments for today's shifts, filter for leads only
             List<DutyAssignmentDto> dutyAssignments = new ArrayList<>();
             
             for (Shift shift : shifts) {
                 List<ShiftAssignment> assignments = shiftAssignmentRepository.findByShiftId(shift.getId());
                 
+                // Filter for lead assignments only
                 for (ShiftAssignment assignment : assignments) {
+                    // Skip non-lead assignments
+                    if (assignment.getIsLead() == null || !assignment.getIsLead()) {
+                        continue;
+                    }
                     DutyAssignmentDto dutyDto = new DutyAssignmentDto();
                     
                     // Staff information
