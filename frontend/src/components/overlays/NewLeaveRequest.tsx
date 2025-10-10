@@ -313,6 +313,10 @@ export default function NewLeaveRequest({
       {showFromDatePicker && (
         Platform.OS === 'web' ? (
           <View style={styles.webDatePickerOverlay}>
+            <Pressable 
+              style={StyleSheet.absoluteFill} 
+              onPress={() => setShowFromDatePicker(false)}
+            />
             <View style={styles.webDatePickerContainer}>
               <Text style={styles.webDatePickerTitle}>Select Start Date</Text>
               <input
@@ -349,6 +353,10 @@ export default function NewLeaveRequest({
       {showToDatePicker && (
         Platform.OS === 'web' ? (
           <View style={styles.webDatePickerOverlay}>
+            <Pressable 
+              style={StyleSheet.absoluteFill} 
+              onPress={() => setShowToDatePicker(false)}
+            />
             <View style={styles.webDatePickerContainer}>
               <Text style={styles.webDatePickerTitle}>Select End Date</Text>
               <input
@@ -545,60 +553,64 @@ const styles = StyleSheet.create({
     fontSize: sx(16),
     fontWeight: "600",
   },
-  // Web date picker styles
-  webDatePickerOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    zIndex: 1000,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  webDatePickerContainer: {
-    backgroundColor: "#fff",
-    borderRadius: sx(12),
-    padding: sx(20),
-    marginHorizontal: sx(20),
-    minWidth: sx(300),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 16,
-  },
-  webDatePickerTitle: {
-    fontSize: sx(18),
-    fontWeight: "600",
-    color: COLOR.ink,
-    marginBottom: sy(16),
-    textAlign: "center",
-  },
-  webDateInput: {
-    width: "100%",
-    padding: sx(12),
-    borderWidth: 1,
-    borderColor: COLOR.divider,
-    borderRadius: sx(8),
-    fontSize: sx(16),
-    marginBottom: sy(16),
-  },
-  webDatePickerButtons: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: sx(12),
-  },
-  webDatePickerButton: {
-    paddingHorizontal: sx(16),
-    paddingVertical: sy(8),
-    borderRadius: sx(8),
-    backgroundColor: COLOR.brand,
-  },
-  webDatePickerButtonText: {
-    color: "#fff",
-    fontSize: sx(14),
-    fontWeight: "600",
-  },
+  // Web date picker styles (only applied on web)
+  ...(Platform.OS === 'web' && {
+    webDatePickerOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      zIndex: 1000,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    webDatePickerContainer: {
+      backgroundColor: "#fff",
+      borderRadius: sx(12),
+      padding: sx(20),
+      marginHorizontal: sx(20),
+      minWidth: sx(300),
+      maxWidth: sx(400),
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 12,
+      elevation: 16,
+    },
+    webDatePickerTitle: {
+      fontSize: sx(18),
+      fontWeight: "600",
+      color: COLOR.ink,
+      marginBottom: sy(16),
+      textAlign: "center",
+    },
+    webDateInput: {
+      width: "100%",
+      padding: sx(12),
+      borderWidth: 1,
+      borderColor: COLOR.divider,
+      borderRadius: sx(8),
+      fontSize: sx(16),
+      marginBottom: sy(16),
+      backgroundColor: "#fff",
+    },
+    webDatePickerButtons: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: sx(12),
+    },
+    webDatePickerButton: {
+      paddingHorizontal: sx(16),
+      paddingVertical: sy(8),
+      borderRadius: sx(8),
+      backgroundColor: COLOR.brand,
+    },
+    webDatePickerButtonText: {
+      color: "#fff",
+      fontSize: sx(14),
+      fontWeight: "600",
+    },
+  }),
 });
