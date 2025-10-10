@@ -242,7 +242,7 @@ export default function NewLeaveRequest({
       <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>        
         <KeyboardAvoidingView 
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 50}
           style={{ flex: 1 }}
         >
           {/* Header */}
@@ -260,7 +260,7 @@ export default function NewLeaveRequest({
             keyboardShouldPersistTaps="handled"
             style={{ flex: 1 }}
             contentContainerStyle={{ 
-              paddingBottom: sy(20),
+              paddingBottom: sy(100), // More padding to ensure text input is visible
               flexGrow: 1 
             }}
             showsVerticalScrollIndicator={true}
@@ -314,7 +314,7 @@ export default function NewLeaveRequest({
             </View>
 
             {/* Reason For Leave */}
-            <View style={styles.section}>
+            <View style={[styles.section, { paddingBottom: sy(20) }]}>
               <Text style={styles.sectionLabel}>Reason For Leave</Text>
               <View style={styles.reasonBox}>
                 <TextInput
@@ -327,10 +327,14 @@ export default function NewLeaveRequest({
                   textAlignVertical="top"
                   style={styles.reasonInput}
                   onFocus={() => {
-                    // Auto-scroll to reason input when keyboard appears
+                    // Auto-scroll to show reason input when keyboard appears
                     setTimeout(() => {
-                      scrollViewRef.current?.scrollToEnd({ animated: true });
-                    }, 300);
+                      // Scroll to a position that shows the text input above keyboard
+                      scrollViewRef.current?.scrollTo({ 
+                        y: 200, // Scroll down enough to show the text input
+                        animated: true 
+                      });
+                    }, 100);
                   }}
                 />
               </View>
