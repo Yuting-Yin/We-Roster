@@ -48,6 +48,8 @@ export default function NewLeaveRequest({
   
   // Dropdown state
   const [showLeaveTypeDropdown, setShowLeaveTypeDropdown] = React.useState(false);
+  const [dropdownPosition, setDropdownPosition] = React.useState({ top: 0, left: 0, width: 0 });
+  const dropdownRef = React.useRef<View>(null);
   
   // Date picker states
   const [showFromDatePicker, setShowFromDatePicker] = React.useState(false);
@@ -75,6 +77,27 @@ export default function NewLeaveRequest({
     setToastMessage(message); 
     setWarningToast(true); 
     setTimeout(() => setWarningToast(false), 1800); 
+  };
+
+  // Function to measure dropdown position
+  const measureDropdownPosition = () => {
+    if (dropdownRef.current) {
+      dropdownRef.current.measure((x, y, width, height, pageX, pageY) => {
+        setDropdownPosition({
+          top: pageY + height,
+          left: pageX,
+          width: width,
+        });
+      });
+    }
+  };
+
+  // Handle dropdown toggle with position measurement
+  const toggleDropdown = () => {
+    if (!showLeaveTypeDropdown) {
+      measureDropdownPosition();
+    }
+    setShowLeaveTypeDropdown(!showLeaveTypeDropdown);
   };
 
   const anim = React.useRef(new Animated.Value(0)).current;
@@ -235,8 +258,9 @@ export default function NewLeaveRequest({
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Select Leave Type</Text>
               <Pressable 
+                ref={dropdownRef}
                 style={styles.dropdown}
-                onPress={() => setShowLeaveTypeDropdown(!showLeaveTypeDropdown)}
+                onPress={toggleDropdown}
               >
                 <Text style={[styles.dropdownText, !leaveType && styles.placeholderText]}>
                   {leaveType ? leaveTypes.find(t => t.value === leaveType)?.label : "Leave Type"}
@@ -302,10 +326,21 @@ export default function NewLeaveRequest({
         </KeyboardAvoidingView>
       </Animated.View>
       
-      {/* Dropdown Options - Positioned at sheet level */}
+      {/* Dropdown Options - Positioned dynamically */}
       {showLeaveTypeDropdown && (
         <View style={styles.dropdownOverlay}>
-          <View style={styles.dropdownOptions}>
+          <Pressable 
+            style={StyleSheet.absoluteFill} 
+            onPress={() => setShowLeaveTypeDropdown(false)}
+          />
+          <View style={[
+            styles.dropdownOptions,
+            {
+              top: dropdownPosition.top,
+              left: dropdownPosition.left,
+              width: dropdownPosition.width,
+            }
+          ]}>
             {leaveTypes.map((type) => (
               <Pressable
                 key={type.value}
@@ -499,13 +534,15 @@ const styles = StyleSheet.create({
   },
   dropdownOverlay: {
     position: "absolute",
-    top: sy(273), // Position directly below the leave type input field
-    left: sx(16),
-    right: sx(16),
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     zIndex: 9999,
     elevation: 20,
   },
   dropdownOptions: {
+    position: "absolute",
     backgroundColor: "#fff",
     borderRadius: sx(12),
     borderWidth: 1,
