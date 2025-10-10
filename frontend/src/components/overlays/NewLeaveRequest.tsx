@@ -59,26 +59,39 @@ export default function NewLeaveRequest({
   const [reasonY, setReasonY] = React.useState<number | null>(null);
 
   const onHeaderLayout = (e: LayoutChangeEvent) => {
-    setHeaderH(e.nativeEvent.layout.height);
+    const height = e.nativeEvent.layout.height;
+    console.log('🔍 onHeaderLayout:', height);
+    setHeaderH(height);
   };
 
   const onReasonLayout = (e: LayoutChangeEvent) => {
-    setReasonY(e.nativeEvent.layout.y);
+    const y = e.nativeEvent.layout.y;
+    console.log('🔍 onReasonLayout:', y);
+    setReasonY(y);
   };
 
   const scrollReasonIntoView = React.useCallback(() => {
-    if (reasonY === null) return;
+    if (reasonY === null) {
+      console.log('🔍 scrollReasonIntoView: reasonY is null');
+      return;
+    }
     const margin = sy(8);
     const targetY = Math.max(0, reasonY - headerH - margin);
+    console.log('🔍 scrollReasonIntoView:', { reasonY, headerH, margin, targetY });
     scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
   }, [reasonY, headerH]);
 
   React.useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
-      setKbHeight(e.endCoordinates?.height ?? 0);
+      const height = e.endCoordinates?.height ?? 0;
+      console.log('🔍 keyboardDidShow:', height);
+      setKbHeight(height);
       setTimeout(scrollReasonIntoView, 60);
     });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKbHeight(0));
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      console.log('🔍 keyboardDidHide');
+      setKbHeight(0);
+    });
     return () => { showSub.remove(); hideSub.remove(); };
   }, [scrollReasonIntoView]);
   
@@ -274,8 +287,8 @@ export default function NewLeaveRequest({
             <Text style={styles.hTitle}>New Leave Request</Text>
             <View style={{ width: sx(24) }} />
           </View>
+            <View style={styles.divider} />
           </View>
-          <View style={styles.divider} />
 
           <ScrollView
             ref={scrollViewRef}
