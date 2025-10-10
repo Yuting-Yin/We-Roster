@@ -8,13 +8,15 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "plugins": ["expo-dev-client"],
+    "scheme": "we-roster-mobile",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.werostermobile"
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +25,25 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.anonymous.werostermobile",
-      "usesCleartextTraffic": true
+      "usesCleartextTraffic": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https"
+            },
+            {
+              "scheme": "we-roster-mobile"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

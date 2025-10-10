@@ -5,7 +5,9 @@
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('node_modules',{recursive:true,force:true}); try{require('fs').rmSync('package-lock.json',{force:true})}catch{}\"",
     "setup": "node scripts/setup.mjs",
-    "start": "expo start",
+    "start": "expo start --tunnel",
+    "start:lan": "expo start --lan",
+    "start:localhost": "expo start --localhost",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
