@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, FlatList } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRoute } from "@react-navigation/native";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
-import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useOverlayContext } from "@/contexts/OverlayContext";
 import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
@@ -44,14 +43,17 @@ export type TeamRosterFilterValue = {
   designations: string[];
 };
 
+const BORDER_COLOR = "#2B88D8";
+const HEADER_BG = "#EFF6FC";
+const LABEL_COLOR = "#212121";
+
 export default function TeamRoster() {
   const route = useRoute<any>();
   const selectedDate = route.params?.selectedDate;
-  const { members, loading, error, refresh } = useTeamMembers();
   const { user: currentUser } = useCurrentUser();
   const { registerOverlay, unregisterOverlay } = useOverlayContext();
   
-  // Get current date for display and API calls - memoize to prevent unnecessary re-renders
+  // Get current date for display and API calls
   const currentDate = useMemo(() => {
     return selectedDate ? new Date(selectedDate) : new Date();
   }, [selectedDate]);
@@ -120,7 +122,7 @@ export default function TeamRoster() {
     }));
   }, [teamRosterTables, filter]);
 
-  // Format current date for display - memoize to prevent unnecessary re-renders
+  // Format current date for display
   const formattedDate = useMemo(() => {
     return fmt(currentDate, { 
       weekday: 'short', 
@@ -140,89 +142,191 @@ export default function TeamRoster() {
     setCollapsedHospitals(newCollapsed);
   };
 
-  const renderStaffList = (staff: TeamRosterShift['assignedStaff'], shiftId: string) => {
+  // Helper function to get cells for a specific room and shift type
+  const getCellsForRoomAndShift = (
+    hospitalCells: TeamRosterCell[], 
+    room: string, 
+    shiftType: "AM" | "PM" | "AH" | "ON_CALL"
+  ): TeamRosterCell | undefined => {
+    return hospitalCells.find(c => c.room === room && c.shiftType === shiftType);
+  };
+
+  // Render staff list with icons
+  const renderStaffList = (staff: TeamRosterShift['assignedStaff']) => {
     return staff.map((person, index) => (
-      <View key={`staff-${shiftId}-${person.id}-${index}`} style={styles.staffItem}>
-        <Ionicons name="person" size={sx(12)} color={COLOR.label} />
+      <View key={`${person.id}-${index}`} style={styles.staffRow}>
+        <Ionicons name="person-outline" size={sx(12)} color={BORDER_COLOR} />
         <Text style={styles.staffName}>{person.name}</Text>
       </View>
     ));
   };
 
-  const renderTableCell = (room: string, shiftType: "AM" | "PM" | "AH" | "ON_CALL") => {
-    const cell = filteredData[0]?.cells.find(c => c.room === room && c.shiftType === shiftType);
-    
-    if (!cell || cell.shifts.length === 0) {
-      return <View style={styles.emptyCell} />;
-    }
+  // Render shifts in a cell
+  const renderShifts = (shifts: TeamRosterShift[]) => {
+    return shifts.map((shift, index) => (
+      <View 
+        key={`${shift.id}-${index}`} 
+        style={[
+          styles.shiftGroup,
+          index > 0 && styles.shiftGroupSpacing
+        ]}
+      >
+        <View style={styles.dutyRow}>
+          <Ionicons name="medical-outline" size={sx(12)} color={BORDER_COLOR} />
+          <Text style={styles.dutyName}>{shift.shiftName}</Text>
+        </View>
+        {renderStaffList(shift.assignedStaff)}
+      </View>
+    ));
+  };
 
+  // Render a single table cell
+  const renderTableCell = (
+    hospitalCells: TeamRosterCell[],
+    room: string, 
+    shiftType: "AM" | "PM" | "AH" | "ON_CALL",
+    isLastColumn: boolean
+  ) => {
+    const cell = getCellsForRoomAndShift(hospitalCells, room, shiftType);
+    
     return (
-      <View style={styles.tableCell}>
-        {cell.shifts.map((shift, index) => (
-          <View key={`shift-${room}-${shiftType}-${shift.id}-${index}`} style={styles.shiftContainer}>
-            <View style={styles.shiftHeader}>
-              <Ionicons name="medical" size={sx(14)} color={COLOR.brand} />
-              <Text style={styles.shiftName}>{shift.shiftName}</Text>
-            </View>
-            <Text style={styles.shiftTime}>{shift.startTime} - {shift.endTime}</Text>
-            <View style={styles.staffContainer}>
-              {renderStaffList(shift.assignedStaff, shift.id)}
-            </View>
-          </View>
-        ))}
+      <View style={[
+        styles.tableCell,
+        !isLastColumn && styles.tableCellBorder
+      ]}>
+        {cell && cell.shifts.length > 0 ? (
+          renderShifts(cell.shifts)
+        ) : null}
       </View>
     );
   };
 
+  // Render hospital table
   const renderHospitalTable = (hospital: TeamRosterTable) => {
     const isCollapsed = collapsedHospitals.has(hospital.hospital);
-    const rooms = hospital.rooms; // Backend already includes "On Call"
-    const shiftTypes: ("AM" | "PM" | "AH" | "ON_CALL")[] = ["ON_CALL", "AM", "PM", "AH"];
+    
+    // Define shift types in order: ON_CALL should be "On Call", others as is
+    const shiftTypeRows: Array<{
+      key: "ON_CALL" | "AM" | "PM" | "AH";
+      label: string;
+      rooms: string[];
+    }> = [];
+
+    // Check if we have "On Call" room data
+    const hasOnCallRoom = hospital.rooms.some(r => r === "On Call");
+    if (hasOnCallRoom) {
+      shiftTypeRows.push({
+        key: "ON_CALL",
+        label: "On Call",
+        rooms: ["On Call"]
+      });
+    }
+
+    // Get all theatre/room rows (exclude "On Call")
+    const theatreRooms = hospital.rooms.filter(r => r !== "On Call");
+    if (theatreRooms.length > 0) {
+      theatreRooms.forEach(room => {
+        shiftTypeRows.push({
+          key: room as any,
+          label: room,
+          rooms: [room]
+        });
+      });
+    }
+
+    // Column headers
+    const shiftColumns = ["AM", "PM", "AH"];
 
     return (
       <View key={hospital.hospital} style={styles.hospitalSection}>
-        {/* Hospital Header */}
+        {/* Hospital Header - Collapsible */}
         <Pressable 
-          style={styles.hospitalHeader}
+          style={styles.campusHeader}
           onPress={() => toggleHospitalCollapse(hospital.hospital)}
         >
-          <Text style={styles.hospitalTitle}>{hospital.hospital}</Text>
           <Ionicons 
             name={isCollapsed ? "chevron-down" : "chevron-up"} 
-            size={sx(20)} 
-            color={COLOR.label} 
+            size={sx(16)} 
+            color={LABEL_COLOR} 
           />
+          <Text style={styles.campusTitle}>{hospital.hospital}</Text>
         </Pressable>
 
         {!isCollapsed && (
-          <View style={styles.tableContainer}>
-            {/* Table Header */}
-            <View style={styles.tableHeader}>
-              <View style={styles.sessionColumn}>
+          <View style={styles.tableWrapper}>
+            {/* Table Header Row */}
+            <View style={styles.tableHeaderRow}>
+              <View style={[styles.sessionHeaderCell, styles.headerCellBorder]}>
                 <Text style={styles.headerText}>Session</Text>
               </View>
-              {rooms.map(room => (
-                <View key={room} style={styles.roomColumn}>
-                  <Text style={styles.headerText}>{room}</Text>
+              {shiftColumns.map((col, index) => (
+                <View 
+                  key={col} 
+                  style={[
+                    styles.shiftHeaderCell,
+                    styles.headerCellBorder,
+                    index < shiftColumns.length - 1 && styles.shiftHeaderCellBorder
+                  ]}
+                >
+                  <Text style={styles.headerText}>{col}</Text>
                 </View>
               ))}
             </View>
 
-            {/* Table Rows */}
-            {shiftTypes.map(shiftType => (
-              <View key={shiftType} style={styles.tableRow}>
-                <View style={styles.sessionColumn}>
-                  <Text style={styles.shiftTypeText}>
-                    {shiftType === "ON_CALL" ? "On Call" : shiftType}
-                  </Text>
-                </View>
-                {rooms.map(room => (
-                  <View key={`${room}-${shiftType}`} style={styles.roomColumn}>
-                    {renderTableCell(room, shiftType)}
+            {/* Table Body - Rows */}
+            {shiftTypeRows.map((row, rowIndex) => {
+              const isOnCallRow = row.key === "ON_CALL";
+              
+              return (
+                <View 
+                  key={`${row.key}-${rowIndex}`} 
+                  style={[
+                    styles.tableRow,
+                    rowIndex === 0 && styles.tableRowFirst
+                  ]}
+                >
+                  {/* Session Column */}
+                  <View style={[styles.sessionCell, styles.tableCellBorder]}>
+                    <Text style={styles.sessionText}>{row.label}</Text>
                   </View>
-                ))}
-              </View>
-            ))}
+                  
+                  {/* Data Columns */}
+                  {isOnCallRow ? (
+                    // On Call row spans all shift columns
+                    <View style={styles.onCallCell}>
+                      {hospital.cells
+                        .filter(c => c.room === "On Call" && c.shiftType === "ON_CALL")
+                        .flatMap(c => c.shifts)
+                        .map((shift, idx) => (
+                          <View 
+                            key={`${shift.id}-${idx}`} 
+                            style={[
+                              styles.shiftGroup,
+                              idx > 0 && styles.shiftGroupSpacing
+                            ]}
+                          >
+                            <View style={styles.dutyRow}>
+                              <Ionicons name="medical-outline" size={sx(12)} color={BORDER_COLOR} />
+                              <Text style={styles.dutyName}>{shift.shiftName}</Text>
+                            </View>
+                            {renderStaffList(shift.assignedStaff)}
+                          </View>
+                        ))}
+                    </View>
+                  ) : (
+                    // Theatre rows have individual cells for AM, PM, AH
+                    shiftColumns.map((shiftType, colIndex) => 
+                      renderTableCell(
+                        hospital.cells,
+                        row.label,
+                        shiftType as "AM" | "PM" | "AH",
+                        colIndex === shiftColumns.length - 1
+                      )
+                    )
+                  )}
+                </View>
+              );
+            })}
           </View>
         )}
       </View>
@@ -237,22 +341,26 @@ export default function TeamRoster() {
           style={styles.filterButton}
           onPress={() => setFilterVisible(true)}
         >
-          <Ionicons name="options-outline" size={sx(18)} color={COLOR.ink} />
+          <Ionicons name="options-outline" size={sx(24)} color={COLOR.ink} />
         </Pressable>
 
         <View style={styles.dateContainer}>
-          <Ionicons name="chevron-back" size={sx(20)} color={COLOR.label} />
+          <Ionicons name="chevron-back" size={sx(24)} color={COLOR.ink} />
           <Text style={styles.dateText}>{formattedDate}</Text>
-          <Ionicons name="chevron-forward" size={sx(20)} color={COLOR.label} />
+          <Ionicons name="chevron-forward" size={sx(24)} color={COLOR.ink} />
         </View>
 
         <Pressable style={styles.searchButton}>
-          <Ionicons name="search-outline" size={sx(18)} color={COLOR.ink} />
+          <Ionicons name="search-outline" size={sx(24)} color={COLOR.ink} />
         </Pressable>
       </View>
 
       {/* Team Roster Tables */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {rosterLoading ? (
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>Loading team roster...</Text>
@@ -299,16 +407,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: sx(16),
-    paddingVertical: sy(12),
+    paddingVertical: sy(16),
     backgroundColor: "#fff",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLOR.divider,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#000",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 9.4,
+    elevation: 3,
   },
   
   filterButton: {
-    width: sx(36),
-    height: sy(36),
-    borderRadius: sx(8),
+    width: sx(24),
+    height: sy(24),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -316,152 +428,183 @@ const styles = StyleSheet.create({
   dateContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: sx(12),
+    gap: sx(8),
   },
   
   dateText: {
-    fontSize: sx(16),
-    fontWeight: "600",
+    fontSize: sx(14),
+    fontWeight: "500",
     color: COLOR.ink,
   },
   
   searchButton: {
-    width: sx(36),
-    height: sy(36),
-    borderRadius: sx(8),
+    width: sx(24),
+    height: sy(24),
     alignItems: "center",
     justifyContent: "center",
   },
   
   content: {
     flex: 1,
-    padding: sx(16),
+  },
+
+  scrollContent: {
+    paddingBottom: sy(16),
   },
   
   hospitalSection: {
-    marginBottom: sy(24),
     backgroundColor: "#fff",
-    borderRadius: sx(12),
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
   },
   
-  hospitalHeader: {
+  campusHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: sx(16),
-    paddingVertical: sy(12),
-    backgroundColor: COLOR.brand + "10",
+    gap: sx(4),
+    paddingHorizontal: sx(8),
+    paddingVertical: sy(8),
+    backgroundColor: HEADER_BG,
   },
   
-  hospitalTitle: {
-    fontSize: sx(18),
-    fontWeight: "700",
-    color: COLOR.brand,
+  campusTitle: {
+    fontSize: sx(14),
+    fontWeight: "400",
+    color: LABEL_COLOR,
+    textTransform: "uppercase",
   },
   
-  tableContainer: {
-    padding: sx(16),
-  },
-  
-  tableHeader: {
-    flexDirection: "row",
-    borderBottomWidth: 2,
-    borderBottomColor: COLOR.brand,
-    paddingBottom: sy(8),
-    marginBottom: sy(12),
-  },
-  
-  sessionColumn: {
-    width: sx(80),
-    paddingRight: sx(8),
-  },
-  
-  roomColumn: {
+  tableWrapper: {
     flex: 1,
-    paddingHorizontal: sx(4),
+  },
+  
+  tableHeaderRow: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+  },
+  
+  sessionHeaderCell: {
+    width: sx(90),
+    paddingVertical: sy(8),
+    paddingHorizontal: sx(8),
+    justifyContent: "center",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER_COLOR,
+  },
+  
+  shiftHeaderCell: {
+    flex: 1,
+    paddingVertical: sy(8),
+    paddingHorizontal: sx(8),
+    justifyContent: "center",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER_COLOR,
+  },
+  
+  headerCellBorder: {
+    borderRightWidth: 1,
+    borderRightColor: BORDER_COLOR,
+    borderLeftWidth: 1,
+    borderLeftColor: BORDER_COLOR,
+  },
+
+  shiftHeaderCellBorder: {
+    borderRightWidth: 1,
+    borderRightColor: BORDER_COLOR,
   },
   
   headerText: {
-    fontSize: sx(14),
-    fontWeight: "700",
-    color: COLOR.brand,
+    fontSize: sx(10),
+    fontWeight: "400",
+    color: "#000",
     textAlign: "center",
   },
   
   tableRow: {
     flexDirection: "row",
     minHeight: sy(60),
-    marginBottom: sy(8),
-    alignItems: "flex-start",
+    borderTopWidth: 1,
+    borderTopColor: BORDER_COLOR,
+  },
+
+  tableRowFirst: {
+    borderTopWidth: 0,
   },
   
-  shiftTypeText: {
-    fontSize: sx(12),
-    fontWeight: "600",
-    color: COLOR.ink,
+  sessionCell: {
+    width: sx(90),
+    paddingVertical: sy(8),
+    paddingHorizontal: sx(8),
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  
+  sessionText: {
+    fontSize: sx(10),
+    fontWeight: "400",
+    color: "#000",
     textAlign: "center",
-    paddingTop: sy(4),
+  },
+  
+  onCallCell: {
+    flex: 1,
+    paddingVertical: sy(8),
+    paddingHorizontal: sx(8),
+    borderLeftWidth: 1,
+    borderLeftColor: BORDER_COLOR,
   },
   
   tableCell: {
     flex: 1,
-    paddingHorizontal: sx(4),
-    paddingVertical: sy(4),
+    paddingVertical: sy(8),
+    paddingHorizontal: sx(8),
+    justifyContent: "flex-start",
+    alignItems: "flex-start",
   },
   
-  emptyCell: {
-    flex: 1,
-    height: sy(52),
+  tableCellBorder: {
+    borderRightWidth: 1,
+    borderRightColor: BORDER_COLOR,
+    borderLeftWidth: 1,
+    borderLeftColor: BORDER_COLOR,
   },
   
-  shiftContainer: {
-    backgroundColor: COLOR.bg,
-    borderRadius: sx(8),
-    padding: sx(8),
-    marginBottom: sy(4),
-    borderWidth: 1,
-    borderColor: COLOR.divider,
+  shiftGroup: {
+    width: "100%",
+  },
+
+  shiftGroupSpacing: {
+    marginTop: sy(8),
+    paddingTop: sy(8),
+    borderTopWidth: 1,
+    borderTopColor: BORDER_COLOR,
   },
   
-  shiftHeader: {
+  dutyRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: sy(4),
     gap: sx(4),
+    marginBottom: sy(4),
   },
   
-  shiftName: {
-    fontSize: sx(12),
-    fontWeight: "600",
-    color: COLOR.ink,
-    flex: 1,
-  },
-  
-  shiftTime: {
+  dutyName: {
     fontSize: sx(10),
-    color: COLOR.label,
-    marginBottom: sy(4),
+    fontWeight: "400",
+    color: "#000",
+    flex: 1,
   },
   
-  staffContainer: {
-    gap: sy(2),
-  },
-  
-  staffItem: {
+  staffRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: sx(4),
+    marginTop: sy(2),
   },
   
   staffName: {
     fontSize: sx(10),
-    color: COLOR.label,
+    fontWeight: "400",
+    color: "#000",
     flex: 1,
   },
   
