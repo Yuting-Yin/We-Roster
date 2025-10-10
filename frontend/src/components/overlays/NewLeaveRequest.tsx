@@ -50,6 +50,7 @@ export default function NewLeaveRequest({
   const [showLeaveTypeDropdown, setShowLeaveTypeDropdown] = React.useState(false);
   const [dropdownPosition, setDropdownPosition] = React.useState({ top: 0, left: 0, width: 0 });
   const dropdownRef = React.useRef<View>(null);
+  const reasonInputRef = React.useRef<TextInput>(null);
   
   // Date picker states
   const [showFromDatePicker, setShowFromDatePicker] = React.useState(false);
@@ -238,7 +239,10 @@ export default function NewLeaveRequest({
       </Animated.View>
 
       <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>        
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        >
           {/* Header */}
           <View style={styles.header}>
             <Pressable onPress={onCancel}>
@@ -251,8 +255,12 @@ export default function NewLeaveRequest({
 
           <ScrollView
             keyboardShouldPersistTaps="handled"
-            style={{ maxHeight: sy(500) }}
-            contentContainerStyle={{ paddingBottom: sy(18) + (Platform.OS === "ios" ? kbHeight : 0) }}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ 
+              paddingBottom: sy(20),
+              flexGrow: 1 
+            }}
+            showsVerticalScrollIndicator={false}
           >
             {/* Select Leave Type */}
             <View style={styles.section}>
@@ -303,6 +311,7 @@ export default function NewLeaveRequest({
               <Text style={styles.sectionLabel}>Reason For Leave</Text>
               <View style={styles.reasonBox}>
                 <TextInput
+                  ref={reasonInputRef}
                   placeholder="Type your reason here"
                   placeholderTextColor="#8FA7BF"
                   value={reason}
@@ -310,6 +319,9 @@ export default function NewLeaveRequest({
                   multiline
                   textAlignVertical="top"
                   style={styles.reasonInput}
+                  onFocus={() => {
+                    // Focus handling is managed by KeyboardAvoidingView and ScrollView
+                  }}
                 />
               </View>
             </View>
@@ -475,7 +487,8 @@ const styles = StyleSheet.create({
     paddingBottom: sy(8), 
     zIndex: 52, 
     elevation: 16,
-    maxHeight: '90%',
+    maxHeight: '95%',
+    minHeight: '60%',
   },
   header: { 
     flexDirection: "row", 
