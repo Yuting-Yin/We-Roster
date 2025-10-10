@@ -20,6 +20,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.weroster.dto.DutyAssignmentDto;
+
 @RestController
 @RequestMapping("/api/v1/team-roster")
 @CrossOrigin(origins = "*")
@@ -109,6 +111,69 @@ public class TeamRosterController {
             
         } catch (Exception e) {
             System.err.println("Error fetching team roster week: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get today's duty assignments for dashboard
+     */
+    @GetMapping("/duty-today")
+    public ResponseEntity<List<DutyAssignmentDto>> getTodayDutyAssignments() {
+        try {
+            LocalDate today = LocalDate.now();
+            LocalDateTime startOfDay = today.atStartOfDay();
+            LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+            
+            // Get all shifts for today
+            List<Shift> shifts = shiftRepository.findByDateRange(startOfDay, endOfDay);
+            
+            // Get all assignments for today's shifts
+            List<DutyAssignmentDto> dutyAssignments = new ArrayList<>();
+            
+            for (Shift shift : shifts) {
+                List<ShiftAssignment> assignments = shiftAssignmentRepository.findByShiftId(shift.getId());
+                
+                for (ShiftAssignment assignment : assignments) {
+                    DutyAssignmentDto dutyDto = new DutyAssignmentDto();
+                    
+                    // Staff information
+                    Staff staff = assignment.getStaff();
+                    dutyDto.setStaffId(staff.getId().toString());
+                    dutyDto.setStaffName(staff.getFirstName() + " " + staff.getLastName());
+                    String initials = String.valueOf(staff.getFirstName().charAt(0)) + 
+                                     String.valueOf(staff.getLastName().charAt(0));
+                    dutyDto.setStaffInitials(initials.toUpperCase());
+                    dutyDto.setStaffDesignation(
+                        staff.getDesignation() != null ? staff.getDesignation().getName() : "Staff"
+                    );
+                    
+                    // Shift information
+                    dutyDto.setShiftId(shift.getId().toString());
+                    dutyDto.setShiftDate(today.format(DateTimeFormatter.ofPattern("EEE, dd MMM")));
+                    dutyDto.setShiftTime(
+                        shift.getStartTs().format(DateTimeFormatter.ofPattern("HH:mm")) + " - " +
+                        shift.getEndTs().format(DateTimeFormatter.ofPattern("HH:mm"))
+                    );
+                    
+                    // Location and hospital information
+                    dutyDto.setLocationName(
+                        shift.getLocation() != null ? shift.getLocation().getName() : "TBA"
+                    );
+                    dutyDto.setHospitalName(
+                        shift.getDepartment() != null && shift.getDepartment().getHospital() != null ?
+                        shift.getDepartment().getHospital().getName() : "TBA"
+                    );
+                    
+                    dutyAssignments.add(dutyDto);
+                }
+            }
+            
+            return ResponseEntity.ok(dutyAssignments);
+            
+        } catch (Exception e) {
+            System.err.println("Error fetching today's duty assignments: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }

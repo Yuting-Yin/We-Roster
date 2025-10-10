@@ -9,7 +9,9 @@ import ProfileSideMenu from "@/components/overlays/ProfileSideMenu";
 import { useDashboardData } from "@/hooks/useDashboard";
 import { useMyLeaves } from "@/hooks/useMyLeaves";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDutyAssignments } from "@/hooks/useDutyAssignments";
 import type { DutyItem, ShiftItem, LeaveItem } from "@/types/dashboard";
+import type { DutyAssignmentData } from "@/api/duty";
 
 import { styles } from "./styles";
 import { Section } from "./components/Section";
@@ -20,6 +22,7 @@ import { PaginationDots } from "./components/PaginationDots";
 import { DutyCard } from "./components/cards/DutyCard";
 import { ShiftCard } from "./components/cards/ShiftCard";
 import { LeaveCard } from "./components/cards/LeaveCard";
+import TeamMemberProfile from "@/components/overlays/TeamMemberProfile";
 
 import { DutyCardSkeleton } from "./components/skeletons/DutyCardSkeleton";
 import { ShiftCardSkeleton } from "./components/skeletons/ShiftCardSkeleton";
@@ -41,21 +44,26 @@ export default function Dashboard() {
   const navigation = useNavigation<any>();
   const { logout } = useAuth();
   const [sideVisible, setSideVisible] = useState(false);
+  const [profileVisible, setProfileVisible] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<DutyAssignmentData | null>(null);
 
   // Register overlays with context for auto-close functionality
   const { registerOverlay, unregisterOverlay } = useOverlayContext();
   
   React.useEffect(() => {
     registerOverlay('dashboard-side', () => setSideVisible(false));
+    registerOverlay('dashboard-profile', () => setProfileVisible(false));
     
     return () => {
       unregisterOverlay('dashboard-side');
+      unregisterOverlay('dashboard-profile');
     };
   }, [registerOverlay, unregisterOverlay]);
 
   // Auto-close overlays when navigating to other tabs
   useAutoCloseOverlays([
-    () => setSideVisible(false)
+    () => setSideVisible(false),
+    () => setProfileVisible(false)
   ]);
 
   // Handle shift card press - navigate to Roster page with specific date
@@ -88,15 +96,45 @@ export default function Dashboard() {
     }, 100); // Small delay to ensure tab navigation completes first
   };
 
+  // Handle duty card press - show team member profile
+  const handleDutyPress = (dutyItem: DutyItem) => {
+    // Find the corresponding duty assignment data
+    const assignment = dutyAssignments.find(a => a.staffId === dutyItem.id);
+    if (assignment) {
+      setSelectedMember(assignment);
+      setProfileVisible(true);
+    }
+  };
+
+  // Handle "View My Team" button press - navigate to Team Roster
+  const handleViewMyTeam = () => {
+    navigation.navigate('Roster', { screen: 'TEAM ROSTER' });
+  };
+
   // Get current user info (connected to backend database)
   const { firstName, displayName, initials, email, user } = useCurrentUser({mock: false});
   
   // Get leaves without month filter - will be filtered in the hook
   const { leaves, loading: leavesLoading, error: leavesError, refresh: refreshLeaves } = useMyLeaves(undefined, { mock: false });
   
-  // Mock data for "Who's on duty" section (not implemented yet)
-  const { duty, loading, error, refresh } =
-  useDashboardData({ mock: true, delayMs: 500, amplifyTimes: 2 });
+  // Real data for "Who's on duty" section
+  const { assignments: dutyAssignments, loading: dutyLoading, error: dutyError, refresh: refreshDuty } = useDutyAssignments();
+  
+  // Convert duty assignments to DutyItem format for compatibility
+  const duty: DutyItem[] = dutyAssignments.map(assignment => ({
+    id: assignment.staffId,
+    initials: assignment.staffInitials,
+    name: assignment.staffName,
+    role: assignment.staffDesignation,
+    theatre: assignment.locationName,
+    site: assignment.hospitalName,
+    time: assignment.shiftTime,
+    date: assignment.shiftDate,
+  }));
+  
+  const loading = dutyLoading;
+  const error = dutyError;
+  const refresh = refreshDuty;
 
   // Refresh data once when dashboard screen comes into focus
   const [hasRefreshed, setHasRefreshed] = useState(false);
@@ -475,12 +513,12 @@ export default function Dashboard() {
       >
         {error ? <ErrorBanner message={error} onRetry={refresh} /> : null}
 
-        {/* TODO: Connect "Who's on duty" section to backend - not implemented yet */}
-        <Section title={`Who's on duty (${duty.length})`} actionLabel="View My Team" onAction={() => console.log("view team")}
+        {/* Real "Who's on duty" section with backend data */}
+        <Section title={`Who's on duty (${duty.length})`} actionLabel="View My Team" onAction={handleViewMyTeam}
           data={loading && duty.length === 0 ? placeholderArray<DutyItem>(3) : duty}
           keyExtractor={(i, idx) => (i?.id ?? `duty-skel-${idx}`)}
           contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
-          renderItem={({ item }) => (item?.id ? <DutyCard item={item} onPress={() => console.log("duty", item.id)} /> : <DutyCardSkeleton />)}
+          renderItem={({ item }) => (item?.id ? <DutyCard item={item} onPress={() => handleDutyPress(item)} /> : <DutyCardSkeleton />)}
           flatListProps={dutySnap}
           footer={<PaginationDots count={Math.max(duty.length, loading ? 3 : 0)} index={dutyIdx} />}
           emptyText="No team members on duty"
@@ -548,6 +586,13 @@ export default function Dashboard() {
           name: user?.name || displayName, 
           email: user?.email || email 
         }}
+      />
+
+      {/* Team Member Profile Overlay */}
+      <TeamMemberProfile
+        visible={profileVisible}
+        onClose={() => setProfileVisible(false)}
+        member={selectedMember}
       />
 
     </SafeAreaView>
