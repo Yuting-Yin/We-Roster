@@ -7,7 +7,8 @@ import { sx, sy } from "@/theme/metrics";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useOverlayContext } from "@/contexts/OverlayContext";
 import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
-import { useTeamRosterData } from "@/hooks/useTeamRoster";
+import { useTeamRosterData, useTeamRosterFilterOptions } from "@/hooks/useTeamRoster";
+import { getAvailableDates } from "@/api/teamroster";
 import TeamRosterFilter from "@/components/overlays/TeamRosterFilter";
 import { fmt } from "@/lib/date";
 
@@ -58,7 +59,31 @@ export default function TeamRoster() {
     return selectedDate ? new Date(selectedDate) : new Date();
   }, [selectedDate]);
   
-  const { data: teamRosterData, loading: rosterLoading, error: rosterError, refresh: refreshRoster } = useTeamRosterData(currentDate);
+  // State for date navigation
+  const [displayDate, setDisplayDate] = useState<Date>(currentDate);
+  
+  // Update displayDate when route params change
+  useEffect(() => {
+    if (selectedDate) {
+      setDisplayDate(new Date(selectedDate));
+    }
+  }, [selectedDate]);
+
+  // Debug: Check available dates
+  useEffect(() => {
+    const checkAvailableDates = async () => {
+      try {
+        const dates = await getAvailableDates();
+        console.log('🔍 TeamRoster - Available dates with data:', dates);
+      } catch (error) {
+        console.error('🔍 TeamRoster - Error fetching available dates:', error);
+      }
+    };
+    checkAvailableDates();
+  }, []);
+  
+  const { data: teamRosterData, loading: rosterLoading, error: rosterError, refresh: refreshRoster } = useTeamRosterData(displayDate, { mock: false });
+  const { options: filterOptions, loading: filterOptionsLoading } = useTeamRosterFilterOptions();
 
   // State for filter overlay
   const [filterVisible, setFilterVisible] = useState(false);
@@ -122,15 +147,28 @@ export default function TeamRoster() {
     }));
   }, [teamRosterTables, filter]);
 
-  // Format current date for display
+  // Format display date for display
   const formattedDate = useMemo(() => {
-    return fmt(currentDate, { 
+    return fmt(displayDate, { 
       weekday: 'short', 
       day: 'numeric', 
       month: 'short', 
       year: 'numeric' 
     });
-  }, [currentDate]);
+  }, [displayDate]);
+
+  // Day navigation functions
+  const handlePreviousDay = () => {
+    const previousDay = new Date(displayDate);
+    previousDay.setDate(previousDay.getDate() - 1);
+    setDisplayDate(previousDay);
+  };
+
+  const handleNextDay = () => {
+    const nextDay = new Date(displayDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    setDisplayDate(nextDay);
+  };
 
   const toggleHospitalCollapse = (hospital: string) => {
     const newCollapsed = new Set(collapsedHospitals);
@@ -185,15 +223,19 @@ export default function TeamRoster() {
     hospitalCells: TeamRosterCell[],
     room: string, 
     shiftType: "AM" | "PM" | "AH" | "ON_CALL",
-    isLastColumn: boolean
+    isLastColumn: boolean,
+    key?: string
   ) => {
     const cell = getCellsForRoomAndShift(hospitalCells, room, shiftType);
     
     return (
-      <View style={[
-        styles.tableCell,
-        !isLastColumn && styles.tableCellBorder
-      ]}>
+      <View 
+        key={key}
+        style={[
+          styles.tableCell,
+          !isLastColumn && styles.tableCellBorder
+        ]}
+      >
         {cell && cell.shifts.length > 0 ? (
           renderShifts(cell.shifts)
         ) : null}
@@ -320,7 +362,8 @@ export default function TeamRoster() {
                         hospital.cells,
                         row.label,
                         shiftType as "AM" | "PM" | "AH",
-                        colIndex === shiftColumns.length - 1
+                        colIndex === shiftColumns.length - 1,
+                        `${row.key}-${shiftType}-${colIndex}`
                       )
                     )
                   )}
@@ -345,14 +388,22 @@ export default function TeamRoster() {
         </Pressable>
 
         <View style={styles.dateContainer}>
-          <Ionicons name="chevron-back" size={sx(24)} color={COLOR.ink} />
+          <Pressable 
+            style={styles.dateNavButton}
+            onPress={handlePreviousDay}
+          >
+            <Ionicons name="chevron-back" size={sx(24)} color={COLOR.ink} />
+          </Pressable>
           <Text style={styles.dateText}>{formattedDate}</Text>
-          <Ionicons name="chevron-forward" size={sx(24)} color={COLOR.ink} />
+          <Pressable 
+            style={styles.dateNavButton}
+            onPress={handleNextDay}
+          >
+            <Ionicons name="chevron-forward" size={sx(24)} color={COLOR.ink} />
+          </Pressable>
         </View>
 
-        <Pressable style={styles.searchButton}>
-          <Ionicons name="search-outline" size={sx(24)} color={COLOR.ink} />
-        </Pressable>
+        <View style={styles.placeholder} />
       </View>
 
       {/* Team Roster Tables */}
@@ -391,6 +442,8 @@ export default function TeamRoster() {
         onApply={() => setFilterVisible(false)}
         onClear={() => setFilter({ shiftTypes: [], designations: [] })}
         onClose={() => setFilterVisible(false)}
+        shiftTypeOptions={filterOptions?.shiftTypes || []}
+        designationOptions={filterOptions?.designations || []}
       />
     </View>
   );
@@ -429,6 +482,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: sx(8),
+    flex: 1,
+    justifyContent: "center",
+  },
+  
+  dateNavButton: {
+    width: sx(32),
+    height: sy(32),
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: sx(16),
+  },
+  
+  placeholder: {
+    width: sx(24),
+    height: sy(24),
   },
   
   dateText: {
@@ -437,12 +505,6 @@ const styles = StyleSheet.create({
     color: COLOR.ink,
   },
   
-  searchButton: {
-    width: sx(24),
-    height: sy(24),
-    alignItems: "center",
-    justifyContent: "center",
-  },
   
   content: {
     flex: 1,

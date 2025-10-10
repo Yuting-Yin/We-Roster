@@ -62,6 +62,16 @@ export async function getTeamRosterWeek(startDate: string, endDate: string): Pro
 }
 
 /**
+ * Get available dates that have shift data
+ */
+export async function getAvailableDates(): Promise<string[]> {
+  return await fetchJson<string[]>('/api/v1/team-roster/available-dates', {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+/**
  * Get available filter options for team roster
  */
 export interface TeamRosterFilterOptions {

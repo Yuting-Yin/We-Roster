@@ -34,6 +34,29 @@ public class TeamRosterController {
     private ShiftAssignmentRepository shiftAssignmentRepository;
 
     /**
+     * Get available dates that have shift data
+     */
+    @GetMapping("/available-dates")
+    public ResponseEntity<List<String>> getAvailableDates() {
+        try {
+            List<Shift> allShifts = shiftRepository.findAll();
+            List<String> dates = allShifts.stream()
+                    .map(shift -> shift.getStartTs().toLocalDate().toString())
+                    .distinct()
+                    .sorted()
+                    .collect(Collectors.toList());
+            
+            System.out.println("🔍 TeamRosterController - Available dates: " + dates);
+            return ResponseEntity.ok(dates);
+            
+        } catch (Exception e) {
+            System.err.println("Error fetching available dates: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
      * Get team roster data for a specific date
      */
     @GetMapping
@@ -44,8 +67,19 @@ public class TeamRosterController {
             LocalDateTime startOfDay = date.atStartOfDay();
             LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
             
+            System.out.println("🔍 TeamRosterController - Date range: " + startOfDay + " to " + endOfDay);
+            
             // Get all shifts for the date
             List<Shift> shifts = shiftRepository.findByDateRange(startOfDay, endOfDay);
+            System.out.println("🔍 TeamRosterController - Found " + shifts.size() + " shifts for date " + date);
+            
+            // Debug: Log first few shifts
+            shifts.stream().limit(3).forEach(shift -> {
+                System.out.println("🔍 TeamRosterController - Shift: " + shift.getId() + 
+                    " start=" + shift.getStartTs() + 
+                    " dept=" + (shift.getDepartment() != null ? shift.getDepartment().getName() : "null") +
+                    " hospital=" + (shift.getDepartment() != null && shift.getDepartment().getHospital() != null ? shift.getDepartment().getHospital().getName() : "null"));
+            });
             
             // Group shifts by hospital/department
             Map<String, List<Shift>> shiftsByHospital = shifts.stream()
@@ -53,6 +87,8 @@ public class TeamRosterController {
                     .collect(Collectors.groupingBy(
                             shift -> shift.getDepartment().getHospital().getName()
                     ));
+            
+            System.out.println("🔍 TeamRosterController - Hospitals with shifts: " + shiftsByHospital.keySet());
             
             List<TeamRosterTableDto> tables = shiftsByHospital.entrySet().stream()
                     .map(entry -> buildHospitalTable(entry.getKey(), entry.getValue()))

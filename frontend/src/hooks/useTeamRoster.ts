@@ -19,12 +19,21 @@ export function useTeamRosterData(date: Date, opts: Options = {}) {
   const loadData = useCallback(async () => {
     const dateString = date.toISOString().split('T')[0];
     
+    console.log('🔍 useTeamRoster - loadData called:', {
+      dateString,
+      useMock,
+      lastLoadedDate,
+      hasData: !!data
+    });
+    
     // Skip loading if we already have data for this date
     if (lastLoadedDate === dateString && data) {
+      console.log('🔍 useTeamRoster - Skipping load, already have data for this date');
       return;
     }
     
     if (useMock) {
+      console.log('🔍 useTeamRoster - Using mock data');
       setLoading(true);
       setError(null);
       
@@ -210,10 +219,13 @@ export function useTeamRosterData(date: Date, opts: Options = {}) {
       setLoading(true);
       setError(null);
 
+      console.log('🔍 useTeamRoster - Making API call for date:', dateString);
       const response = await getTeamRoster(dateString);
+      console.log('🔍 useTeamRoster - API response:', response);
       setData(response);
       setLastLoadedDate(dateString);
     } catch (err: any) {
+      console.error('🔍 useTeamRoster - API error:', err);
       setError(err?.message ?? "Failed to load team roster data");
     } finally {
       setLoading(false);
