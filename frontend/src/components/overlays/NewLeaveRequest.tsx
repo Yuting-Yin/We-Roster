@@ -1,5 +1,5 @@
 import React from "react";
-import { View, ScrollView, Text, TextInput, Pressable, Animated, StyleSheet, KeyboardAvoidingView, Platform, Keyboard, ActivityIndicator } from "react-native";
+import { View, ScrollView, Text, TextInput, Pressable, Animated, StyleSheet, KeyboardAvoidingView, Platform, Keyboard, ActivityIndicator, LayoutChangeEvent } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLOR } from "@/theme/colors";
@@ -52,6 +52,35 @@ export default function NewLeaveRequest({
   const dropdownRef = React.useRef<View>(null);
   const reasonInputRef = React.useRef<TextInput>(null);
   const scrollViewRef = React.useRef<ScrollView>(null);
+  
+  // Keyboard handling and precise scroll control (similar to RequestLeave.tsx)
+  const [kbHeight, setKbHeight] = React.useState(0);
+  const [headerH, setHeaderH] = React.useState(0);
+  const [reasonY, setReasonY] = React.useState<number | null>(null);
+
+  const onHeaderLayout = (e: LayoutChangeEvent) => {
+    setHeaderH(e.nativeEvent.layout.height);
+  };
+
+  const onReasonLayout = (e: LayoutChangeEvent) => {
+    setReasonY(e.nativeEvent.layout.y);
+  };
+
+  const scrollReasonIntoView = React.useCallback(() => {
+    if (reasonY === null) return;
+    const margin = sy(8);
+    const targetY = Math.max(0, reasonY - headerH - margin);
+    scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
+  }, [reasonY, headerH]);
+
+  React.useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKbHeight(e.endCoordinates?.height ?? 0);
+      setTimeout(scrollReasonIntoView, 60);
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKbHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, [scrollReasonIntoView]);
   
   // Date picker states
   const [showFromDatePicker, setShowFromDatePicker] = React.useState(false);
@@ -132,15 +161,6 @@ export default function NewLeaveRequest({
     }
   }, []); // Only run on mount
 
-  // Keyboard handling
-  const [kbHeight, setKbHeight] = React.useState(0);
-  React.useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
-      setKbHeight(e.endCoordinates?.height ?? 0);
-    });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKbHeight(0));
-    return () => { showSub.remove(); hideSub.remove(); };
-  }, []);
 
   if (!visible) return null;
   const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
@@ -242,16 +262,18 @@ export default function NewLeaveRequest({
       <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>        
         <KeyboardAvoidingView 
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 30}
+          keyboardVerticalOffset={Platform.OS === "ios" ? headerH : 30}
           style={{ flex: 1 }}
         >
           {/* Header */}
-          <View style={styles.header}>
+          <View onLayout={onHeaderLayout}>
+            <View style={styles.header}>
             <Pressable onPress={onCancel}>
               <Ionicons name="close" size={sx(24)} color={COLOR.ink} />
             </Pressable>
             <Text style={styles.hTitle}>New Leave Request</Text>
             <View style={{ width: sx(24) }} />
+          </View>
           </View>
           <View style={styles.divider} />
 
@@ -260,7 +282,7 @@ export default function NewLeaveRequest({
             keyboardShouldPersistTaps="handled"
             style={{ flex: 1 }}
             contentContainerStyle={{ 
-              paddingBottom: sy(60), // Reduced padding since submit button is moved up
+              paddingBottom: sy(18) + (Platform.OS === "ios" ? kbHeight : 0)
             }}
             showsVerticalScrollIndicator={true}
             scrollEventThrottle={16}
@@ -315,7 +337,7 @@ export default function NewLeaveRequest({
             </View>
 
             {/* Reason For Leave */}
-            <View style={[styles.section, { marginBottom: sy(20) }]}>
+            <View style={[styles.section, { marginBottom: sy(20) }]} onLayout={onReasonLayout}>
               <Text style={styles.sectionLabel}>Reason For Leave</Text>
               <View style={styles.reasonBox}>
                 <TextInput
@@ -327,18 +349,7 @@ export default function NewLeaveRequest({
                   multiline
                   textAlignVertical="top"
                   style={styles.reasonInput}
-                  onFocus={() => {
-                    // Auto-scroll so "Reason For Leave" header aligns with bottom of overlay heading
-                    setTimeout(() => {
-                      // Calculate position: header height + divider + sections above reason section
-                      // Header (~60px) + divider (~1px) + select leave type (~80px) + select date (~120px) + some spacing
-                      const targetY = 280; // Position where reason header aligns with bottom of overlay heading
-                      scrollViewRef.current?.scrollTo({ 
-                        y: targetY,
-                        animated: true 
-                      });
-                    }, 100); // Fast response time
-                  }}
+                  onFocus={() => setTimeout(scrollReasonIntoView, 60)}
                 />
               </View>
             </View>
