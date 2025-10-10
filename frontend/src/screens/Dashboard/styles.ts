@@ -160,4 +160,39 @@ export const styles = StyleSheet.create({
     fontSize: sx(14),
     textAlign: "center",
   },
+
+  // Empty dashboard state
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: sx(32),
+    paddingVertical: sy(64),
+    marginTop: sy(40),
+  },
+  emptyStateTitle: {
+    fontSize: sx(20),
+    fontWeight: "600",
+    color: COLOR.ink,
+    marginTop: sy(16),
+    marginBottom: sy(8),
+  },
+  emptyStateText: {
+    fontSize: sx(14),
+    color: COLOR.label,
+    textAlign: "center",
+    lineHeight: sx(20),
+    marginBottom: sy(24),
+  },
+  emptyStateButton: {
+    backgroundColor: COLOR.brand,
+    paddingHorizontal: sx(24),
+    paddingVertical: sy(12),
+    borderRadius: sx(8),
+  },
+  emptyStateButtonText: {
+    color: "#FFFFFF",
+    fontSize: sx(16),
+    fontWeight: "600",
+  },
 });

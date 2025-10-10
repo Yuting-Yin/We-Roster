@@ -1,50 +1,26 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from "react-native-draggable-flatlist";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { RootStackParamList } from "@/navigation/RootNavigator";
+import { useSettings, DashboardSection } from "@/contexts/SettingsContext";
 
 type EditDashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'EditDashboard'>;
 
-interface DashboardComponent {
-  id: string;
-  title: string;
-  subtitle: string;
-  enabled: boolean;
-}
-
 export default function EditDashboard() {
   const navigation = useNavigation<EditDashboardNavigationProp>();
+  const { dashboardSections, updateDashboardSections } = useSettings();
   
-  const [components, setComponents] = useState<DashboardComponent[]>([
-    {
-      id: 'whos-on-duty',
-      title: "Who's on duty",
-      subtitle: "See who's on the duty based on your saved filter",
-      enabled: true,
-    },
-    {
-      id: 'upcoming-shifts',
-      title: "Upcoming shifts",
-      subtitle: "View your scheduled shifts for this week",
-      enabled: true,
-    },
-    {
-      id: 'upcoming-leaves',
-      title: "Upcoming leaves",
-      subtitle: "Track your approved and pending leaves for this month",
-      enabled: true,
-    },
-    {
-      id: 'open-shifts',
-      title: "Open shifts",
-      subtitle: "Browse available shifts you can apply for this week",
-      enabled: true,
-    },
-  ]);
+  const [components, setComponents] = useState<DashboardSection[]>(dashboardSections);
+
+  // Update local state when context changes
+  useEffect(() => {
+    setComponents(dashboardSections);
+  }, [dashboardSections]);
 
   const handleToggleComponent = (id: string) => {
     setComponents(prev => 
@@ -54,39 +30,56 @@ export default function EditDashboard() {
     );
   };
 
-  const handleSave = () => {
-    // TODO: Implement saving dashboard preferences
-    console.log('Saving dashboard components:', components);
-    navigation.goBack();
+  const handleSave = async () => {
+    try {
+      await updateDashboardSections(components);
+      navigation.goBack();
+    } catch (error) {
+      console.error('Failed to save dashboard preferences:', error);
+    }
+  };
+
+  const renderItem = ({ item, drag, isActive }: RenderItemParams<DashboardSection>) => {
+    return (
+      <ScaleDecorator>
+        <View style={[styles.componentItem, isActive && styles.componentItemActive]}>
+          <View style={styles.componentLeft}>
+            <Pressable 
+              style={styles.checkbox} 
+              onPress={() => handleToggleComponent(item.id)}
+            >
+              <Ionicons 
+                name={item.enabled ? "checkbox" : "square-outline"} 
+                size={sx(24)} 
+                color={item.enabled ? COLOR.brand : COLOR.label} 
+              />
+            </Pressable>
+            <View style={styles.textContainer}>
+              <Text style={styles.componentTitle}>{item.title}</Text>
+              <Text style={styles.componentSubtitle}>{item.subtitle}</Text>
+            </View>
+          </View>
+          <Pressable 
+            style={styles.dragHandle} 
+            onPressIn={drag}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="reorder-three-outline" size={sx(28)} color={COLOR.label} />
+          </Pressable>
+        </View>
+      </ScaleDecorator>
+    );
   };
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        {components.map((component) => (
-          <View key={component.id} style={styles.componentItem}>
-            <View style={styles.componentLeft}>
-              <Pressable 
-                style={styles.checkbox} 
-                onPress={() => handleToggleComponent(component.id)}
-              >
-                <Ionicons 
-                  name={component.enabled ? "checkbox" : "square-outline"} 
-                  size={sx(20)} 
-                  color={component.enabled ? COLOR.brand : COLOR.label} 
-                />
-              </Pressable>
-              <View style={styles.textContainer}>
-                <Text style={styles.componentTitle}>{component.title}</Text>
-                <Text style={styles.componentSubtitle}>{component.subtitle}</Text>
-              </View>
-            </View>
-            <View style={styles.dragHandle}>
-              <Ionicons name="reorder-three-outline" size={sx(20)} color={COLOR.label} />
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+      <DraggableFlatList
+        data={components}
+        onDragEnd={({ data }) => setComponents(data)}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={styles.listContent}
+      />
       
       <View style={styles.saveButtonContainer}>
         <Pressable style={styles.saveButton} onPress={handleSave}>
@@ -102,8 +95,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLOR.bg,
   },
-  scrollView: {
-    flex: 1,
+  listContent: {
+    paddingBottom: sy(20),
   },
   componentItem: {
     flexDirection: 'row',
@@ -111,7 +104,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: sx(20),
     paddingVertical: sy(16),
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: COLOR.divider,
+  },
+  componentItemActive: {
     backgroundColor: COLOR.bg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
   },
   componentLeft: {
     flexDirection: 'row',
@@ -120,6 +123,7 @@ const styles = StyleSheet.create({
   },
   checkbox: {
     marginRight: sx(12),
+    padding: sx(4),
   },
   textContainer: {
     flex: 1,
@@ -136,11 +140,14 @@ const styles = StyleSheet.create({
   },
   dragHandle: {
     marginLeft: sx(12),
+    padding: sx(8),
   },
   saveButtonContainer: {
     paddingHorizontal: sx(20),
     paddingVertical: sy(16),
     backgroundColor: COLOR.bg,
+    borderTopWidth: 1,
+    borderTopColor: COLOR.divider,
   },
   saveButton: {
     backgroundColor: COLOR.brand,

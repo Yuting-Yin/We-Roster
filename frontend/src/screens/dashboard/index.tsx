@@ -1,6 +1,7 @@
 // src/screens/Dashboard/index.tsx
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { SafeAreaView, ScrollView, RefreshControl, View, Pressable, FlatList } from "react-native";
+import { SafeAreaView, ScrollView, RefreshControl, View, Pressable, FlatList, Text } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, CommonActions, useFocusEffect } from "@react-navigation/native";
 
 import { sx, sy } from "@/theme/metrics";
@@ -37,11 +38,13 @@ import { useOverlayContext } from "@/contexts/OverlayContext";
 import { useOpenShiftsWeek } from "@/hooks/useOpenShiftsWeek";
 import { fmt } from "@/lib/date";
 import { useNotificationContext } from "@/contexts/NotificationContext";
+import { useSettings } from "@/contexts/SettingsContext";
 
 export default function Dashboard() {
   const navigation = useNavigation<any>();
   const { logout } = useAuth();
   const [sideVisible, setSideVisible] = useState(false);
+  const { dashboardSections } = useSettings();
 
   // Register overlays with context for auto-close functionality
   const { registerOverlay, unregisterOverlay, requestTeamMemberNav } = useOverlayContext();
@@ -479,6 +482,93 @@ export default function Dashboard() {
     });
   };
 
+  // Render sections based on user preferences
+  const renderSection = (sectionId: string) => {
+    switch (sectionId) {
+      case 'whos-on-duty':
+        return (
+          <Section 
+            key="whos-on-duty"
+            title={`Who's on duty (${duty.length})`} 
+            actionLabel="View My Team" 
+            onAction={handleViewMyTeam}
+            data={loading && duty.length === 0 ? placeholderArray<DutyItem>(3) : duty}
+            keyExtractor={(i, idx) => (i?.id ?? `duty-skel-${idx}`)}
+            contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
+            renderItem={({ item }) => (item?.id ? <DutyCard item={item} onPress={() => handleDutyPress(item)} /> : <DutyCardSkeleton />)}
+            flatListProps={dutySnap}
+            footer={<PaginationDots count={Math.max(Math.min(duty.length, 5), loading ? 3 : 0)} index={dutyIdx} />}
+            emptyText="No team members on duty"
+            flatListRef={dutyFlatListRef}
+            maxCards={5}
+          />
+        );
+      
+      case 'upcoming-shifts':
+        return (
+          <Section 
+            key="upcoming-shifts"
+            title={`My shifts this week (${myShifts.length})`} 
+            actionLabel="View All" 
+            onAction={() => navigation.navigate('Roster', { screen: 'MY ROSTER' })}
+            data={weekLoading && myShifts.length === 0 ? placeholderArray<ShiftItem>(3) : myShifts}
+            keyExtractor={(i, idx) => (i?.id ?? `myshift-skel-${idx}`)}
+            contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
+            renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => handleShiftPress(item)} /> : <ShiftCardSkeleton />)}
+            flatListProps={myShiftSnap}
+            footer={<PaginationDots count={Math.max(Math.min(myShifts.length, 5), weekLoading ? 3 : 0)} index={myShiftIdx} />}
+            emptyText="No shifts scheduled this week"
+            flatListRef={myShiftFlatListRef}
+            maxCards={5}
+          />
+        );
+      
+      case 'open-shifts':
+        return (
+          <Section 
+            key="open-shifts"
+            title={`Open shifts this week (${openShiftsFormatted.length})`} 
+            actionLabel="View All" 
+            onAction={() => navigation.navigate('Roster', { screen: 'OPEN SHIFTS' })}
+            data={openShiftsLoading && openShiftsFormatted.length === 0 ? placeholderArray<any>(3) : openShiftsFormatted}
+            keyExtractor={(i, idx) => (i?.id ?? `openshift-skel-${idx}`)}
+            contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
+            renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => handleOpenShiftPress(item)} /> : <ShiftCardSkeleton />)}
+            flatListProps={openShiftSnap}
+            footer={<PaginationDots count={Math.max(Math.min(openShiftsFormatted.length, 5), openShiftsLoading ? 3 : 0)} index={openShiftIdx} />}
+            emptyText="No open shifts available this week"
+            flatListRef={openShiftFlatListRef}
+            maxCards={5}
+          />
+        );
+      
+      case 'upcoming-leaves':
+        return (
+          <Section 
+            key="upcoming-leaves"
+            title={`My leaves this month (${leaves.length})`} 
+            actionLabel="View All" 
+            onAction={() => navigation.navigate('My Request')}
+            data={leavesLoading && leaves.length === 0 ? placeholderArray<LeaveItem>(3) : leaves}
+            keyExtractor={(i, idx) => String(i?.id ?? `leave-skel-${idx}`)}
+            contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
+            renderItem={({ item }) => (item?.id ? <LeaveCard item={item} onPress={() => handleLeavePress(item)} /> : <LeaveCardSkeleton />)}
+            flatListProps={leaveSnap}
+            footer={<PaginationDots count={Math.max(Math.min(leaves.length, 5), leavesLoading ? 3 : 0)} index={leaveIdx} />}
+            emptyText="No leave requests this month"
+            flatListRef={leaveFlatListRef}
+            maxCards={5}
+          />
+        );
+      
+      default:
+        return null;
+    }
+  };
+
+  // Get enabled sections in the order defined by settings
+  const enabledSections = dashboardSections.filter(section => section.enabled);
+
   return (
     <SafeAreaView style={styles.container}>
       <Header
@@ -513,60 +603,29 @@ export default function Dashboard() {
       >
         {error ? <ErrorBanner message={error} onRetry={refresh} /> : null}
 
-        {/* Real "Who's on duty" section with backend data */}
-        <Section title={`Who's on duty (${duty.length})`} actionLabel="View My Team" onAction={handleViewMyTeam}
-          data={loading && duty.length === 0 ? placeholderArray<DutyItem>(3) : duty}
-          keyExtractor={(i, idx) => (i?.id ?? `duty-skel-${idx}`)}
-          contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
-          renderItem={({ item }) => (item?.id ? <DutyCard item={item} onPress={() => handleDutyPress(item)} /> : <DutyCardSkeleton />)}
-          flatListProps={dutySnap}
-          footer={<PaginationDots count={Math.max(Math.min(duty.length, 5), loading ? 3 : 0)} index={dutyIdx} />}
-          emptyText="No team members on duty"
-          flatListRef={dutyFlatListRef}
-          maxCards={5}
-        />
-
-        {/* Real data: Current user's shift assignments this week */}
-        <Section title={`My shifts this week (${myShifts.length})`} actionLabel="View All" 
-          onAction={() => navigation.navigate('Roster', { screen: 'MY ROSTER' })}
-          data={weekLoading && myShifts.length === 0 ? placeholderArray<ShiftItem>(3) : myShifts}
-          keyExtractor={(i, idx) => (i?.id ?? `myshift-skel-${idx}`)}
-          contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
-          renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => handleShiftPress(item)} /> : <ShiftCardSkeleton />)}
-          flatListProps={myShiftSnap}
-          footer={<PaginationDots count={Math.max(Math.min(myShifts.length, 5), weekLoading ? 3 : 0)} index={myShiftIdx} />}
-          emptyText="No shifts scheduled this week"
-          flatListRef={myShiftFlatListRef}
-          maxCards={5}
-        />
-
-        {/* Real data: Available open shifts this week */}
-        <Section title={`Open shifts this week (${openShiftsFormatted.length})`} actionLabel="View All" 
-          onAction={() => navigation.navigate('Roster', { screen: 'OPEN SHIFTS' })}
-          data={openShiftsLoading && openShiftsFormatted.length === 0 ? placeholderArray<any>(3) : openShiftsFormatted}
-          keyExtractor={(i, idx) => (i?.id ?? `openshift-skel-${idx}`)}
-          contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
-          renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => handleOpenShiftPress(item)} /> : <ShiftCardSkeleton />)}
-          flatListProps={openShiftSnap}
-          footer={<PaginationDots count={Math.max(Math.min(openShiftsFormatted.length, 5), openShiftsLoading ? 3 : 0)} index={openShiftIdx} />}
-          emptyText="No open shifts available this week"
-          flatListRef={openShiftFlatListRef}
-          maxCards={5}
-        />
-
-        {/* Real data: Current user's leave requests this month */}
-        <Section title={`My leaves this month (${leaves.length})`} actionLabel="View All" 
-          onAction={() => navigation.navigate('My Request')}
-          data={leavesLoading && leaves.length === 0 ? placeholderArray<LeaveItem>(3) : leaves}
-          keyExtractor={(i, idx) => String(i?.id ?? `leave-skel-${idx}`)}
-          contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
-          renderItem={({ item }) => (item?.id ? <LeaveCard item={item} onPress={() => handleLeavePress(item)} /> : <LeaveCardSkeleton />)}
-          flatListProps={leaveSnap}
-          footer={<PaginationDots count={Math.max(Math.min(leaves.length, 5), leavesLoading ? 3 : 0)} index={leaveIdx} />}
-          emptyText="No leave requests this month"
-          flatListRef={leaveFlatListRef}
-          maxCards={5}
-        />
+        {/* Render sections based on user preferences */}
+        {enabledSections.length > 0 ? (
+          enabledSections.map(section => renderSection(section.id))
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="grid-outline" size={sx(64)} color={COLOR.label} />
+            <Text style={styles.emptyStateTitle}>No sections enabled</Text>
+            <Text style={styles.emptyStateText}>
+              Go to Settings → Edit Dashboard to customize which sections you want to see
+            </Text>
+            <Pressable 
+              style={styles.emptyStateButton}
+              onPress={() => {
+                navigation.navigate("Settings");
+                setTimeout(() => {
+                  navigation.navigate("EditDashboard");
+                }, 100);
+              }}
+            >
+              <Text style={styles.emptyStateButtonText}>Edit Dashboard</Text>
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
 
       <ProfileSideMenu
