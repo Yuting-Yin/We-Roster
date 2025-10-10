@@ -242,7 +242,7 @@ export default function NewLeaveRequest({
       <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>        
         <KeyboardAvoidingView 
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 30}
           style={{ flex: 1 }}
         >
           {/* Header */}
@@ -260,7 +260,7 @@ export default function NewLeaveRequest({
             keyboardShouldPersistTaps="handled"
             style={{ flex: 1 }}
             contentContainerStyle={{ 
-              paddingBottom: sy(20),
+              paddingBottom: sy(120), // Extra padding to ensure content is scrollable above keyboard
               flexGrow: 1 
             }}
             showsVerticalScrollIndicator={true}
@@ -268,6 +268,7 @@ export default function NewLeaveRequest({
             decelerationRate="fast"
             bounces={true}
             scrollsToTop={false}
+            keyboardDismissMode="on-drag"
           >
             {/* Select Leave Type */}
             <View style={styles.section}>
@@ -314,7 +315,7 @@ export default function NewLeaveRequest({
             </View>
 
             {/* Reason For Leave */}
-            <View style={styles.section}>
+            <View style={[styles.section, { marginBottom: sy(10) }]}>
               <Text style={styles.sectionLabel}>Reason For Leave</Text>
               <View style={styles.reasonBox}>
                 <TextInput
@@ -327,10 +328,14 @@ export default function NewLeaveRequest({
                   textAlignVertical="top"
                   style={styles.reasonInput}
                   onFocus={() => {
-                    // Auto-scroll to reason input when keyboard appears
+                    // Auto-scroll to show reason input when keyboard appears
                     setTimeout(() => {
-                      scrollViewRef.current?.scrollToEnd({ animated: true });
-                    }, 300);
+                      // Scroll to ensure the reason input is visible above keyboard
+                      scrollViewRef.current?.scrollTo({ 
+                        y: 250, // Scroll down enough to show the text input above keyboard
+                        animated: true 
+                      });
+                    }, 100); // Faster response time
                   }}
                 />
               </View>
