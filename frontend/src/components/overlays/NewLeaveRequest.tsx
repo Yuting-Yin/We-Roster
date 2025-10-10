@@ -86,14 +86,25 @@ export default function NewLeaveRequest({
       const height = e.endCoordinates?.height ?? 0;
       console.log('🔍 keyboardDidShow:', height);
       setKbHeight(height);
-      setTimeout(scrollReasonIntoView, 60);
+      // Use a more robust scroll function that doesn't depend on callback
+      setTimeout(() => {
+        console.log('🔍 Attempting scroll - reasonY:', reasonY, 'headerH:', headerH);
+        if (reasonY !== null) {
+          const margin = sy(8);
+          const targetY = Math.max(0, reasonY - headerH - margin);
+          console.log('🔍 Direct scroll calculation:', { reasonY, headerH, margin, targetY });
+          scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
+        } else {
+          console.log('🔍 Cannot scroll - reasonY is null');
+        }
+      }, 60);
     });
     const hideSub = Keyboard.addListener("keyboardDidHide", () => {
       console.log('🔍 keyboardDidHide');
       setKbHeight(0);
     });
     return () => { showSub.remove(); hideSub.remove(); };
-  }, [scrollReasonIntoView]);
+  }, [reasonY, headerH]); // Depend on the actual values instead of callback
   
   // Date picker states
   const [showFromDatePicker, setShowFromDatePicker] = React.useState(false);
