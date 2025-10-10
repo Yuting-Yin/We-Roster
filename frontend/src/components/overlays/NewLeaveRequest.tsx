@@ -83,10 +83,11 @@ export default function NewLeaveRequest({
   const measureDropdownPosition = () => {
     if (dropdownRef.current) {
       dropdownRef.current.measure((x, y, width, height, pageX, pageY) => {
+        console.log('Dropdown position measurements:', { x, y, width, height, pageX, pageY });
         setDropdownPosition({
-          top: y + height, // Use relative position, no gap
-          left: x,
-          width: width,
+          top: y + height, // Position below the selection box
+          left: x, // Align with left edge of selection box
+          width: width, // Match width of selection box
         });
       });
     }
