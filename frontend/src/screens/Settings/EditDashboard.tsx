@@ -29,6 +29,15 @@ export default function EditDashboard() {
     );
   };
 
+  const moveToTop = (index: number) => {
+    if (index > 0) {
+      const newComponents = [...components];
+      const item = newComponents.splice(index, 1)[0];
+      newComponents.unshift(item);
+      setComponents(newComponents);
+    }
+  };
+
   const moveUp = (index: number) => {
     if (index > 0) {
       const newComponents = [...components];
@@ -41,6 +50,15 @@ export default function EditDashboard() {
     if (index < components.length - 1) {
       const newComponents = [...components];
       [newComponents[index], newComponents[index + 1]] = [newComponents[index + 1], newComponents[index]];
+      setComponents(newComponents);
+    }
+  };
+
+  const moveToBottom = (index: number) => {
+    if (index < components.length - 1) {
+      const newComponents = [...components];
+      const item = newComponents.splice(index, 1)[0];
+      newComponents.push(item);
       setComponents(newComponents);
     }
   };
@@ -58,62 +76,74 @@ export default function EditDashboard() {
     <View style={styles.container}>
       <View style={styles.infoHeader}>
         <Ionicons name="information-circle-outline" size={sx(18)} color={COLOR.brand} />
-        <Text style={styles.infoText}>Tap checkbox to show/hide • Use arrows to reorder</Text>
+        <Text style={styles.infoText}>Tap buttons to reorder sections • Checkbox to show/hide</Text>
       </View>
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.listContent}>
         {components.map((item, index) => (
-          <View key={item.id} style={styles.componentItem}>
-            {/* Order Number */}
-            <View style={styles.orderBadge}>
-              <Text style={styles.orderNumber}>{index + 1}</Text>
+          <View key={item.id} style={styles.sectionWrapper}>
+            <View style={styles.componentItem}>
+              {/* Order Number */}
+              <View style={styles.orderBadge}>
+                <Text style={styles.orderNumber}>{index + 1}</Text>
+              </View>
+              
+              {/* Checkbox and Content */}
+              <View style={styles.componentLeft}>
+                <Pressable 
+                  style={styles.checkbox} 
+                  onPress={() => handleToggleComponent(item.id)}
+                >
+                  <Ionicons 
+                    name={item.enabled ? "checkbox" : "square-outline"} 
+                    size={sx(24)} 
+                    color={item.enabled ? COLOR.brand : COLOR.label} 
+                  />
+                </Pressable>
+                <View style={styles.textContainer}>
+                  <Text style={styles.componentTitle}>{item.title}</Text>
+                  <Text style={styles.componentSubtitle}>{item.subtitle}</Text>
+                </View>
+              </View>
             </View>
             
-            {/* Checkbox and Content */}
-            <View style={styles.componentLeft}>
+            {/* Reorder Action Buttons */}
+            <View style={styles.actionButtons}>
               <Pressable 
-                style={styles.checkbox} 
-                onPress={() => handleToggleComponent(item.id)}
+                style={[styles.actionButton, index === 0 && styles.actionButtonDisabled]} 
+                onPress={() => moveToTop(index)}
+                disabled={index === 0}
               >
-                <Ionicons 
-                  name={item.enabled ? "checkbox" : "square-outline"} 
-                  size={sx(24)} 
-                  color={item.enabled ? COLOR.brand : COLOR.label} 
-                />
+                <Ionicons name="arrow-up-circle-outline" size={sx(18)} color={index === 0 ? COLOR.label : COLOR.brand} />
+                <Text style={[styles.actionButtonText, index === 0 && styles.actionButtonTextDisabled]}>Move to Top</Text>
               </Pressable>
-              <View style={styles.textContainer}>
-                <Text style={styles.componentTitle}>{item.title}</Text>
-                <Text style={styles.componentSubtitle}>{item.subtitle}</Text>
-              </View>
-            </View>
-            
-            {/* Reorder Controls */}
-            <View style={styles.reorderSection}>
-              <Text style={styles.reorderLabel}>Order</Text>
-              <View style={styles.reorderButtons}>
-                <Pressable 
-                  style={[styles.arrowButton, index === 0 && styles.arrowButtonDisabled]} 
-                  onPress={() => moveUp(index)}
-                  disabled={index === 0}
-                >
-                  <Ionicons 
-                    name="chevron-up" 
-                    size={sx(24)} 
-                    color={index === 0 ? COLOR.divider : COLOR.brand} 
-                  />
-                </Pressable>
-                <Pressable 
-                  style={[styles.arrowButton, index === components.length - 1 && styles.arrowButtonDisabled]} 
-                  onPress={() => moveDown(index)}
-                  disabled={index === components.length - 1}
-                >
-                  <Ionicons 
-                    name="chevron-down" 
-                    size={sx(24)} 
-                    color={index === components.length - 1 ? COLOR.divider : COLOR.brand} 
-                  />
-                </Pressable>
-              </View>
+              
+              <Pressable 
+                style={[styles.actionButton, index === 0 && styles.actionButtonDisabled]} 
+                onPress={() => moveUp(index)}
+                disabled={index === 0}
+              >
+                <Ionicons name="arrow-up-outline" size={sx(18)} color={index === 0 ? COLOR.label : COLOR.brand} />
+                <Text style={[styles.actionButtonText, index === 0 && styles.actionButtonTextDisabled]}>Move Up</Text>
+              </Pressable>
+              
+              <Pressable 
+                style={[styles.actionButton, index === components.length - 1 && styles.actionButtonDisabled]} 
+                onPress={() => moveDown(index)}
+                disabled={index === components.length - 1}
+              >
+                <Ionicons name="arrow-down-outline" size={sx(18)} color={index === components.length - 1 ? COLOR.label : COLOR.brand} />
+                <Text style={[styles.actionButtonText, index === components.length - 1 && styles.actionButtonTextDisabled]}>Move Down</Text>
+              </Pressable>
+              
+              <Pressable 
+                style={[styles.actionButton, index === components.length - 1 && styles.actionButtonDisabled]} 
+                onPress={() => moveToBottom(index)}
+                disabled={index === components.length - 1}
+              >
+                <Ionicons name="arrow-down-circle-outline" size={sx(18)} color={index === components.length - 1 ? COLOR.label : COLOR.brand} />
+                <Text style={[styles.actionButtonText, index === components.length - 1 && styles.actionButtonTextDisabled]}>Move to Bottom</Text>
+              </Pressable>
             </View>
           </View>
         ))}
@@ -154,34 +184,42 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: sy(20),
   },
+  sectionWrapper: {
+    backgroundColor: '#FFFFFF',
+    marginBottom: sy(12),
+    borderRadius: sx(8),
+    marginHorizontal: sx(12),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
   componentItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: sx(16),
-    paddingVertical: sy(16),
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: COLOR.divider,
+    paddingVertical: sy(14),
     gap: sx(12),
   },
   orderBadge: {
-    width: sx(32),
-    height: sx(32),
-    borderRadius: sx(16),
+    width: sx(36),
+    height: sx(36),
+    borderRadius: sx(18),
     backgroundColor: COLOR.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
   orderNumber: {
     color: '#FFFFFF',
-    fontSize: sx(16),
+    fontSize: sx(18),
     fontWeight: '700',
   },
   componentLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: sx(8),
+    gap: sx(10),
   },
   checkbox: {
     padding: sx(4),
@@ -191,7 +229,7 @@ const styles = StyleSheet.create({
   },
   componentTitle: {
     fontSize: sx(16),
-    fontWeight: '500',
+    fontWeight: '600',
     color: COLOR.ink,
     marginBottom: sy(2),
   },
@@ -200,31 +238,39 @@ const styles = StyleSheet.create({
     color: COLOR.label,
     lineHeight: sx(18),
   },
-  reorderSection: {
+  actionButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: sx(8),
+    paddingHorizontal: sx(16),
+    paddingBottom: sy(12),
+    paddingTop: sy(4),
+    borderTopWidth: 1,
+    borderTopColor: COLOR.divider,
+  },
+  actionButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: sx(12),
-    borderLeftWidth: 1,
-    borderLeftColor: COLOR.divider,
-  },
-  reorderLabel: {
-    fontSize: sx(11),
-    color: COLOR.label,
-    fontWeight: '600',
-    marginBottom: sy(4),
-    textTransform: 'uppercase',
-  },
-  reorderButtons: {
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  arrowButton: {
-    padding: sx(6),
-    borderRadius: sx(6),
+    gap: sx(6),
+    paddingHorizontal: sx(12),
+    paddingVertical: sy(8),
     backgroundColor: COLOR.subtleBlue,
+    borderRadius: sx(6),
+    borderWidth: 1,
+    borderColor: COLOR.brand,
   },
-  arrowButtonDisabled: {
-    opacity: 0.3,
+  actionButtonDisabled: {
+    opacity: 0.4,
+    borderColor: COLOR.divider,
     backgroundColor: COLOR.bg,
+  },
+  actionButtonText: {
+    fontSize: sx(13),
+    fontWeight: '500',
+    color: COLOR.brand,
+  },
+  actionButtonTextDisabled: {
+    color: COLOR.label,
   },
   saveButtonContainer: {
     paddingHorizontal: sx(20),
