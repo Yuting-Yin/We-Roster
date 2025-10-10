@@ -12,6 +12,22 @@ import { useNotificationContext } from "@/contexts/NotificationContext";
 import FailToast from "@/components/overlays/FailToast";
 import WarningToast from "@/components/overlays/WarningToast";
 
+// Helper function to format date for mobile display
+const formatDate = (date: Date | null): string => {
+  if (!date || isNaN(date.getTime())) {
+    return new Date().toLocaleDateString('en-US', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    });
+  }
+  return date.toLocaleDateString('en-US', { 
+    day: '2-digit', 
+    month: 'short', 
+    year: 'numeric' 
+  });
+};
+
 export default function NewLeaveRequest({
   visible, onCancel, onSubmitted,
 }: {
@@ -332,14 +348,21 @@ export default function NewLeaveRequest({
                 style={styles.webDateInput}
               />
             ) : (
-              <DateTimePicker
-                value={fromDate}
-                mode="date"
-                display="default"
-                onChange={handleFromDateChange}
-                minimumDate={new Date()}
-                style={styles.mobileDatePicker}
-              />
+              <View style={styles.mobileDatePickerContainer}>
+                <View style={styles.mobileDateDisplay}>
+                  <Text style={styles.mobileDateText}>
+                    {formatDate(fromDate)}
+                  </Text>
+                </View>
+                <DateTimePicker
+                  value={fromDate}
+                  mode="date"
+                  display="default"
+                  onChange={handleFromDateChange}
+                  minimumDate={new Date()}
+                  style={styles.mobileDatePicker}
+                />
+              </View>
             )}
             <View style={styles.webDatePickerButtons}>
               <Pressable 
@@ -375,14 +398,21 @@ export default function NewLeaveRequest({
                 style={styles.webDateInput}
               />
             ) : (
-              <DateTimePicker
-                value={toDate}
-                mode="date"
-                display="default"
-                onChange={handleToDateChange}
-                minimumDate={fromDate}
-                style={styles.mobileDatePicker}
-              />
+              <View style={styles.mobileDatePickerContainer}>
+                <View style={styles.mobileDateDisplay}>
+                  <Text style={styles.mobileDateText}>
+                    {formatDate(toDate)}
+                  </Text>
+                </View>
+                <DateTimePicker
+                  value={toDate}
+                  mode="date"
+                  display="default"
+                  onChange={handleToDateChange}
+                  minimumDate={fromDate}
+                  style={styles.mobileDatePicker}
+                />
+              </View>
             )}
             <View style={styles.webDatePickerButtons}>
               <Pressable 
@@ -617,9 +647,31 @@ const styles = StyleSheet.create({
     fontSize: sx(14),
     fontWeight: "600",
   },
+  mobileDatePickerContainer: {
+    width: "100%",
+  },
+  mobileDateDisplay: {
+    width: "100%",
+    padding: sx(12),
+    backgroundColor: "#f8f9fa",
+    borderRadius: sx(8),
+    borderWidth: 1,
+    borderColor: "#e9ecef",
+    marginBottom: sy(12),
+    alignItems: "center",
+  },
+  mobileDateText: {
+    fontSize: sx(16),
+    color: COLOR.ink,
+    fontWeight: "500",
+  },
   mobileDatePicker: {
     width: "100%",
-    height: sx(200), // Give enough height for the date picker
+    height: sx(160),
+    backgroundColor: "#fff",
+    borderRadius: sx(8),
+    borderWidth: 1,
+    borderColor: "#e9ecef",
     marginBottom: sy(16),
   },
 });
