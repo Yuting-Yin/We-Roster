@@ -1,6 +1,7 @@
 import React from "react";
 import { View, ScrollView, Text, TextInput, Pressable, Animated, StyleSheet, KeyboardAvoidingView, Platform, Keyboard, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { fmt as fmtDate, dayKey } from "@/lib/date";
@@ -11,6 +12,21 @@ import { useNotificationContext } from "@/contexts/NotificationContext";
 import FailToast from "@/components/overlays/FailToast";
 import WarningToast from "@/components/overlays/WarningToast";
 
+// Helper function to format date for mobile display
+const formatDate = (date: Date | null): string => {
+  if (!date || isNaN(date.getTime())) {
+    return new Date().toLocaleDateString('en-US', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    });
+  }
+  return date.toLocaleDateString('en-US', { 
+    day: '2-digit', 
+    month: 'short', 
+    year: 'numeric' 
+  });
+};
 
 export default function NewLeaveRequest({
   visible, onCancel, onSubmitted,
@@ -353,18 +369,37 @@ export default function NewLeaveRequest({
           />
           <View style={styles.webDatePickerContainer}>
             <Text style={styles.webDatePickerTitle}>Select Start Date</Text>
-            <input
-              type="date"
-              value={fromDate && !isNaN(fromDate.getTime()) ? fromDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
-              min={new Date().toISOString().split('T')[0]}
-              onChange={(e) => {
-                const selectedDate = new Date(e.target.value);
-                if (!isNaN(selectedDate.getTime())) {
-                  handleFromDateChange(null, selectedDate);
-                }
-              }}
-              style={styles.webDateInput}
-            />
+            {Platform.OS === 'web' ? (
+              <input
+                type="date"
+                value={fromDate && !isNaN(fromDate.getTime()) ? fromDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={(e) => {
+                  const selectedDate = new Date(e.target.value);
+                  if (!isNaN(selectedDate.getTime())) {
+                    handleFromDateChange(null, selectedDate);
+                  }
+                }}
+                style={styles.webDateInput}
+              />
+            ) : (
+              <View style={styles.mobileDatePickerContainer}>
+                <TextInput
+                  style={styles.webDateInput}
+                  value={fromDate.toLocaleDateString('en-US')}
+                  editable={false}
+                  placeholder="Select date"
+                />
+                <DateTimePicker
+                  value={fromDate}
+                  mode="date"
+                  display="default"
+                  onChange={handleFromDateChange}
+                  minimumDate={new Date()}
+                  style={styles.mobileDatePicker}
+                />
+              </View>
+            )}
             <View style={styles.webDatePickerButtons}>
               <Pressable 
                 style={styles.webDatePickerButton}
@@ -385,18 +420,37 @@ export default function NewLeaveRequest({
           />
           <View style={styles.webDatePickerContainer}>
             <Text style={styles.webDatePickerTitle}>Select End Date</Text>
-            <input
-              type="date"
-              value={toDate && !isNaN(toDate.getTime()) ? toDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
-              min={fromDate && !isNaN(fromDate.getTime()) ? fromDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
-              onChange={(e) => {
-                const selectedDate = new Date(e.target.value);
-                if (!isNaN(selectedDate.getTime())) {
-                  handleToDateChange(null, selectedDate);
-                }
-              }}
-              style={styles.webDateInput}
-            />
+            {Platform.OS === 'web' ? (
+              <input
+                type="date"
+                value={toDate && !isNaN(toDate.getTime()) ? toDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                min={fromDate && !isNaN(fromDate.getTime()) ? fromDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                onChange={(e) => {
+                  const selectedDate = new Date(e.target.value);
+                  if (!isNaN(selectedDate.getTime())) {
+                    handleToDateChange(null, selectedDate);
+                  }
+                }}
+                style={styles.webDateInput}
+              />
+            ) : (
+              <View style={styles.mobileDatePickerContainer}>
+                <TextInput
+                  style={styles.webDateInput}
+                  value={toDate.toLocaleDateString('en-US')}
+                  editable={false}
+                  placeholder="Select date"
+                />
+                <DateTimePicker
+                  value={toDate}
+                  mode="date"
+                  display="default"
+                  onChange={handleToDateChange}
+                  minimumDate={fromDate}
+                  style={styles.mobileDatePicker}
+                />
+              </View>
+            )}
             <View style={styles.webDatePickerButtons}>
               <Pressable 
                 style={styles.webDatePickerButton}
@@ -634,5 +688,17 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: sx(14),
     fontWeight: "600",
+  },
+  mobileDatePickerContainer: {
+    width: "100%",
+    position: "relative",
+  },
+  mobileDatePicker: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0, // Hide the native picker, show TextInput instead
   },
 });
