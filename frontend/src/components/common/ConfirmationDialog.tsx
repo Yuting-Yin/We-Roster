@@ -135,8 +135,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: sx(20),
-    minHeight: '100vh', // Ensure full height coverage
+    paddingHorizontal: sx(16),
+    paddingVertical: sx(20),
+    // Remove web-specific minHeight
   },
   backdrop: {
     position: 'absolute',
@@ -147,15 +148,17 @@ const styles = StyleSheet.create({
   },
   dialog: {
     backgroundColor: '#fff',
-    borderRadius: sx(12),
-    padding: sx(20),
-    width: '90%',
-    maxWidth: sx(400),
+    borderRadius: sx(16),
+    padding: sx(24),
+    width: '100%',
+    maxWidth: sx(340),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 8,
+    // Ensure proper mobile spacing
+    marginHorizontal: sx(16),
   },
   content: {
     flex: 1,
@@ -178,22 +181,22 @@ const styles = StyleSheet.create({
     fontSize: sx(16),
     color: COLOR.label,
     lineHeight: sy(22),
-    marginBottom: sy(20),
+    marginBottom: sy(24),
     textAlign: 'center',
   },
   buttonContainer: {
     flexDirection: 'row',
     gap: sx(12),
-    marginTop: sx(4),
+    marginTop: sx(8),
   },
   button: {
     flex: 1,
-    paddingVertical: sy(12),
-    paddingHorizontal: sx(16),
-    borderRadius: sx(8),
+    paddingVertical: sy(14),
+    paddingHorizontal: sx(20),
+    borderRadius: sx(12),
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: sy(44),
+    minHeight: sy(48),
     backgroundColor: COLOR.brand, // Fallback background color
   },
   cancelButton: {
@@ -202,16 +205,16 @@ const styles = StyleSheet.create({
     borderColor: COLOR.divider,
   },
   cancelButtonText: {
-    fontSize: sx(15),
-    fontWeight: '500',
+    fontSize: sx(16),
+    fontWeight: '600',
     color: COLOR.label,
   },
   confirmButton: {
     backgroundColor: COLOR.brand,
   },
   confirmButtonText: {
-    fontSize: sx(15),
-    fontWeight: '500',
+    fontSize: sx(16),
+    fontWeight: '600',
     color: '#fff',
   },
   confirmButtonDestructive: {
