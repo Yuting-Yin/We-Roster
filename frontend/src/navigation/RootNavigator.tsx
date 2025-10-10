@@ -35,93 +35,83 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export default function RootNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName="Splash"
-        screenOptions={{ headerShown: false }}
-      >
-        <Stack.Screen name="Splash" component={Splash} />
-        <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="AppTabs">
-          {() => (
-            <SettingsProvider>
+      <SettingsProvider>
+        <Stack.Navigator
+          initialRouteName="Splash"
+          screenOptions={{ headerShown: false }}
+        >
+          <Stack.Screen name="Splash" component={Splash} />
+          <Stack.Screen name="Login" component={Login} />
+          <Stack.Screen name="AppTabs">
+            {() => (
               <NotificationProvider>
                 <OverlayProvider>
                   <AppTabs />
                 </OverlayProvider>
               </NotificationProvider>
-            </SettingsProvider>
-          )}
-        </Stack.Screen>
+            )}
+          </Stack.Screen>
 
-        {/* 个人信息页：需要展示标题栏（蓝色） */}
-        <Stack.Screen
-          name="Profile"
-          component={Profile}
-          options={{
-            headerShown: true,
-            title: "Profile",
-            headerStyle: { backgroundColor: COLOR.brand },
-            headerTintColor: "#fff",
-          }}
-        />
+          {/* 个人信息页：需要展示标题栏（蓝色） */}
+          <Stack.Screen
+            name="Profile"
+            component={Profile}
+            options={{
+              headerShown: true,
+              title: "Profile",
+              headerStyle: { backgroundColor: COLOR.brand },
+              headerTintColor: "#fff",
+            }}
+          />
 
-        <Stack.Screen 
-          name="Settings" 
-          options={{
-            headerShown: true, 
-            title: "Settings",
-            headerStyle: { 
-              backgroundColor: COLOR.brand,
-            }, 
-            headerTintColor: "#fff",
-            headerTitleStyle: {
-              fontSize: sx(20),
-              fontWeight: "normal",
-            },
-          }}
-        >
-          {() => (
-            <SettingsProvider>
-              <Settings />
-            </SettingsProvider>
-          )}
-        </Stack.Screen>
+          <Stack.Screen 
+            name="Settings" 
+            component={Settings}
+            options={{
+              headerShown: true, 
+              title: "Settings",
+              headerStyle: { 
+                backgroundColor: COLOR.brand,
+              }, 
+              headerTintColor: "#fff",
+              headerTitleStyle: {
+                fontSize: sx(20),
+                fontWeight: "normal",
+              },
+            }}
+          />
 
-        <Stack.Screen 
-          name="EditDashboard" 
-          options={{
-            headerShown: true, 
-            title: "Edit Dashboard",
-            headerStyle: { 
-              backgroundColor: COLOR.brand,
-            }, 
-            headerTintColor: "#fff",
-            headerTitleStyle: {
-              fontSize: sx(20),
-              fontWeight: "normal",
-            },
-          }}
-        >
-          {() => (
-            <SettingsProvider>
-              <EditDashboard />
-            </SettingsProvider>
-          )}
-        </Stack.Screen>
+          <Stack.Screen 
+            name="EditDashboard" 
+            component={EditDashboard}
+            options={{
+              headerShown: true, 
+              title: "Edit Dashboard",
+              headerStyle: { 
+                backgroundColor: COLOR.brand,
+              }, 
+              headerTintColor: "#fff",
+              headerTitleStyle: {
+                fontSize: sx(20),
+                fontWeight: "normal",
+              },
+            }}
+          />
 
-        <Stack.Screen 
-          name="Notifications" 
-          options={{
-            headerShown: false, // We handle our own header in the component
-          }}
-        >
-          {() => (
-            <NotificationProvider>
-              <Notifications />
-            </NotificationProvider>
-          )}
-        </Stack.Screen>
-      </Stack.Navigator>
+          <Stack.Screen 
+            name="Notifications" 
+            options={{
+              headerShown: false, // We handle our own header in the component
+            }}
+          >
+            {() => (
+              <NotificationProvider>
+                <Notifications />
+              </NotificationProvider>
+            )}
+          </Stack.Screen>
+        </Stack.Navigator>
+      </SettingsProvider>
     </NavigationContainer>
   );
 }
