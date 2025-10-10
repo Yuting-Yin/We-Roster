@@ -7,27 +7,13 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "plugins": ["expo-dev-client"],
-    "scheme": "we-roster-mobile",
-    "developmentClient": {
-      "silentLaunch": true
-    },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.werostermobile",
-      "infoPlist": {
-        "CFBundleURLTypes": [
-          {
-            "CFBundleURLName": "we-roster-mobile",
-            "CFBundleURLSchemes": ["we-roster-mobile", "exp"]
-          }
-        ]
-      }
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
@@ -35,34 +21,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.werostermobile",
-      "usesCleartextTraffic": true,
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "https",
-              "host": "*.exp.direct"
-            },
-            {
-              "scheme": "https",
-              "host": "*.exp.host"
-            },
-            {
-              "scheme": "we-roster-mobile"
-            },
-            {
-              "scheme": "exp"
-            }
-          ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
-        }
-      ]
+      "package": "com.anonymous.werostermobile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
