@@ -164,6 +164,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingBottom: sy(8), // Add extra spacing at bottom of content
   },
   header: {
     flexDirection: 'row',
@@ -183,14 +184,14 @@ const styles = StyleSheet.create({
     fontSize: sx(16),
     color: COLOR.label,
     lineHeight: sy(22),
-    marginBottom: sy(24),
+    marginBottom: sy(32),
     textAlign: 'center',
     minHeight: sy(22), // Ensure message has minimum height
   },
   buttonContainer: {
     flexDirection: 'row',
     gap: sx(8),
-    marginTop: sx(8),
+    marginTop: sx(16),
   },
   button: {
     flex: 1,
