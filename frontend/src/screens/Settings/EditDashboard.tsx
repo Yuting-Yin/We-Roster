@@ -56,9 +56,20 @@ export default function EditDashboard() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.infoHeader}>
+        <Ionicons name="information-circle-outline" size={sx(18)} color={COLOR.brand} />
+        <Text style={styles.infoText}>Tap checkbox to show/hide • Use arrows to reorder</Text>
+      </View>
+      
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.listContent}>
         {components.map((item, index) => (
           <View key={item.id} style={styles.componentItem}>
+            {/* Order Number */}
+            <View style={styles.orderBadge}>
+              <Text style={styles.orderNumber}>{index + 1}</Text>
+            </View>
+            
+            {/* Checkbox and Content */}
             <View style={styles.componentLeft}>
               <Pressable 
                 style={styles.checkbox} 
@@ -75,29 +86,34 @@ export default function EditDashboard() {
                 <Text style={styles.componentSubtitle}>{item.subtitle}</Text>
               </View>
             </View>
-            <View style={styles.reorderButtons}>
-              <Pressable 
-                style={[styles.arrowButton, index === 0 && styles.arrowButtonDisabled]} 
-                onPress={() => moveUp(index)}
-                disabled={index === 0}
-              >
-                <Ionicons 
-                  name="chevron-up" 
-                  size={sx(20)} 
-                  color={index === 0 ? COLOR.divider : COLOR.ink} 
-                />
-              </Pressable>
-              <Pressable 
-                style={[styles.arrowButton, index === components.length - 1 && styles.arrowButtonDisabled]} 
-                onPress={() => moveDown(index)}
-                disabled={index === components.length - 1}
-              >
-                <Ionicons 
-                  name="chevron-down" 
-                  size={sx(20)} 
-                  color={index === components.length - 1 ? COLOR.divider : COLOR.ink} 
-                />
-              </Pressable>
+            
+            {/* Reorder Controls */}
+            <View style={styles.reorderSection}>
+              <Text style={styles.reorderLabel}>Order</Text>
+              <View style={styles.reorderButtons}>
+                <Pressable 
+                  style={[styles.arrowButton, index === 0 && styles.arrowButtonDisabled]} 
+                  onPress={() => moveUp(index)}
+                  disabled={index === 0}
+                >
+                  <Ionicons 
+                    name="chevron-up" 
+                    size={sx(24)} 
+                    color={index === 0 ? COLOR.divider : COLOR.brand} 
+                  />
+                </Pressable>
+                <Pressable 
+                  style={[styles.arrowButton, index === components.length - 1 && styles.arrowButtonDisabled]} 
+                  onPress={() => moveDown(index)}
+                  disabled={index === components.length - 1}
+                >
+                  <Ionicons 
+                    name="chevron-down" 
+                    size={sx(24)} 
+                    color={index === components.length - 1 ? COLOR.divider : COLOR.brand} 
+                  />
+                </Pressable>
+              </View>
             </View>
           </View>
         ))}
@@ -117,6 +133,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLOR.bg,
   },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLOR.subtleBlue,
+    paddingHorizontal: sx(16),
+    paddingVertical: sy(12),
+    gap: sx(8),
+    borderBottomWidth: 1,
+    borderBottomColor: COLOR.divider,
+  },
+  infoText: {
+    fontSize: sx(13),
+    color: COLOR.ink,
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
   },
@@ -126,20 +157,33 @@ const styles = StyleSheet.create({
   componentItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: sx(20),
+    paddingHorizontal: sx(16),
     paddingVertical: sy(16),
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: COLOR.divider,
+    gap: sx(12),
+  },
+  orderBadge: {
+    width: sx(32),
+    height: sx(32),
+    borderRadius: sx(16),
+    backgroundColor: COLOR.brand,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orderNumber: {
+    color: '#FFFFFF',
+    fontSize: sx(16),
+    fontWeight: '700',
   },
   componentLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    gap: sx(8),
   },
   checkbox: {
-    marginRight: sx(12),
     padding: sx(4),
   },
   textContainer: {
@@ -152,29 +196,47 @@ const styles = StyleSheet.create({
     marginBottom: sy(2),
   },
   componentSubtitle: {
-    fontSize: sx(14),
+    fontSize: sx(13),
     color: COLOR.label,
+    lineHeight: sx(18),
+  },
+  reorderSection: {
+    alignItems: 'center',
+    paddingLeft: sx(12),
+    borderLeftWidth: 1,
+    borderLeftColor: COLOR.divider,
+  },
+  reorderLabel: {
+    fontSize: sx(11),
+    color: COLOR.label,
+    fontWeight: '600',
+    marginBottom: sy(4),
+    textTransform: 'uppercase',
   },
   reorderButtons: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: sx(4),
-    marginLeft: sx(12),
   },
   arrowButton: {
-    padding: sx(8),
+    padding: sx(6),
     borderRadius: sx(6),
-    backgroundColor: COLOR.bg,
+    backgroundColor: COLOR.subtleBlue,
   },
   arrowButtonDisabled: {
     opacity: 0.3,
+    backgroundColor: COLOR.bg,
   },
   saveButtonContainer: {
     paddingHorizontal: sx(20),
     paddingVertical: sy(16),
-    backgroundColor: COLOR.bg,
-    borderTopWidth: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 2,
     borderTopColor: COLOR.divider,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 8,
   },
   saveButton: {
     backgroundColor: COLOR.brand,
