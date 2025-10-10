@@ -62,9 +62,12 @@ export default function Dashboard() {
   // Handle shift card press - navigate to Roster page with specific date
   const handleShiftPress = (shift: any) => {
     
-    // Navigate to Roster tab with the shift's date
+    // Navigate to Roster tab -> MY ROSTER screen with the shift's date
     navigation.navigate('Roster', { 
-      selectedDate: shift.eventDate // Pass the date from the shift
+      screen: 'MY ROSTER',
+      params: {
+        selectedDate: shift.eventDate // Pass the date from the shift
+      }
     });
   };
 
