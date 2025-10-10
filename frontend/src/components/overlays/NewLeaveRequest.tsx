@@ -59,52 +59,30 @@ export default function NewLeaveRequest({
   const [reasonY, setReasonY] = React.useState<number | null>(null);
 
   const onHeaderLayout = (e: LayoutChangeEvent) => {
-    const height = e.nativeEvent.layout.height;
-    console.log('🔍 onHeaderLayout:', height);
-    setHeaderH(height);
+    setHeaderH(e.nativeEvent.layout.height);
   };
 
   const onReasonLayout = (e: LayoutChangeEvent) => {
-    const y = e.nativeEvent.layout.y;
-    console.log('🔍 onReasonLayout:', y);
-    setReasonY(y);
+    setReasonY(e.nativeEvent.layout.y);
   };
-
-  const scrollReasonIntoView = React.useCallback(() => {
-    if (reasonY === null) {
-      console.log('🔍 scrollReasonIntoView: reasonY is null');
-      return;
-    }
-    const margin = sy(8);
-    const targetY = Math.max(0, reasonY - headerH - margin);
-    console.log('🔍 scrollReasonIntoView:', { reasonY, headerH, margin, targetY });
-    scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
-  }, [reasonY, headerH]);
 
   React.useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
-      const height = e.endCoordinates?.height ?? 0;
-      console.log('🔍 keyboardDidShow:', height);
-      setKbHeight(height);
-      // Use a more robust scroll function that doesn't depend on callback
+      setKbHeight(e.endCoordinates?.height ?? 0);
+      // Scroll reason section into view when keyboard appears
       setTimeout(() => {
-        console.log('🔍 Attempting scroll - reasonY:', reasonY, 'headerH:', headerH);
         if (reasonY !== null) {
           const margin = sy(8);
           const targetY = Math.max(0, reasonY - headerH - margin);
-          console.log('🔍 Direct scroll calculation:', { reasonY, headerH, margin, targetY });
           scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
-        } else {
-          console.log('🔍 Cannot scroll - reasonY is null');
         }
       }, 60);
     });
     const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      console.log('🔍 keyboardDidHide');
       setKbHeight(0);
     });
     return () => { showSub.remove(); hideSub.remove(); };
-  }, [reasonY, headerH]); // Depend on the actual values instead of callback
+  }, [reasonY, headerH]);
   
   // Date picker states
   const [showFromDatePicker, setShowFromDatePicker] = React.useState(false);
@@ -373,7 +351,6 @@ export default function NewLeaveRequest({
                   multiline
                   textAlignVertical="top"
                   style={styles.reasonInput}
-                  onFocus={() => setTimeout(scrollReasonIntoView, 60)}
                 />
               </View>
             </View>
