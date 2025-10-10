@@ -84,7 +84,7 @@ export default function NewLeaveRequest({
     if (dropdownRef.current) {
       dropdownRef.current.measure((x, y, width, height, pageX, pageY) => {
         setDropdownPosition({
-          top: y + height + sy(4), // Use relative position + small gap
+          top: y + height, // Use relative position, no gap
           left: x,
           width: width,
         });
