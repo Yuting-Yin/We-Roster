@@ -11,6 +11,7 @@ import SuccessToast from "@/components/overlays/SuccessToast";
 import { useNotificationContext } from "@/contexts/NotificationContext";
 import FailToast from "@/components/overlays/FailToast";
 import WarningToast from "@/components/overlays/WarningToast";
+import { useRequestRefresh } from "@/contexts/RequestRefreshContext";
 
 // Helper function to format date for mobile display
 const formatDate = (date: Date | null): string => {
@@ -37,6 +38,16 @@ export default function NewLeaveRequest({
 }) {
   const { user, loading, error } = useCurrentUser({ mock: false });
   const { refreshUnreadCount } = useNotificationContext();
+  
+  // Get refresh trigger from context (optional)
+  let triggerRefresh: (() => void) | null = null;
+  try {
+    const refreshContext = useRequestRefresh();
+    triggerRefresh = refreshContext.triggerRefresh;
+  } catch (error) {
+    // Component is not within RequestRefreshProvider context
+    console.log('🔍 NewLeaveRequest - Not within RequestRefreshProvider context');
+  }
   
   const [leaveType, setLeaveType] = React.useState<string | null>("Day Leave"); // Default to Day Leave
   const [reason, setReason] = React.useState("");
@@ -219,6 +230,11 @@ export default function NewLeaveRequest({
       
       // Refresh notification count after successful submission
       refreshUnreadCount();
+      
+      // Trigger refresh of all request data (if available)
+      if (triggerRefresh) {
+        triggerRefresh();
+      }
       
       // Delay closing the modal to allow toast to show
       setTimeout(() => {

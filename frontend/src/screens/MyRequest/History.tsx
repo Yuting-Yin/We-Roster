@@ -18,6 +18,7 @@ import RequestDetail from "@/components/overlays/RequestDetail";
 import RequestFilter from "@/components/overlays/RequestFilter";
 import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
 import { useOverlayContext } from "@/contexts/OverlayContext";
+import { useRequestRefresh } from "@/contexts/RequestRefreshContext";
 
 export default function History() {
   const route = useRoute<any>();
@@ -34,15 +35,22 @@ export default function History() {
   // Register overlays with context for auto-close functionality
   const { registerOverlay, unregisterOverlay } = useOverlayContext();
   
+  // Register with refresh context
+  const { registerRefreshCallback, unregisterRefreshCallback } = useRequestRefresh();
+  
   React.useEffect(() => {
     registerOverlay('myrequest-history-detail', () => setRequestDetailVisible(false));
     registerOverlay('myrequest-history-filter', () => setShowFilter(false));
     
+    // Register refresh callback for this component
+    registerRefreshCallback('history', refresh);
+    
     return () => {
       unregisterOverlay('myrequest-history-detail');
       unregisterOverlay('myrequest-history-filter');
+      unregisterRefreshCallback('history');
     };
-  }, [registerOverlay, unregisterOverlay]);
+  }, [registerOverlay, unregisterOverlay, registerRefreshCallback, unregisterRefreshCallback, refresh]);
 
   // Auto-close overlays when navigating to other tabs
   useAutoCloseOverlays([
@@ -238,6 +246,7 @@ export default function History() {
         onClose={handleRequestDetailClose}
         request={selectedRequest}
         workingStaff={[]} // TODO: Fetch working staff for shift-related requests
+        onRefresh={refresh} // Pass refresh function to trigger auto refresh on actions
       />
     </View>
   );
