@@ -172,20 +172,24 @@ CREATE TABLE shift_designation_requirements (
 -- Create Leave Request table
 CREATE TABLE leave_request (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    start_time DATETIME NOT NULL,
+    end_time DATETIME NOT NULL,
     staff_id BIGINT NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
+    shift_id BIGINT NULL,
+    request_type VARCHAR(50),
     reason TEXT,
-    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    status VARCHAR(30) NOT NULL DEFAULT 'AWAITING',
+    created_at DATETIME,
+    approved_at DATETIME,
     approved_by BIGINT NULL,
-    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE,
+    FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE,
     FOREIGN KEY (approved_by) REFERENCES staff(id) ON DELETE SET NULL,
     INDEX idx_leave_request_staff (staff_id),
+    INDEX idx_leave_request_shift (shift_id),
     INDEX idx_leave_request_status (status),
-    INDEX idx_leave_request_dates (start_date, end_date),
-    CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'))
+    INDEX idx_leave_request_dates (start_time, end_time),
+    CHECK (status IN ('AWAITING', 'APPROVED', 'REJECTED', 'CANCELLED'))
 );
 
 -- Create Open Shift Request table
@@ -208,15 +212,20 @@ CREATE TABLE shift_swap (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     requester_id BIGINT NOT NULL,
     target_id BIGINT NOT NULL,
+    shift_id BIGINT NOT NULL,
     from_time DATETIME NOT NULL,
     to_time DATETIME NOT NULL,
     message TEXT,
     status VARCHAR(20) NOT NULL DEFAULT 'AWAITING',
+    target_response VARCHAR(20),
+    target_response_at DATETIME,
     date_made DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (requester_id) REFERENCES staff(id) ON DELETE CASCADE,
     FOREIGN KEY (target_id) REFERENCES staff(id) ON DELETE CASCADE,
+    FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE,
     INDEX idx_shift_swap_requester (requester_id),
     INDEX idx_shift_swap_target (target_id),
+    INDEX idx_shift_swap_shift (shift_id),
     INDEX idx_shift_swap_status (status),
     CHECK (status IN ('AWAITING', 'APPROVED', 'REJECTED', 'CANCELLED'))
 );

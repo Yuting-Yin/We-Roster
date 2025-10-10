@@ -63,9 +63,11 @@ export default function RequestCard({ request, onPress }: RequestCardProps) {
   };
 
   const isIncomingSwap = request.isIncomingSwap || request.requestSubType === "Incoming Swap Request";
+  // Use the needsResponse field from backend, with fallback to the old logic
+  const needsResponse = request.needsResponse ?? (isIncomingSwap && request.status === "AWAITING");
 
   return (
-    <TouchableOpacity style={[styles.card, isIncomingSwap && styles.incomingSwapCard]} onPress={onPress}>
+    <TouchableOpacity style={[styles.card, isIncomingSwap && styles.incomingSwapCard, needsResponse && styles.needsResponseCard]} onPress={onPress}>
       {/* Special yellow bar for incoming swap requests */}
       {isIncomingSwap}
       
@@ -98,9 +100,15 @@ export default function RequestCard({ request, onPress }: RequestCardProps) {
 
       {/* Respond indicator for incoming swap requests */}
       {isIncomingSwap && (
-        <View style={styles.respondIndicator}>
-          <Ionicons name="arrow-back" size={sx(14)} color="#B0C4DE" />
-          <Text style={styles.respondIndicatorText}>Respond</Text>
+        <View style={[styles.respondIndicator, needsResponse && styles.urgentRespondIndicator]}>
+          <Ionicons 
+            name={needsResponse ? "alert-circle" : "checkmark-circle"} 
+            size={sx(14)} 
+            color={needsResponse ? "#FF6B35" : "#28A745"} 
+          />
+          <Text style={[styles.respondIndicatorText, needsResponse && styles.urgentRespondText]}>
+            {needsResponse ? "Action Required" : "Responded"}
+          </Text>
         </View>
       )}
 
@@ -215,5 +223,20 @@ const styles = StyleSheet.create({
     color: "#B0C4DE", // Light blue-gray color
     fontSize: sx(11),
     fontWeight: "500",
+  },
+  needsResponseCard: {
+    borderWidth: 2,
+    borderColor: "#FF6B35",
+    backgroundColor: "#FFF8F5", // Very light orange background
+  },
+  urgentRespondIndicator: {
+    backgroundColor: "#FFF0E6",
+    paddingHorizontal: sx(8),
+    paddingVertical: sy(2),
+    borderRadius: sx(12),
+  },
+  urgentRespondText: {
+    color: "#FF6B35",
+    fontWeight: "600",
   },
 });

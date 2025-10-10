@@ -18,6 +18,9 @@ import { useRequestByStatus } from "@/hooks/useRequests";
 import NewLeaveRequest from "@/components/overlays/NewLeaveRequest";
 import RequestDetail from "@/components/overlays/RequestDetail";
 import RequestFilter from "@/components/overlays/RequestFilter";
+import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
+import { useOverlayContext } from "@/contexts/OverlayContext";
+import { useRequestRefresh } from "@/contexts/RequestRefreshContext";
 
 export default function InAction() {
   const route = useRoute<any>();
@@ -31,11 +34,42 @@ export default function InAction() {
     openShiftRequest: false,
   });
   const [showFilter, setShowFilter] = useState(false);
+
+  // Register overlays with context for auto-close functionality
+  const { registerOverlay, unregisterOverlay } = useOverlayContext();
+  
+  // Get requests data first
   const { requests, loading, error, refresh } = useRequestByStatus(
     "AWAITING",
     selectedMonth.getMonth() + 1,
     selectedMonth.getFullYear()
   );
+
+  // Register with refresh context
+  const { registerRefreshCallback, unregisterRefreshCallback } = useRequestRefresh();
+  
+  React.useEffect(() => {
+    registerOverlay('myrequest-new-leave', () => setNewLeaveRequestVisible(false));
+    registerOverlay('myrequest-detail', () => setRequestDetailVisible(false));
+    registerOverlay('myrequest-filter', () => setShowFilter(false));
+    
+    // Register refresh callback for this component
+    registerRefreshCallback('inaction', refresh);
+    
+    return () => {
+      unregisterOverlay('myrequest-new-leave');
+      unregisterOverlay('myrequest-detail');
+      unregisterOverlay('myrequest-filter');
+      unregisterRefreshCallback('inaction');
+    };
+  }, [registerOverlay, unregisterOverlay, registerRefreshCallback, unregisterRefreshCallback, refresh]);
+
+  // Auto-close overlays when navigating to other tabs
+  useAutoCloseOverlays([
+    () => setNewLeaveRequestVisible(false),
+    () => setRequestDetailVisible(false),
+    () => setShowFilter(false)
+  ]);
 
   // Refresh data when component mounts to ensure latest data is shown
   React.useEffect(() => {
@@ -243,6 +277,7 @@ export default function InAction() {
         onClose={handleRequestDetailClose}
         request={selectedRequest}
         workingStaff={[]} // TODO: Fetch working staff for shift-related requests
+        onRefresh={refresh} // Pass refresh function to trigger auto refresh on actions
       />
     </View>
   );

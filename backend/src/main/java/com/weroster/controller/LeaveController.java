@@ -9,6 +9,7 @@ import com.weroster.entity.User;
 import com.weroster.repository.LeaveRequestRepository;
 import com.weroster.repository.ShiftAssignmentRepository;
 import com.weroster.repository.ShiftRepository;
+import com.weroster.repository.StaffRepository;
 import com.weroster.repository.UserRepository;
 import com.weroster.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,9 @@ public class LeaveController {
     
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private StaffRepository staffRepository;
     
     @Autowired
     private ShiftRepository shiftRepository;
@@ -310,6 +314,88 @@ public class LeaveController {
             System.out.println("🔍 My Leaves - Error: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body("Failed to get leave requests: " + e.getMessage());
+        }
+    }
+    
+    @GetMapping("/staff/{staffId}/leaves")
+    public ResponseEntity<?> getStaffLeaves(
+            @PathVariable Long staffId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(value = "month", required = false) String month) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body("Missing or invalid authorization header");
+            }
+            
+            String token = authHeader.substring(7); // Remove "Bearer " prefix
+            User currentUser = getUserFromToken(token);
+            if (currentUser == null) {
+                return ResponseEntity.status(401).body("Invalid token");
+            }
+            
+            // Verify the staff member exists
+            Staff targetStaff = staffRepository.findById(staffId)
+                    .orElse(null);
+            if (targetStaff == null) {
+                return ResponseEntity.status(404).body("Staff member not found");
+            }
+            
+            // Parse month parameter or use current month
+            YearMonth targetMonth;
+            if (month != null && !month.isEmpty()) {
+                targetMonth = YearMonth.parse(month); // Expected format: YYYY-MM
+            } else {
+                targetMonth = YearMonth.now();
+            }
+            
+            // Get start and end of the month
+            LocalDateTime monthStart = targetMonth.atDay(1).atStartOfDay();
+            LocalDateTime monthEnd = targetMonth.atEndOfMonth().atTime(23, 59, 59);
+            
+            System.out.println("🔍 Staff Leaves - Staff ID: " + staffId);
+            System.out.println("🔍 Staff Leaves - Month: " + targetMonth);
+            System.out.println("🔍 Staff Leaves - Date range: " + monthStart + " to " + monthEnd);
+            
+            // Find approved leave requests for the staff member in the specified month
+            List<LeaveRequest> leaveRequests = leaveRequestRepository.findByStaffAndDateRange(
+                staffId, monthStart, monthEnd);
+            
+            // Filter only approved leaves
+            List<LeaveRequest> approvedLeaves = leaveRequests.stream()
+                .filter(leave -> "APPROVED".equals(leave.getStatus()))
+                .collect(java.util.stream.Collectors.toList());
+            
+            System.out.println("🔍 Staff Leaves - Found " + approvedLeaves.size() + " approved leave requests");
+            for (LeaveRequest leave : approvedLeaves) {
+                System.out.println("🔍 Staff Leaves - Request ID: " + leave.getId() + 
+                    ", Type: " + leave.getRequestType() + 
+                    ", Status: " + leave.getStatus() + 
+                    ", Start: " + leave.getStartTime() + 
+                    ", End: " + leave.getEndTime());
+            }
+            
+            // Convert to response format
+            List<Map<String, Object>> response = approvedLeaves.stream()
+                .map(leave -> {
+                    Map<String, Object> leaveMap = new HashMap<>();
+                    leaveMap.put("id", leave.getId());
+                    leaveMap.put("requestDate", leave.getCreatedAt());
+                    leaveMap.put("startTime", leave.getStartTime());
+                    leaveMap.put("endTime", leave.getEndTime());
+                    leaveMap.put("leaveType", leave.getRequestType());
+                    leaveMap.put("status", leave.getStatus());
+                    leaveMap.put("reason", leave.getReason());
+                    leaveMap.put("shiftId", leave.getShift() != null ? leave.getShift().getId() : null);
+                    return leaveMap;
+                })
+                .toList();
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.out.println("🔍 Staff Leaves - Error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Failed to get staff leave requests: " + e.getMessage());
         }
     }
     

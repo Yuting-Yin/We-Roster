@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from "react";
-import { View, Text, StyleSheet, Modal, Pressable, ScrollView, Platform } from "react-native";
+import React, { memo } from "react";
+import { View, Text, StyleSheet, Modal, Pressable, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
@@ -9,333 +9,108 @@ export type TeamRosterFilterValue = {
   designations: string[];
 };
 
-interface TeamRosterFilterProps {
+type Props = {
   visible: boolean;
   value: TeamRosterFilterValue;
   onChange: (value: TeamRosterFilterValue) => void;
   onApply: () => void;
   onClear: () => void;
   onClose: () => void;
-}
+  shiftTypeOptions?: string[];
+  designationOptions?: string[];
+};
 
-export default function TeamRosterFilter({
-  visible,
-  value,
-  onChange,
-  onApply,
-  onClear,
-  onClose,
-}: TeamRosterFilterProps) {
-  // Available filter options
-  const shiftTypeOptions = [
-    { key: "AM", label: "AM Shifts" },
-    { key: "PM", label: "PM Shifts" },
-    { key: "AH", label: "After Hours" },
-    { key: "ON_CALL", label: "On Call" },
-  ];
+const toggle = <T extends string>(arr: T[], k: T) => (arr.includes(k) ? arr.filter(x => x !== k) : [...arr, k]);
 
-  const designationOptions = [
-    { key: "Surgeon", label: "Surgeon" },
-    { key: "Anesthetist", label: "Anesthetist" },
-    { key: "Nurse", label: "Nurse" },
-    { key: "Fellow", label: "Fellow" },
-    { key: "Cardiologist", label: "Cardiologist" },
-    { key: "Resident", label: "Resident" },
-    { key: "Consultant", label: "Consultant" },
-  ];
+const Chip = ({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) => (
+  <Pressable onPress={onPress} style={[styles.chip, selected && styles.chipSel]} android_ripple={{ color: "#eaeaea" }}>
+    <Text style={[styles.chipText, selected && styles.chipTextSel]}>{label}</Text>
+  </Pressable>
+);
 
-  const toggleShiftType = (shiftType: string) => {
-    const newShiftTypes = value.shiftTypes.includes(shiftType)
-      ? value.shiftTypes.filter(st => st !== shiftType)
-      : [...value.shiftTypes, shiftType];
-    
-    onChange({ ...value, shiftTypes: newShiftTypes });
-  };
-
-  const toggleDesignation = (designation: string) => {
-    const newDesignations = value.designations.includes(designation)
-      ? value.designations.filter(d => d !== designation)
-      : [...value.designations, designation];
-    
-    onChange({ ...value, designations: newDesignations });
-  };
-
-  const hasActiveFilters = useMemo(() => {
-    return value.shiftTypes.length > 0 || value.designations.length > 0;
-  }, [value]);
-
-  const FilterSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <View style={styles.section}>
+const Section: React.FC<{ icon?: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
+  <View style={styles.section}>
+    <View style={styles.sectionHead}>
+      {icon}
       <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.optionsContainer}>
-        {children}
-      </View>
     </View>
-  );
+    {children}
+    <View style={styles.divider} />
+  </View>
+);
 
-  const FilterChip = ({ 
-    label, 
-    isSelected, 
-    onPress 
-  }: { 
-    label: string; 
-    isSelected: boolean; 
-    onPress: () => void; 
-  }) => (
-    <Pressable
-      style={[
-        styles.filterChip,
-        isSelected && styles.filterChipSelected
-      ]}
-      onPress={onPress}
-    >
-      <Text style={[
-        styles.filterChipText,
-        isSelected && styles.filterChipTextSelected
-      ]}>
-        {label}
-      </Text>
-      {isSelected && (
-        <Ionicons name="checkmark" size={sx(16)} color={COLOR.brand} />
-      )}
-    </Pressable>
-  );
+export default memo(function TeamRosterFilter({
+  visible, value, onChange, onApply, onClear, onClose, shiftTypeOptions = [], designationOptions = []
+}: Props) {
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.container} onPress={(e) => e.stopPropagation()}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Filter Team Roster</Text>
-            <Pressable onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={sx(24)} color={COLOR.ink} />
-            </Pressable>
+    <Modal visible={visible} animationType="none" transparent onRequestClose={onClose}>
+      <Pressable style={styles.mask} onPress={onClose}>
+        <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
+          {/* Top bar */}
+          <View style={styles.topbar}>
+            <Pressable onPress={onClear} hitSlop={10}><Text style={styles.clear}>Clear all</Text></Pressable>
+            <Text style={styles.title}>FILTER</Text>
+            <Pressable onPress={onApply} hitSlop={10}><Text style={styles.apply}>Apply</Text></Pressable>
           </View>
 
-          {/* Filter Content */}
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            <FilterSection title="Shift Types">
-              {shiftTypeOptions.map(option => (
-                <FilterChip
-                  key={option.key}
-                  label={option.label}
-                  isSelected={value.shiftTypes.includes(option.key)}
-                  onPress={() => toggleShiftType(option.key)}
-                />
-              ))}
-            </FilterSection>
+          <ScrollView contentContainerStyle={styles.body}>
+            {/* Shift Types */}
+            <Section title="Shift Types" icon={<Ionicons name="time-outline" size={sx(16)} color={COLOR.label} />}>
+              <View style={styles.row}>
+                {shiftTypeOptions.map(shiftType => (
+                  <Chip
+                    key={shiftType}
+                    label={shiftType === "ON_CALL" ? "On Call" : shiftType}
+                    selected={value.shiftTypes.includes(shiftType)}
+                    onPress={() => onChange({ ...value, shiftTypes: toggle(value.shiftTypes, shiftType) })}
+                  />
+                ))}
+              </View>
+            </Section>
 
-            <FilterSection title="Staff Designations">
-              {designationOptions.map(option => (
-                <FilterChip
-                  key={option.key}
-                  label={option.label}
-                  isSelected={value.designations.includes(option.key)}
-                  onPress={() => toggleDesignation(option.key)}
-                />
-              ))}
-            </FilterSection>
+            {/* Designations */}
+            <Section title="Designations" icon={<Ionicons name="person-outline" size={sx(16)} color={COLOR.label} />}>
+              <View style={styles.row}>
+                {designationOptions.map(designation => (
+                  <Chip
+                    key={designation}
+                    label={designation}
+                    selected={value.designations.includes(designation)}
+                    onPress={() => onChange({ ...value, designations: toggle(value.designations, designation) })}
+                  />
+                ))}
+              </View>
+            </Section>
           </ScrollView>
-
-          {/* Footer Actions */}
-          <View style={styles.footer}>
-            <Pressable
-              style={[styles.button, styles.clearButton]}
-              onPress={onClear}
-              disabled={!hasActiveFilters}
-            >
-              <Text style={[
-                styles.clearButtonText,
-                !hasActiveFilters && styles.clearButtonTextDisabled
-              ]}>
-                Clear All
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={[styles.button, styles.applyButton]}
-              onPress={onApply}
-            >
-              <Text style={styles.applyButtonText}>Apply Filters</Text>
-              {hasActiveFilters && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
-                    {value.shiftTypes.length + value.designations.length}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
         </Pressable>
       </Pressable>
     </Modal>
   );
-}
+});
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
+  mask: { ...StyleSheet.absoluteFillObject, backgroundColor: "#0005", justifyContent: "flex-end" },
+  panel: { backgroundColor: "#fff", borderTopLeftRadius: sx(16), borderTopRightRadius: sx(16), maxHeight: "80%" },
+  topbar: {
+    height: sy(48), paddingHorizontal: sx(16), flexDirection: "row",
+    alignItems: "center", justifyContent: "space-between", borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLOR.divider
   },
-  
-  container: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: sx(20),
-    borderTopRightRadius: sx(20),
-    maxHeight: "80%",
-    minHeight: "60%",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 10,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
+  title: { fontSize: sx(14), color: COLOR.ink, fontWeight: "700", letterSpacing: 1 },
+  clear: { color: COLOR.ink, opacity: 0.6 },
+  apply: { color: COLOR.brand, fontWeight: "600" },
+  body: { paddingVertical: sy(8) },
+  section: { paddingHorizontal: sx(16), paddingVertical: sy(8) },
+  sectionHead: { flexDirection: "row", alignItems: "center", gap: sx(6), marginBottom: sy(8) },
+  sectionTitle: { color: COLOR.ink, fontWeight: "600" },
+  row: { flexDirection: "row", flexWrap: "wrap", gap: sx(8) },
+  chip: {
+    paddingHorizontal: sx(12), paddingVertical: sy(8),
+    borderWidth: 1, borderColor: COLOR.divider, borderRadius: sx(999), backgroundColor: "#fff"
   },
-  
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: sx(20),
-    paddingVertical: sy(16),
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLOR.divider,
-  },
-  
-  title: {
-    fontSize: sx(18),
-    fontWeight: "700",
-    color: COLOR.ink,
-  },
-  
-  closeButton: {
-    width: sx(32),
-    height: sy(32),
-    borderRadius: sx(16),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  
-  content: {
-    flex: 1,
-    paddingHorizontal: sx(20),
-  },
-  
-  section: {
-    marginVertical: sy(16),
-  },
-  
-  sectionTitle: {
-    fontSize: sx(16),
-    fontWeight: "600",
-    color: COLOR.ink,
-    marginBottom: sy(12),
-  },
-  
-  optionsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: sx(8),
-  },
-  
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: sx(12),
-    paddingVertical: sy(8),
-    borderRadius: sx(20),
-    borderWidth: 1,
-    borderColor: COLOR.divider,
-    backgroundColor: "#fff",
-    gap: sx(6),
-  },
-  
-  filterChipSelected: {
-    borderColor: COLOR.brand,
-    backgroundColor: COLOR.brand + "10",
-  },
-  
-  filterChipText: {
-    fontSize: sx(14),
-    color: COLOR.label,
-    fontWeight: "500",
-  },
-  
-  filterChipTextSelected: {
-    color: COLOR.brand,
-    fontWeight: "600",
-  },
-  
-  footer: {
-    flexDirection: "row",
-    paddingHorizontal: sx(20),
-    paddingVertical: sy(16),
-    gap: sx(12),
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: COLOR.divider,
-  },
-  
-  button: {
-    flex: 1,
-    paddingVertical: sy(12),
-    borderRadius: sx(12),
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: sx(8),
-  },
-  
-  clearButton: {
-    borderWidth: 1,
-    borderColor: COLOR.divider,
-    backgroundColor: "#fff",
-  },
-  
-  clearButtonText: {
-    fontSize: sx(16),
-    fontWeight: "600",
-    color: COLOR.label,
-  },
-  
-  clearButtonTextDisabled: {
-    color: COLOR.label + "60",
-  },
-  
-  applyButton: {
-    backgroundColor: COLOR.brand,
-  },
-  
-  applyButtonText: {
-    fontSize: sx(16),
-    fontWeight: "600",
-    color: "#fff",
-  },
-  
-  badge: {
-    backgroundColor: "#fff",
-    borderRadius: sx(10),
-    minWidth: sx(20),
-    height: sy(20),
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: sx(6),
-  },
-  
-  badgeText: {
-    fontSize: sx(12),
-    fontWeight: "700",
-    color: COLOR.brand,
-  },
+  chipSel: { borderColor: COLOR.brand, backgroundColor: (COLOR.brand ?? "#0078D4") + "15" },
+  chipText: { color: COLOR.ink, fontSize: sx(12) },
+  chipTextSel: { color: COLOR.brand, fontWeight: "600" },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: COLOR.divider, marginTop: sy(12) }
 });

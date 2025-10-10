@@ -4,6 +4,7 @@ import { createMaterialTopTabNavigator } from "@react-navigation/material-top-ta
 import AppBar from "@/components/common/AppBar";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
+import { RequestRefreshProvider } from "@/contexts/RequestRefreshContext";
 
 // Sub-pages: InAction, History
 import InAction from "./InAction";
@@ -16,23 +17,25 @@ export default function MyRequestScreen() {
     <SafeAreaView style={styles.container}>
       <AppBar />
       {/* top sub nav bar */}
-      <Tab.Navigator
-        screenOptions={{
-          tabBarScrollEnabled: false,
-          tabBarIndicatorStyle: { backgroundColor: COLOR.brand, height: sy(3), borderRadius: sy(2) },
-          tabBarActiveTintColor: COLOR.brand,
-          tabBarInactiveTintColor: COLOR.label,
-          tabBarLabelStyle: { fontSize: sx(12), fontWeight: "600", textTransform: "none" },
-          tabBarStyle: {
-            backgroundColor: COLOR.bg, height: sy(48),
-            borderBottomColor: COLOR.divider, borderBottomWidth: StyleSheet.hairlineWidth,
-            shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
-          },
-        }}
-      >
-        <Tab.Screen name="IN ACTION" component={InAction} />
-        <Tab.Screen name="HISTORY" component={History} />
-      </Tab.Navigator>
+      <RequestRefreshProvider>
+        <Tab.Navigator
+          screenOptions={{
+            tabBarScrollEnabled: false,
+            tabBarIndicatorStyle: { backgroundColor: COLOR.brand, height: sy(3), borderRadius: sy(2) },
+            tabBarActiveTintColor: COLOR.brand,
+            tabBarInactiveTintColor: COLOR.label,
+            tabBarLabelStyle: { fontSize: sx(12), fontWeight: "600", textTransform: "none" },
+            tabBarStyle: {
+              backgroundColor: COLOR.bg, height: sy(48),
+              borderBottomColor: COLOR.divider, borderBottomWidth: StyleSheet.hairlineWidth,
+              shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+            },
+          }}
+        >
+          <Tab.Screen name="IN ACTION" component={InAction} />
+          <Tab.Screen name="HISTORY" component={History} />
+        </Tab.Navigator>
+      </RequestRefreshProvider>
     </SafeAreaView>
   );
 }

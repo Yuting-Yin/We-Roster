@@ -92,8 +92,8 @@ public class DataInitializer implements CommandLineRunner {
         shiftDesignationRequirementsRepository.deleteAll();
         shiftAssignmentRepository.deleteAll();
         openShiftRepository.deleteAll();
+        leaveRequestRepository.deleteAll(); // Delete leave requests BEFORE shifts
         shiftRepository.deleteAll();
-        leaveRequestRepository.deleteAll();
         staffRepository.deleteAll();
         userRepository.deleteAll();
         locationRepository.deleteAll();
@@ -1078,6 +1078,34 @@ public class DataInitializer implements CommandLineRunner {
         testLeaves.add(dayLeave);
         System.out.println("🔍 DataInitializer - Created Day Leave request (AWAITING) for " + nextDay);
         
+        // 4. Create leave requests for other staff members for testing
+        // Get a few other staff members to create diverse leave data
+        List<Staff> allStaff = staffRepository.findAll();
+        List<Staff> otherStaff = allStaff.stream()
+            .filter(s -> !s.getId().equals(testStaff.getId()))
+            .limit(3)
+            .collect(java.util.stream.Collectors.toList());
+        
+        for (int i = 0; i < otherStaff.size(); i++) {
+            Staff staff = otherStaff.get(i);
+            LocalDate leaveStart = today.plusDays(10 + (i * 3)); // Different dates for each staff
+            LocalDate leaveEnd = leaveStart.plusDays(2); // 3-day leave
+            
+            LeaveRequest staffLeave = LeaveRequest.builder()
+                .staff(staff)
+                .shift(null)
+                .startTime(leaveStart.atStartOfDay())
+                .endTime(leaveEnd.atTime(23, 59))
+                .requestType("Annual Leave")
+                .reason("Personal time off")
+                .status("APPROVED")
+                .createdAt(LocalDateTime.now().minusDays(7 + i))
+                .build();
+            testLeaves.add(staffLeave);
+            System.out.println("🔍 DataInitializer - Created Annual Leave request (APPROVED) for " + 
+                staff.getFirstName() + " " + staff.getLastName() + " from " + leaveStart + " to " + leaveEnd);
+        }
+        
         // Save all test leave requests
         leaveRequestRepository.saveAll(testLeaves);
         System.out.println("🔍 DataInitializer - Saved " + testLeaves.size() + " test leave requests");
@@ -1141,6 +1169,7 @@ public class DataInitializer implements CommandLineRunner {
         ShiftSwap swapRequest1 = ShiftSwap.builder()
             .requester(testStaff)
             .target(targetStaff1)
+            .shift(testShift1)
             .fromTime(testShift1.getStartTs())
             .toTime(testShift1.getEndTs())
             .message("I need to swap this shift due to personal commitments")
@@ -1157,6 +1186,7 @@ public class DataInitializer implements CommandLineRunner {
             ShiftSwap swapRequest2 = ShiftSwap.builder()
                 .requester(testStaff)
                 .target(targetStaff2)
+                .shift(testShift2)
                 .fromTime(testShift2.getStartTs())
                 .toTime(testShift2.getEndTs())
                 .message("Need to swap for family event")
@@ -1174,6 +1204,7 @@ public class DataInitializer implements CommandLineRunner {
             ShiftSwap swapRequest3 = ShiftSwap.builder()
                 .requester(testStaff)
                 .target(targetStaff3)
+                .shift(testShift3)
                 .fromTime(testShift3.getStartTs())
                 .toTime(testShift3.getEndTs())
                 .message("Would like to swap this shift")
@@ -1199,6 +1230,7 @@ public class DataInitializer implements CommandLineRunner {
             ShiftSwap swapRequest4 = ShiftSwap.builder()
                 .requester(requesterStaff)
                 .target(testStaff)
+                .shift(otherShift)
                 .fromTime(otherShift.getStartTs())
                 .toTime(otherShift.getEndTs())
                 .message("Can you please swap this shift with me?")
@@ -1216,6 +1248,7 @@ public class DataInitializer implements CommandLineRunner {
             ShiftSwap swapRequest5 = ShiftSwap.builder()
                 .requester(requesterStaff2)
                 .target(testStaff)
+                .shift(otherShift2)
                 .fromTime(otherShift2.getStartTs())
                 .toTime(otherShift2.getEndTs())
                 .message("I'd like to swap shifts with you")

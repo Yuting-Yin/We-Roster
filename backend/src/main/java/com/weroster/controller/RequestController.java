@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -295,6 +296,7 @@ public class RequestController {
             .date(date)
             .timeRange(timeRange)
             .isIncomingSwap(false)
+            .needsResponse(false) // Leave requests never need response from other users
             .createdAt(leave.getCreatedAt())
             .reviewedAt(leave.getApprovedAt())
             .reviewedBy(leave.getApprovedBy() != null ? leave.getApprovedBy().getFirstName() + " " + leave.getApprovedBy().getLastName() : null)
@@ -313,6 +315,7 @@ public class RequestController {
         String requestType = "Swap Request";
         String requestSubType;
         boolean isIncomingSwap = false;
+        boolean needsResponse = false;
         
         // Determine if this is an incoming or outgoing swap request
         if (swap.getRequester().getId().equals(currentStaffId)) {
@@ -320,13 +323,38 @@ public class RequestController {
         } else {
             requestSubType = "Incoming Swap Request";
             isIncomingSwap = true;
+            // For incoming swaps, check if target user still needs to respond
+            // needsResponse = true if status is AWAITING AND targetResponse is null (user hasn't responded yet)
+            needsResponse = "AWAITING".equals(swap.getStatus()) && swap.getTargetResponse() == null;
         }
         
         String date = formatDate(swap.getFromTime().toLocalDate());
         String timeRange = formatTimeRange(swap.getFromTime(), swap.getToTime());
         
-        // For swap requests, we don't have direct shift reference, so we'll leave shift info as null
-        // TODO: In the future, we could find the shift by matching the time range
+        // Get shift information from the linked shift
+        String shiftId = null;
+        String location = null;
+        String address = null;
+        
+        try {
+            if (swap.getShift() != null) {
+                shiftId = swap.getShift().getId().toString();
+                
+                // Safely access location
+                if (swap.getShift().getLocation() != null) {
+                    location = swap.getShift().getLocation().getName();
+                    
+                    // Safely access hospital address
+                    if (swap.getShift().getLocation().getHospital() != null) {
+                        address = swap.getShift().getLocation().getHospital().getAddress();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("🔍 RequestController - Error accessing swap shift details: " + e.getMessage());
+            // Continue with null values for shift details
+        }
+        
         return RequestCardDto.builder()
             .id(swap.getId().toString())
             .status(status)
@@ -335,13 +363,14 @@ public class RequestController {
             .date(date)
             .timeRange(timeRange)
             .isIncomingSwap(isIncomingSwap)
+            .needsResponse(needsResponse)
             .createdAt(swap.getDateMade())
             .reviewedAt(null) // ShiftSwap doesn't have reviewed date
             .reviewedBy(null)
             .reason(swap.getMessage())
-            .shiftId(null) // TODO: Find shift by time range if needed
-            .location(null) // TODO: Get from shift if found
-            .address(null) // TODO: Get from shift if found
+            .shiftId(shiftId)
+            .location(location)
+            .address(address)
             .build();
     }
     
@@ -365,7 +394,7 @@ public class RequestController {
                 Shift shift = openShiftRequest.getOpenShift().getShift();
                 date = formatDate(shift.getStartTs().toLocalDate());
                 timeRange = formatTimeRange(shift.getStartTs(), shift.getEndTs());
-                shiftId = openShiftRequest.getOpenShift().getId().toString();
+                shiftId = shift.getId().toString(); // Return the actual shift ID, not open shift ID
                 
                 // Safely access location
                 if (shift.getLocation() != null) {
@@ -390,6 +419,7 @@ public class RequestController {
             .date(date)
             .timeRange(timeRange)
             .isIncomingSwap(false) // Open shift requests are never incoming swaps
+            .needsResponse(false) // Open shift requests never need response from other users
             .createdAt(openShiftRequest.getCreatedAt())
             .reviewedAt(openShiftRequest.getReviewedAt())
             .reviewedBy(openShiftRequest.getReviewedBy() != null ? 
@@ -455,7 +485,7 @@ public class RequestController {
      * Determine leave request sub-type based on duration and type
      */
     private String determineLeaveSubType(LeaveRequest leave) {
-        // Map database request_type values to frontend display values
+        // First, respect the original request type from the database
         if (leave.getRequestType() != null) {
             String requestType = leave.getRequestType().trim();
             
@@ -472,7 +502,7 @@ public class RequestController {
                 case "All Day Leave":
                     return "Day Leave";
                 case "Shift Leave":
-                    return "Day Leave";
+                    return "Shift Leave";
                 default:
                     // Handle legacy abbreviated format
                     switch (requestType.toLowerCase()) {
@@ -489,6 +519,20 @@ public class RequestController {
                     }
             }
         }
+        
+        // Fallback logic: Check if it's an overnight leave (starts one day, ends next day)
+        LocalDateTime start = leave.getStartTime();
+        LocalDateTime end = leave.getEndTime();
+        
+        if (!start.toLocalDate().equals(end.toLocalDate())) {
+            return "Shift Leave"; // Overnight leave is always a shift leave
+        }
+        
+        // If it's linked to a shift and no explicit request type, it's a shift leave
+        if (leave.getShift() != null) {
+            return "Shift Leave";
+        }
+        
         return "Day Leave"; // Default fallback
     }
     
@@ -505,6 +549,138 @@ public class RequestController {
      */
     private String formatTimeRange(LocalDateTime start, LocalDateTime end) {
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mm a");
-        return start.format(timeFormatter) + " - " + end.format(timeFormatter);
+        String startTime = start.format(timeFormatter);
+        String endTime = end.format(timeFormatter);
+        
+        // Check if it's overnight (different dates)
+        if (!start.toLocalDate().equals(end.toLocalDate())) {
+            return startTime + " - " + endTime + " (+1)";
+        }
+        
+        return startTime + " - " + endTime;
+    }
+    
+    @DeleteMapping("/{requestId}")
+    public ResponseEntity<Map<String, Object>> deleteRequest(
+            @PathVariable Long requestId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            System.out.println("🔍 Delete Request - Request ID: " + requestId);
+            
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body(Map.of("error", "Missing or invalid authorization header"));
+            }
+            
+            String token = authHeader.substring(7); // Remove "Bearer " prefix
+            User user = getUserFromToken(token);
+            if (user == null) {
+                return ResponseEntity.status(401).body(Map.of("error", "Invalid token"));
+            }
+            
+            Staff staff = user.getStaff();
+            if (staff == null) {
+                return ResponseEntity.status(404).body(Map.of("error", "No staff linked to user"));
+            }
+            
+            System.out.println("🔍 Delete Request - Staff ID: " + staff.getId());
+            
+            // Try to find and delete the request from different repositories
+            boolean deleted = false;
+            String requestType = "";
+            
+            // Try LeaveRequest first
+            try {
+                LeaveRequest leaveRequest = leaveRequestRepository.findById(requestId).orElse(null);
+                if (leaveRequest != null && leaveRequest.getStaff().getId().equals(staff.getId())) {
+                    // Check if request can be deleted (only AWAITING status)
+                    if (!"AWAITING".equals(leaveRequest.getStatus())) {
+                        return ResponseEntity.status(400).body(Map.of(
+                            "error", "Cannot delete request with status: " + leaveRequest.getStatus()
+                        ));
+                    }
+                    leaveRequestRepository.deleteById(requestId);
+                    deleted = true;
+                    requestType = "Leave Request";
+                    System.out.println("🔍 Delete Request - Deleted LeaveRequest ID: " + requestId);
+                }
+            } catch (Exception e) {
+                System.out.println("🔍 Delete Request - LeaveRequest not found or error: " + e.getMessage());
+            }
+            
+            // Try ShiftSwap if not found in LeaveRequest
+            if (!deleted) {
+                try {
+                    ShiftSwap shiftSwap = shiftSwapRepository.findById(requestId).orElse(null);
+                    if (shiftSwap != null && 
+                        (shiftSwap.getRequester().getId().equals(staff.getId()) || 
+                         shiftSwap.getTarget().getId().equals(staff.getId()))) {
+                        // Check if request can be deleted (only AWAITING status)
+                        if (!"AWAITING".equals(shiftSwap.getStatus())) {
+                            return ResponseEntity.status(400).body(Map.of(
+                                "error", "Cannot delete request with status: " + shiftSwap.getStatus()
+                            ));
+                        }
+                        shiftSwapRepository.deleteById(requestId);
+                        deleted = true;
+                        requestType = "Swap Request";
+                        System.out.println("🔍 Delete Request - Deleted ShiftSwap ID: " + requestId);
+                    }
+                } catch (Exception e) {
+                    System.out.println("🔍 Delete Request - ShiftSwap not found or error: " + e.getMessage());
+                }
+            }
+            
+            // Try OpenShiftRequest if not found in previous repositories
+            if (!deleted) {
+                try {
+                    OpenShiftRequest openShiftRequest = openShiftRequestRepository.findById(requestId).orElse(null);
+                    if (openShiftRequest != null && openShiftRequest.getStaff().getId().equals(staff.getId())) {
+                        // Check if request can be deleted (only AWAITING status)
+                        if (!"AWAITING".equals(openShiftRequest.getStatus())) {
+                            return ResponseEntity.status(400).body(Map.of(
+                                "error", "Cannot delete request with status: " + openShiftRequest.getStatus()
+                            ));
+                        }
+                        openShiftRequestRepository.deleteById(requestId);
+                        deleted = true;
+                        requestType = "Open Shift Request";
+                        System.out.println("🔍 Delete Request - Deleted OpenShiftRequest ID: " + requestId);
+                    }
+                } catch (Exception e) {
+                    System.out.println("🔍 Delete Request - OpenShiftRequest not found or error: " + e.getMessage());
+                }
+            }
+            
+            if (!deleted) {
+                return ResponseEntity.status(404).body(Map.of("error", "Request not found or access denied"));
+            }
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", requestType + " deleted successfully",
+                "requestId", requestId
+            ));
+            
+        } catch (Exception e) {
+            System.out.println("🔍 Delete Request - Error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to delete request: " + e.getMessage()));
+        }
+    }
+    
+    private User getUserFromToken(String token) {
+        try {
+            if (!token.startsWith("jwt_token_")) {
+                return null;
+            }
+            String[] parts = token.split("_");
+            if (parts.length < 3) {
+                return null;
+            }
+            Long userId = Long.parseLong(parts[2]);
+            return userRepository.findById(userId).orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

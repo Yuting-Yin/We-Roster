@@ -1,6 +1,7 @@
 // src/screens/Dashboard/index.tsx
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { SafeAreaView, ScrollView, RefreshControl, View, Pressable, FlatList } from "react-native";
+import { SafeAreaView, ScrollView, RefreshControl, View, Pressable, FlatList, Text } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, CommonActions, useFocusEffect } from "@react-navigation/native";
 
 import { sx, sy } from "@/theme/metrics";
@@ -9,6 +10,7 @@ import ProfileSideMenu from "@/components/overlays/ProfileSideMenu";
 import { useDashboardData } from "@/hooks/useDashboard";
 import { useMyLeaves } from "@/hooks/useMyLeaves";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDutyAssignments } from "@/hooks/useDutyAssignments";
 import type { DutyItem, ShiftItem, LeaveItem } from "@/types/dashboard";
 
 import { styles } from "./styles";
@@ -36,14 +38,16 @@ import { useOverlayContext } from "@/contexts/OverlayContext";
 import { useOpenShiftsWeek } from "@/hooks/useOpenShiftsWeek";
 import { fmt } from "@/lib/date";
 import { useNotificationContext } from "@/contexts/NotificationContext";
+import { useSettings } from "@/contexts/SettingsContext";
 
 export default function Dashboard() {
   const navigation = useNavigation<any>();
   const { logout } = useAuth();
   const [sideVisible, setSideVisible] = useState(false);
+  const { dashboardSections } = useSettings();
 
   // Register overlays with context for auto-close functionality
-  const { registerOverlay, unregisterOverlay } = useOverlayContext();
+  const { registerOverlay, unregisterOverlay, requestTeamMemberNav } = useOverlayContext();
   
   React.useEffect(() => {
     registerOverlay('dashboard-side', () => setSideVisible(false));
@@ -61,9 +65,12 @@ export default function Dashboard() {
   // Handle shift card press - navigate to Roster page with specific date
   const handleShiftPress = (shift: any) => {
     
-    // Navigate to Roster tab with the shift's date
+    // Navigate to Roster tab -> MY ROSTER screen with the shift's date
     navigation.navigate('Roster', { 
-      selectedDate: shift.eventDate // Pass the date from the shift
+      screen: 'MY ROSTER',
+      params: {
+        selectedDate: shift.eventDate // Pass the date from the shift
+      }
     });
   };
 
@@ -88,15 +95,49 @@ export default function Dashboard() {
     }, 100); // Small delay to ensure tab navigation completes first
   };
 
+  // Handle duty card press - navigate to My Team and show staff details
+  const handleDutyPress = (dutyItem: DutyItem) => {
+    // Request navigation to the staff member in My Team
+    requestTeamMemberNav(
+      Number(dutyItem.id),
+      dutyItem.name,
+      dutyItem.initials,
+      'Dashboard' // Return to Dashboard tab after closing
+    );
+    
+    // Navigate to My Team tab (the overlay will open automatically)
+    navigation.navigate('My Team');
+  };
+
+  // Handle "View My Team" button press - navigate to Team Roster
+  const handleViewMyTeam = () => {
+    navigation.navigate('Roster', { screen: 'TEAM ROSTER' });
+  };
+
   // Get current user info (connected to backend database)
   const { firstName, displayName, initials, email, user } = useCurrentUser({mock: false});
   
   // Get leaves without month filter - will be filtered in the hook
   const { leaves, loading: leavesLoading, error: leavesError, refresh: refreshLeaves } = useMyLeaves(undefined, { mock: false });
   
-  // Mock data for "Who's on duty" section (not implemented yet)
-  const { duty, loading, error, refresh } =
-  useDashboardData({ mock: true, delayMs: 500, amplifyTimes: 2 });
+  // Real data for "Who's on duty" section
+  const { assignments: dutyAssignments, loading: dutyLoading, error: dutyError, refresh: refreshDuty } = useDutyAssignments();
+  
+  // Convert duty assignments to DutyItem format for compatibility
+  const duty: DutyItem[] = dutyAssignments.map(assignment => ({
+    id: assignment.staffId,
+    initials: assignment.staffInitials,
+    name: assignment.staffName,
+    role: assignment.staffDesignation,
+    theatre: assignment.locationName,
+    site: assignment.hospitalName,
+    time: assignment.shiftTime,
+    date: assignment.shiftDate,
+  }));
+  
+  const loading = dutyLoading;
+  const error = dutyError;
+  const refresh = refreshDuty;
 
   // Refresh data once when dashboard screen comes into focus
   const [hasRefreshed, setHasRefreshed] = useState(false);
@@ -441,6 +482,93 @@ export default function Dashboard() {
     });
   };
 
+  // Render sections based on user preferences
+  const renderSection = (sectionId: string) => {
+    switch (sectionId) {
+      case 'whos-on-duty':
+        return (
+          <Section 
+            key="whos-on-duty"
+            title={`Who's on duty (${duty.length})`} 
+            actionLabel="View My Team" 
+            onAction={handleViewMyTeam}
+            data={loading && duty.length === 0 ? placeholderArray<DutyItem>(3) : duty}
+            keyExtractor={(i, idx) => (i?.id ?? `duty-skel-${idx}`)}
+            contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
+            renderItem={({ item }) => (item?.id ? <DutyCard item={item} onPress={() => handleDutyPress(item)} /> : <DutyCardSkeleton />)}
+            flatListProps={dutySnap}
+            footer={<PaginationDots count={Math.max(Math.min(duty.length, 5), loading ? 3 : 0)} index={dutyIdx} />}
+            emptyText="No team members on duty"
+            flatListRef={dutyFlatListRef}
+            maxCards={5}
+          />
+        );
+      
+      case 'upcoming-shifts':
+        return (
+          <Section 
+            key="upcoming-shifts"
+            title={`My shifts this week (${myShifts.length})`} 
+            actionLabel="View All" 
+            onAction={() => navigation.navigate('Roster', { screen: 'MY ROSTER' })}
+            data={weekLoading && myShifts.length === 0 ? placeholderArray<ShiftItem>(3) : myShifts}
+            keyExtractor={(i, idx) => (i?.id ?? `myshift-skel-${idx}`)}
+            contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
+            renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => handleShiftPress(item)} /> : <ShiftCardSkeleton />)}
+            flatListProps={myShiftSnap}
+            footer={<PaginationDots count={Math.max(Math.min(myShifts.length, 5), weekLoading ? 3 : 0)} index={myShiftIdx} />}
+            emptyText="No shifts scheduled this week"
+            flatListRef={myShiftFlatListRef}
+            maxCards={5}
+          />
+        );
+      
+      case 'open-shifts':
+        return (
+          <Section 
+            key="open-shifts"
+            title={`Open shifts this week (${openShiftsFormatted.length})`} 
+            actionLabel="View All" 
+            onAction={() => navigation.navigate('Roster', { screen: 'OPEN SHIFTS' })}
+            data={openShiftsLoading && openShiftsFormatted.length === 0 ? placeholderArray<any>(3) : openShiftsFormatted}
+            keyExtractor={(i, idx) => (i?.id ?? `openshift-skel-${idx}`)}
+            contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
+            renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => handleOpenShiftPress(item)} /> : <ShiftCardSkeleton />)}
+            flatListProps={openShiftSnap}
+            footer={<PaginationDots count={Math.max(Math.min(openShiftsFormatted.length, 5), openShiftsLoading ? 3 : 0)} index={openShiftIdx} />}
+            emptyText="No open shifts available this week"
+            flatListRef={openShiftFlatListRef}
+            maxCards={5}
+          />
+        );
+      
+      case 'upcoming-leaves':
+        return (
+          <Section 
+            key="upcoming-leaves"
+            title={`My leaves this month (${leaves.length})`} 
+            actionLabel="View All" 
+            onAction={() => navigation.navigate('My Request')}
+            data={leavesLoading && leaves.length === 0 ? placeholderArray<LeaveItem>(3) : leaves}
+            keyExtractor={(i, idx) => String(i?.id ?? `leave-skel-${idx}`)}
+            contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
+            renderItem={({ item }) => (item?.id ? <LeaveCard item={item} onPress={() => handleLeavePress(item)} /> : <LeaveCardSkeleton />)}
+            flatListProps={leaveSnap}
+            footer={<PaginationDots count={Math.max(Math.min(leaves.length, 5), leavesLoading ? 3 : 0)} index={leaveIdx} />}
+            emptyText="No leave requests this month"
+            flatListRef={leaveFlatListRef}
+            maxCards={5}
+          />
+        );
+      
+      default:
+        return null;
+    }
+  };
+
+  // Get enabled sections in the order defined by settings
+  const enabledSections = dashboardSections.filter(section => section.enabled);
+
   return (
     <SafeAreaView style={styles.container}>
       <Header
@@ -475,56 +603,29 @@ export default function Dashboard() {
       >
         {error ? <ErrorBanner message={error} onRetry={refresh} /> : null}
 
-        {/* TODO: Connect "Who's on duty" section to backend - not implemented yet */}
-        <Section title={`Who's on duty (${duty.length})`} actionLabel="View My Team" onAction={() => console.log("view team")}
-          data={loading && duty.length === 0 ? placeholderArray<DutyItem>(3) : duty}
-          keyExtractor={(i, idx) => (i?.id ?? `duty-skel-${idx}`)}
-          contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
-          renderItem={({ item }) => (item?.id ? <DutyCard item={item} onPress={() => console.log("duty", item.id)} /> : <DutyCardSkeleton />)}
-          flatListProps={dutySnap}
-          footer={<PaginationDots count={Math.max(duty.length, loading ? 3 : 0)} index={dutyIdx} />}
-          emptyText="No team members on duty"
-          flatListRef={dutyFlatListRef}
-        />
-
-        {/* Real data: Current user's shift assignments this week */}
-        <Section title={`My shifts this week (${myShifts.length})`} actionLabel="View All" 
-          onAction={() => navigation.navigate('Roster', { screen: 'MY ROSTER' })}
-          data={weekLoading && myShifts.length === 0 ? placeholderArray<ShiftItem>(3) : myShifts}
-          keyExtractor={(i, idx) => (i?.id ?? `myshift-skel-${idx}`)}
-          contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
-          renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => handleShiftPress(item)} /> : <ShiftCardSkeleton />)}
-          flatListProps={myShiftSnap}
-          footer={<PaginationDots count={Math.max(myShifts.length, weekLoading ? 3 : 0)} index={myShiftIdx} />}
-          emptyText="No shifts scheduled this week"
-          flatListRef={myShiftFlatListRef}
-        />
-
-        {/* Real data: Available open shifts this week */}
-        <Section title={`Open shifts this week (${openShiftsFormatted.length})`} actionLabel="View All" 
-          onAction={() => navigation.navigate('Roster', { screen: 'OPEN SHIFTS' })}
-          data={openShiftsLoading && openShiftsFormatted.length === 0 ? placeholderArray<any>(3) : openShiftsFormatted}
-          keyExtractor={(i, idx) => (i?.id ?? `openshift-skel-${idx}`)}
-          contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
-          renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => handleOpenShiftPress(item)} /> : <ShiftCardSkeleton />)}
-          flatListProps={openShiftSnap}
-          footer={<PaginationDots count={Math.max(openShiftsFormatted.length, openShiftsLoading ? 3 : 0)} index={openShiftIdx} />}
-          emptyText="No open shifts available this week"
-          flatListRef={openShiftFlatListRef}
-        />
-
-        {/* Real data: Current user's leave requests this month */}
-        <Section title={`My leaves this month (${leaves.length})`} actionLabel="View All" 
-          onAction={() => navigation.navigate('My Request')}
-          data={leavesLoading && leaves.length === 0 ? placeholderArray<LeaveItem>(3) : leaves}
-          keyExtractor={(i, idx) => String(i?.id ?? `leave-skel-${idx}`)}
-          contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
-          renderItem={({ item }) => (item?.id ? <LeaveCard item={item} onPress={() => handleLeavePress(item)} /> : <LeaveCardSkeleton />)}
-          flatListProps={leaveSnap}
-          footer={<PaginationDots count={Math.max(leaves.length, leavesLoading ? 3 : 0)} index={leaveIdx} />}
-          emptyText="No leave requests this month"
-          flatListRef={leaveFlatListRef}
-        />
+        {/* Render sections based on user preferences */}
+        {enabledSections.length > 0 ? (
+          enabledSections.map(section => renderSection(section.id))
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="grid-outline" size={sx(64)} color={COLOR.label} />
+            <Text style={styles.emptyStateTitle}>No sections enabled</Text>
+            <Text style={styles.emptyStateText}>
+              Go to Settings → Edit Dashboard to customize which sections you want to see
+            </Text>
+            <Pressable 
+              style={styles.emptyStateButton}
+              onPress={() => {
+                navigation.navigate("Settings");
+                setTimeout(() => {
+                  navigation.navigate("EditDashboard");
+                }, 100);
+              }}
+            >
+              <Text style={styles.emptyStateButtonText}>Edit Dashboard</Text>
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
 
       <ProfileSideMenu
@@ -549,7 +650,6 @@ export default function Dashboard() {
           email: user?.email || email 
         }}
       />
-
     </SafeAreaView>
   );
 }

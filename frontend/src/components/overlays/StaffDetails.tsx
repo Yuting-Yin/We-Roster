@@ -1,5 +1,5 @@
 // src/components/overlays/StaffDetails.tsx
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { View, Text, StyleSheet, Modal, Pressable, ScrollView, Platform, Linking, SafeAreaView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,7 +8,7 @@ import { sx, sy } from "@/theme/metrics";
 import { ShiftType } from "@/types/roster";
 import { useOverlayContext } from "@/contexts/OverlayContext";
 import ExpandedCalendar from "@/components/calendar/ExpandedCalendar";
-import { useApprovedLeaves } from "@/hooks/useApprovedLeaves";
+import { useStaffLeaves } from "@/hooks/useStaffLeaves";
 
 export type StaffMember = {
   id: number;
@@ -35,7 +35,14 @@ export default function StaffDetails({ visible, staff, shiftMap, onClose, return
   const [date, setDate] = useState(new Date());
   const navigation = useNavigation<any>();
   const { teamMemberNavRequest, clearTeamMemberNavRequest } = useOverlayContext();
-  const { leaveMap } = useApprovedLeaves();
+  const { leaveMap } = useStaffLeaves(staff?.id || 0);
+
+  // Reset tab to "about" when staff changes
+  useEffect(() => {
+    if (staff) {
+      setActiveTab("about");
+    }
+  }, [staff?.id]);
 
   const handlePhonePress = () => {
     if (staff?.phone) {
@@ -67,10 +74,11 @@ export default function StaffDetails({ visible, staff, shiftMap, onClose, return
   return (
     <Modal
       visible={visible}
-      transparent={false}
+      transparent={true}
       animationType="slide"
       onRequestClose={handleClose}
-      presentationStyle="fullScreen"
+      presentationStyle="overFullScreen"
+      statusBarTranslucent={false}
     >
       <SafeAreaView style={styles.container}>
         {/* Header with Back button */}
@@ -197,7 +205,7 @@ export default function StaffDetails({ visible, staff, shiftMap, onClose, return
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E8EEF6",
+    backgroundColor: "rgba(232, 238, 246, 0.98)",
   },
 
   header: {
@@ -206,7 +214,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#E8EEF6",
+    backgroundColor: "rgba(232, 238, 246, 0.98)",
   },
   headerTitle: { 
     color: COLOR.ink, 
@@ -221,7 +229,7 @@ const styles = StyleSheet.create({
   },
 
   profileSection: {
-    backgroundColor: "#E8EEF6",
+    backgroundColor: "rgba(232, 238, 246, 0.98)",
     alignItems: "center",
     paddingBottom: sy(24),
   },
@@ -298,7 +306,7 @@ const styles = StyleSheet.create({
 
   contentContainer: {
     flexGrow: 1,
-    backgroundColor: "#E8EEF6",
+    backgroundColor: "rgba(232, 238, 246, 0.98)",
     paddingTop: sy(20),
     paddingBottom: sy(20),
   },

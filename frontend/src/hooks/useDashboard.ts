@@ -56,7 +56,7 @@ export function useDashboardData(opts: Options = {}) {
 
     try {
       // 优先聚合接口
-      const data = await fetchJson<DashboardPayload>("/api/dashboard", {
+      const data = await fetchJson<DashboardPayload>("/api/v1/dashboard", {
         signal: controller.signal,
       });
       setDuty(safeArray<DutyItem>(data.duty));
@@ -66,10 +66,10 @@ export function useDashboardData(opts: Options = {}) {
     } catch {
       try {
         const [d, ms, os, ls] = await Promise.all([
-          fetchJson<DutyItem[]>("/api/duty", { signal: controller.signal }),
-          fetchJson<ShiftItem[]>("/api/my-shifts", { signal: controller.signal }),
-          fetchJson<ShiftItem[]>("/api/open-shifts", { signal: controller.signal }),
-          fetchJson<LeaveItem[]>("/api/leaves", { signal: controller.signal }),
+          fetchJson<DutyItem[]>("/api/v1/duty", { signal: controller.signal }),
+          fetchJson<ShiftItem[]>("/api/v1/my-shifts", { signal: controller.signal }),
+          fetchJson<ShiftItem[]>("/api/v1/open-shifts", { signal: controller.signal }),
+          fetchJson<LeaveItem[]>("/api/v1/leaves", { signal: controller.signal }),
         ]);
         setDuty(safeArray<DutyItem>(d));
         setMyShifts(safeArray<ShiftItem>(ms));

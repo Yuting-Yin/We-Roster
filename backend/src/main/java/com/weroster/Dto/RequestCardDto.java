@@ -19,6 +19,7 @@ public class RequestCardDto {
     private String date; // Formatted date string like "Thursday, 15 Oct"
     private String timeRange; // Optional time range like "08:00 AM - 13:00 PM"
     private Boolean isIncomingSwap; // Special flag for incoming swap requests
+    private Boolean needsResponse; // True if this request needs the current user to respond
     private LocalDateTime createdAt;
     private LocalDateTime reviewedAt;
     private String reviewedBy;

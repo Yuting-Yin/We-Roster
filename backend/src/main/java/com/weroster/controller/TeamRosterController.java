@@ -20,6 +20,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.weroster.dto.DutyAssignmentDto;
+
 @RestController
 @RequestMapping("/api/v1/team-roster")
 @CrossOrigin(origins = "*")
@@ -32,6 +34,29 @@ public class TeamRosterController {
     private ShiftAssignmentRepository shiftAssignmentRepository;
 
     /**
+     * Get available dates that have shift data
+     */
+    @GetMapping("/available-dates")
+    public ResponseEntity<List<String>> getAvailableDates() {
+        try {
+            List<Shift> allShifts = shiftRepository.findAll();
+            List<String> dates = allShifts.stream()
+                    .map(shift -> shift.getStartTs().toLocalDate().toString())
+                    .distinct()
+                    .sorted()
+                    .collect(Collectors.toList());
+            
+            System.out.println("🔍 TeamRosterController - Available dates: " + dates);
+            return ResponseEntity.ok(dates);
+            
+        } catch (Exception e) {
+            System.err.println("Error fetching available dates: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
      * Get team roster data for a specific date
      */
     @GetMapping
@@ -42,8 +67,21 @@ public class TeamRosterController {
             LocalDateTime startOfDay = date.atStartOfDay();
             LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
             
+            System.out.println("🔍 TeamRosterController - Date range: " + startOfDay + " to " + endOfDay);
+            
             // Get all shifts for the date
             List<Shift> shifts = shiftRepository.findByDateRange(startOfDay, endOfDay);
+            System.out.println("🔍 TeamRosterController - Found " + shifts.size() + " shifts for date " + date);
+            
+            // Debug: Log first few shifts
+            shifts.stream().limit(5).forEach(shift -> {
+                System.out.println("🔍 TeamRosterController - Shift: " + shift.getId() + 
+                    " start=" + shift.getStartTs() + 
+                    " type=" + shift.getType() + 
+                    " name=" + shift.getName() +
+                    " dept=" + (shift.getDepartment() != null ? shift.getDepartment().getName() : "null") +
+                    " hospital=" + (shift.getDepartment() != null && shift.getDepartment().getHospital() != null ? shift.getDepartment().getHospital().getName() : "null"));
+            });
             
             // Group shifts by hospital/department
             Map<String, List<Shift>> shiftsByHospital = shifts.stream()
@@ -51,6 +89,8 @@ public class TeamRosterController {
                     .collect(Collectors.groupingBy(
                             shift -> shift.getDepartment().getHospital().getName()
                     ));
+            
+            System.out.println("🔍 TeamRosterController - Hospitals with shifts: " + shiftsByHospital.keySet());
             
             List<TeamRosterTableDto> tables = shiftsByHospital.entrySet().stream()
                     .map(entry -> buildHospitalTable(entry.getKey(), entry.getValue()))
@@ -109,6 +149,75 @@ public class TeamRosterController {
             
         } catch (Exception e) {
             System.err.println("Error fetching team roster week: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get today's duty assignments for dashboard
+     * Only returns assignments where is_lead = true
+     */
+    @GetMapping("/duty-today")
+    public ResponseEntity<List<DutyAssignmentDto>> getTodayDutyAssignments() {
+        try {
+            LocalDate today = LocalDate.now();
+            LocalDateTime startOfDay = today.atStartOfDay();
+            LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+            
+            // Get all shifts for today
+            List<Shift> shifts = shiftRepository.findByDateRange(startOfDay, endOfDay);
+            
+            // Get all assignments for today's shifts, filter for leads only
+            List<DutyAssignmentDto> dutyAssignments = new ArrayList<>();
+            
+            for (Shift shift : shifts) {
+                List<ShiftAssignment> assignments = shiftAssignmentRepository.findByShiftId(shift.getId());
+                
+                // Filter for lead assignments only
+                for (ShiftAssignment assignment : assignments) {
+                    // Skip non-lead assignments
+                    if (assignment.getIsLead() == null || !assignment.getIsLead()) {
+                        continue;
+                    }
+                    DutyAssignmentDto dutyDto = new DutyAssignmentDto();
+                    
+                    // Staff information
+                    Staff staff = assignment.getStaff();
+                    dutyDto.setStaffId(staff.getId().toString());
+                    dutyDto.setStaffName(staff.getFirstName() + " " + staff.getLastName());
+                    String initials = String.valueOf(staff.getFirstName().charAt(0)) + 
+                                     String.valueOf(staff.getLastName().charAt(0));
+                    dutyDto.setStaffInitials(initials.toUpperCase());
+                    dutyDto.setStaffDesignation(
+                        staff.getDesignation() != null ? staff.getDesignation().getName() : "Staff"
+                    );
+                    
+                    // Shift information
+                    dutyDto.setShiftId(shift.getId().toString());
+                    dutyDto.setShiftDate(today.format(DateTimeFormatter.ofPattern("EEE, dd MMM")));
+                    dutyDto.setShiftTime(
+                        shift.getStartTs().format(DateTimeFormatter.ofPattern("HH:mm")) + " - " +
+                        shift.getEndTs().format(DateTimeFormatter.ofPattern("HH:mm"))
+                    );
+                    
+                    // Location and hospital information
+                    dutyDto.setLocationName(
+                        shift.getLocation() != null ? shift.getLocation().getName() : "TBA"
+                    );
+                    dutyDto.setHospitalName(
+                        shift.getDepartment() != null && shift.getDepartment().getHospital() != null ?
+                        shift.getDepartment().getHospital().getName() : "TBA"
+                    );
+                    
+                    dutyAssignments.add(dutyDto);
+                }
+            }
+            
+            return ResponseEntity.ok(dutyAssignments);
+            
+        } catch (Exception e) {
+            System.err.println("Error fetching today's duty assignments: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
@@ -196,6 +305,18 @@ public class TeamRosterController {
                        (shift.getName().contains("[OC]") || 
                         shift.getName().toLowerCase().contains("on call") ||
                         shift.getName().toLowerCase().contains("on-call"));
+            
+            // Debug On Call matching
+            if (shift.getName() != null && (shift.getName().contains("[OC]") || 
+                shift.getName().toLowerCase().contains("on call") ||
+                shift.getName().toLowerCase().contains("on-call"))) {
+                String detectedType = determineShiftType(shift);
+                System.out.println("🔍 TeamRosterController - On Call shift match: " + shift.getId() + 
+                    " name=" + shift.getName() + 
+                    " detectedType=" + detectedType + 
+                    " requestedType=" + shiftType + 
+                    " match=" + detectedType.equals(shiftType));
+            }
         } else {
             // For regular rooms, check location match
             roomMatch = shift.getLocation() != null && 
@@ -205,10 +326,19 @@ public class TeamRosterController {
         if (!roomMatch) return false;
         
         // Check shift type match
-        return determineShiftType(shift).equals(shiftType);
+        String detectedType = determineShiftType(shift);
+        boolean typeMatch = detectedType.equals(shiftType);
+        
+        return typeMatch;
     }
 
     private String determineShiftType(Shift shift) {
+        // First check if the shift has an explicit type set
+        if (shift.getType() != null && !shift.getType().isEmpty()) {
+            return shift.getType();
+        }
+        
+        // Fallback to hour-based determination
         int hour = shift.getStartTs().getHour();
         
         if (hour >= 8 && hour < 13) {

@@ -255,6 +255,7 @@ export default function OpenShifts() {
         const timeoutId = setTimeout(() => {
           openDetailsFor(shift);
           // Clear the highlight param to prevent reopening on next navigation
+          navigation.setParams({ highlightShiftId: undefined });
         }, 500);
         
         return () => clearTimeout(timeoutId);

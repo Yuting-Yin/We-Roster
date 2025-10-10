@@ -7,7 +7,7 @@ import { createMaterialTopTabNavigator } from "@react-navigation/material-top-ta
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useApprovedLeaves } from "@/hooks/useApprovedLeaves";
 import { useMyRosterData } from "@/hooks/useMyRoster";
-import { CollapsibleCalendar } from "@/components/calendar/CollapsibleCalendar";
+import CollapsibleCalendar from "@/components/calendar/CollapsibleCalendar";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { fmt } from "@/lib/date";

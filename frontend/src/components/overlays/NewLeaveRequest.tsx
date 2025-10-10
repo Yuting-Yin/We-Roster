@@ -1,5 +1,5 @@
 import React from "react";
-import { View, ScrollView, Text, TextInput, Pressable, Animated, StyleSheet, KeyboardAvoidingView, Platform, Keyboard, ActivityIndicator } from "react-native";
+import { View, ScrollView, Text, TextInput, Pressable, Animated, StyleSheet, KeyboardAvoidingView, Platform, Keyboard, ActivityIndicator, LayoutChangeEvent } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLOR } from "@/theme/colors";
@@ -11,6 +11,23 @@ import SuccessToast from "@/components/overlays/SuccessToast";
 import { useNotificationContext } from "@/contexts/NotificationContext";
 import FailToast from "@/components/overlays/FailToast";
 import WarningToast from "@/components/overlays/WarningToast";
+import { useRequestRefresh } from "@/contexts/RequestRefreshContext";
+
+// Helper function to format date for mobile display
+const formatDate = (date: Date | null): string => {
+  if (!date || isNaN(date.getTime())) {
+    return new Date().toLocaleDateString('en-US', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    });
+  }
+  return date.toLocaleDateString('en-US', { 
+    day: '2-digit', 
+    month: 'short', 
+    year: 'numeric' 
+  });
+};
 
 export default function NewLeaveRequest({
   visible, onCancel, onSubmitted,
@@ -22,6 +39,16 @@ export default function NewLeaveRequest({
   const { user, loading, error } = useCurrentUser({ mock: false });
   const { refreshUnreadCount } = useNotificationContext();
   
+  // Get refresh trigger from context (optional)
+  let triggerRefresh: (() => void) | null = null;
+  try {
+    const refreshContext = useRequestRefresh();
+    triggerRefresh = refreshContext.triggerRefresh;
+  } catch (error) {
+    // Component is not within RequestRefreshProvider context
+    console.log('🔍 NewLeaveRequest - Not within RequestRefreshProvider context');
+  }
+  
   const [leaveType, setLeaveType] = React.useState<string | null>("Day Leave"); // Default to Day Leave
   const [reason, setReason] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
@@ -32,6 +59,41 @@ export default function NewLeaveRequest({
   
   // Dropdown state
   const [showLeaveTypeDropdown, setShowLeaveTypeDropdown] = React.useState(false);
+  const [dropdownPosition, setDropdownPosition] = React.useState({ top: 0, left: 0, width: 0 });
+  const dropdownRef = React.useRef<View>(null);
+  const reasonInputRef = React.useRef<TextInput>(null);
+  const scrollViewRef = React.useRef<ScrollView>(null);
+  
+  // Keyboard handling and precise scroll control (similar to RequestLeave.tsx)
+  const [kbHeight, setKbHeight] = React.useState(0);
+  const [headerH, setHeaderH] = React.useState(0);
+  const [reasonY, setReasonY] = React.useState<number | null>(null);
+
+  const onHeaderLayout = (e: LayoutChangeEvent) => {
+    setHeaderH(e.nativeEvent.layout.height);
+  };
+
+  const onReasonLayout = (e: LayoutChangeEvent) => {
+    setReasonY(e.nativeEvent.layout.y);
+  };
+
+  React.useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKbHeight(e.endCoordinates?.height ?? 0);
+      // Scroll reason section into view when keyboard appears
+      setTimeout(() => {
+        if (reasonY !== null) {
+          const margin = sy(8);
+          const targetY = Math.max(0, reasonY - headerH - margin);
+          scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
+        }
+      }, 60);
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setKbHeight(0);
+    });
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, [reasonY, headerH]);
   
   // Date picker states
   const [showFromDatePicker, setShowFromDatePicker] = React.useState(false);
@@ -44,6 +106,7 @@ export default function NewLeaveRequest({
   const [toastMessage, setToastMessage] = React.useState("");
   
   const showSuccessToast = (message: string) => { 
+    console.log('🔍 NewLeaveRequest - Showing success toast:', message);
     setToastMessage(message); 
     setSuccessToast(true); 
     setTimeout(() => setSuccessToast(false), 1800); 
@@ -59,6 +122,27 @@ export default function NewLeaveRequest({
     setToastMessage(message); 
     setWarningToast(true); 
     setTimeout(() => setWarningToast(false), 1800); 
+  };
+
+  // Function to measure dropdown position
+  const measureDropdownPosition = () => {
+    if (dropdownRef.current) {
+      dropdownRef.current.measure((x, y, width, height, pageX, pageY) => {
+        setDropdownPosition({
+          top: y + height, // Position below the selection box
+          left: x, // Align with left edge of selection box
+          width: width, // Match width of selection box
+        });
+      });
+    }
+  };
+
+  // Handle dropdown toggle with position measurement
+  const toggleDropdown = () => {
+    if (!showLeaveTypeDropdown) {
+      measureDropdownPosition();
+    }
+    setShowLeaveTypeDropdown(!showLeaveTypeDropdown);
   };
 
   const anim = React.useRef(new Animated.Value(0)).current;
@@ -91,15 +175,6 @@ export default function NewLeaveRequest({
     }
   }, []); // Only run on mount
 
-  // Keyboard handling
-  const [kbHeight, setKbHeight] = React.useState(0);
-  React.useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
-      setKbHeight(e.endCoordinates?.height ?? 0);
-    });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKbHeight(0));
-    return () => { showSub.remove(); hideSub.remove(); };
-  }, []);
 
   if (!visible) return null;
   const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
@@ -155,7 +230,16 @@ export default function NewLeaveRequest({
       
       // Refresh notification count after successful submission
       refreshUnreadCount();
-      onSubmitted?.();
+      
+      // Trigger refresh of all request data (if available)
+      if (triggerRefresh) {
+        triggerRefresh();
+      }
+      
+      // Delay closing the modal to allow toast to show
+      setTimeout(() => {
+        onSubmitted?.();
+      }, 1000);
     } catch (e: any) {
       console.error('🔍 New Leave Request - Error:', e);
       showFailToast('Failed to submit: Network error or server issue');
@@ -175,7 +259,7 @@ export default function NewLeaveRequest({
 
   const handleFromDateChange = (event: any, selectedDate?: Date) => {
     setShowFromDatePicker(false);
-    if (selectedDate) {
+    if (selectedDate && !isNaN(selectedDate.getTime())) {
       setFromDate(selectedDate);
       // Auto-calculate toDate based on leave type
       if (leaveType) {
@@ -187,7 +271,7 @@ export default function NewLeaveRequest({
 
   const handleToDateChange = (event: any, selectedDate?: Date) => {
     setShowToDatePicker(false);
-    if (selectedDate) {
+    if (selectedDate && !isNaN(selectedDate.getTime())) {
       setToDate(selectedDate);
     }
   };
@@ -199,28 +283,45 @@ export default function NewLeaveRequest({
       </Animated.View>
 
       <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>        
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? headerH : 30}
+          style={{ flex: 1 }}
+        >
           {/* Header */}
-          <View style={styles.header}>
+          <View onLayout={onHeaderLayout}>
+            <View style={styles.header}>
             <Pressable onPress={onCancel}>
               <Ionicons name="close" size={sx(24)} color={COLOR.ink} />
             </Pressable>
             <Text style={styles.hTitle}>New Leave Request</Text>
             <View style={{ width: sx(24) }} />
           </View>
-          <View style={styles.divider} />
+            <View style={styles.divider} />
+          </View>
 
           <ScrollView
+            ref={scrollViewRef}
             keyboardShouldPersistTaps="handled"
-            style={{ maxHeight: sy(500) }}
-            contentContainerStyle={{ paddingBottom: sy(18) + (Platform.OS === "ios" ? kbHeight : 0) }}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ 
+              paddingBottom: sy(18) + (Platform.OS === "ios" ? kbHeight : 0)
+            }}
+            showsVerticalScrollIndicator={true}
+            scrollEventThrottle={16}
+            decelerationRate="fast"
+            bounces={true}
+            scrollsToTop={false}
+            keyboardDismissMode="on-drag"
+            nestedScrollEnabled={true}
           >
             {/* Select Leave Type */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Select Leave Type</Text>
               <Pressable 
+                ref={dropdownRef}
                 style={styles.dropdown}
-                onPress={() => setShowLeaveTypeDropdown(!showLeaveTypeDropdown)}
+                onPress={toggleDropdown}
               >
                 <Text style={[styles.dropdownText, !leaveType && styles.placeholderText]}>
                   {leaveType ? leaveTypes.find(t => t.value === leaveType)?.label : "Leave Type"}
@@ -236,7 +337,10 @@ export default function NewLeaveRequest({
               <View style={styles.dateRow}>
                 <View style={styles.dateField}>
                   <Text style={styles.dateLabel}>From</Text>
-                  <Pressable style={styles.dateInput} onPress={() => setShowFromDatePicker(true)}>
+                  <Pressable 
+                    style={styles.dateInput} 
+                    onPress={() => setShowFromDatePicker(true)}
+                  >
                     <Text style={styles.dateInputText}>{formatDate(fromDate)}</Text>
                     <Ionicons name="calendar-outline" size={sx(20)} color={COLOR.label} />
                   </Pressable>
@@ -244,19 +348,23 @@ export default function NewLeaveRequest({
                 
                 <View style={styles.dateField}>
                   <Text style={styles.dateLabel}>To</Text>
-                  <View style={[styles.dateInput, styles.dateInputReadOnly]}>
+                  <Pressable 
+                    style={[styles.dateInput, styles.dateInputReadOnly]} 
+                    onPress={() => setShowToDatePicker(true)}
+                  >
                     <Text style={styles.dateInputText}>{formatDate(toDate)}</Text>
                     <Ionicons name="calendar-outline" size={sx(20)} color="#CCCCCC" />
-                  </View>
+                  </Pressable>
                 </View>
               </View>
             </View>
 
             {/* Reason For Leave */}
-            <View style={styles.section}>
+            <View style={[styles.section, { marginBottom: sy(20) }]} onLayout={onReasonLayout}>
               <Text style={styles.sectionLabel}>Reason For Leave</Text>
               <View style={styles.reasonBox}>
                 <TextInput
+                  ref={reasonInputRef}
                   placeholder="Type your reason here"
                   placeholderTextColor="#8FA7BF"
                   value={reason}
@@ -267,10 +375,9 @@ export default function NewLeaveRequest({
                 />
               </View>
             </View>
-          </ScrollView>
 
-          {/* Submit Button */}
-          <View style={styles.submitContainer}>
+            {/* Submit Button - Now inside ScrollView */}
+            <View style={styles.submitContainer}>
             <Pressable 
               style={[styles.submitButton, (!leaveType || submitting) && styles.submitButtonDisabled]} 
               onPress={submit}
@@ -283,13 +390,25 @@ export default function NewLeaveRequest({
               )}
             </Pressable>
           </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Animated.View>
       
-      {/* Dropdown Options - Positioned at sheet level */}
+      {/* Dropdown Options - Positioned dynamically */}
       {showLeaveTypeDropdown && (
         <View style={styles.dropdownOverlay}>
-          <View style={styles.dropdownOptions}>
+          <Pressable 
+            style={StyleSheet.absoluteFill} 
+            onPress={() => setShowLeaveTypeDropdown(false)}
+          />
+          <View style={[
+            styles.dropdownOptions,
+            {
+              top: dropdownPosition.top,
+              left: dropdownPosition.left,
+              width: dropdownPosition.width,
+            }
+          ]}>
             {leaveTypes.map((type) => (
               <Pressable
                 key={type.value}
@@ -311,24 +430,89 @@ export default function NewLeaveRequest({
       
       {/* Date Pickers */}
       {showFromDatePicker && (
-        <DateTimePicker
-          value={fromDate}
-          mode="date"
-          display="default"
-          onChange={handleFromDateChange}
-          minimumDate={new Date()}
-        />
+        <View style={styles.webDatePickerOverlay}>
+          <Pressable 
+            style={StyleSheet.absoluteFill} 
+            onPress={() => setShowFromDatePicker(false)}
+          />
+          <View style={styles.webDatePickerContainer}>
+            <Text style={styles.webDatePickerTitle}>Select Start Date</Text>
+            {Platform.OS === 'web' ? (
+              <input
+                type="date"
+                value={fromDate && !isNaN(fromDate.getTime()) ? fromDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={(e) => {
+                  const selectedDate = new Date(e.target.value);
+                  if (!isNaN(selectedDate.getTime())) {
+                    handleFromDateChange(null, selectedDate);
+                  }
+                }}
+                style={styles.webDateInput}
+              />
+            ) : (
+              <DateTimePicker
+                value={fromDate}
+                mode="date"
+                display="default"
+                onChange={handleFromDateChange}
+                minimumDate={new Date()}
+              />
+            )}
+            <View style={styles.webDatePickerButtons}>
+              <Pressable 
+                style={styles.webDatePickerButton}
+                onPress={() => setShowFromDatePicker(false)}
+              >
+                <Text style={styles.webDatePickerButtonText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
       )}
       
       {showToDatePicker && (
-        <DateTimePicker
-          value={toDate}
-          mode="date"
-          display="default"
-          onChange={handleToDateChange}
-          minimumDate={fromDate}
-        />
+        <View style={styles.webDatePickerOverlay}>
+          <Pressable 
+            style={StyleSheet.absoluteFill} 
+            onPress={() => setShowToDatePicker(false)}
+          />
+          <View style={styles.webDatePickerContainer}>
+            <Text style={styles.webDatePickerTitle}>Select End Date</Text>
+            {Platform.OS === 'web' ? (
+              <input
+                type="date"
+                value={toDate && !isNaN(toDate.getTime()) ? toDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                min={fromDate && !isNaN(fromDate.getTime()) ? fromDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                onChange={(e) => {
+                  const selectedDate = new Date(e.target.value);
+                  if (!isNaN(selectedDate.getTime())) {
+                    handleToDateChange(null, selectedDate);
+                  }
+                }}
+                style={styles.webDateInput}
+              />
+            ) : (
+              <DateTimePicker
+                value={toDate}
+                mode="date"
+                display="default"
+                onChange={handleToDateChange}
+                minimumDate={fromDate}
+              />
+            )}
+            <View style={styles.webDatePickerButtons}>
+              <Pressable 
+                style={styles.webDatePickerButton}
+                onPress={() => setShowToDatePicker(false)}
+              >
+                <Text style={styles.webDatePickerButtonText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
       )}
+      
       
       {/* Toast notifications */}
       <SuccessToast visible={successToast} text={toastMessage} />
@@ -353,7 +537,8 @@ const styles = StyleSheet.create({
     paddingBottom: sy(8), 
     zIndex: 52, 
     elevation: 16,
-    maxHeight: '90%',
+    maxHeight: '85%', // Reduced to ensure it doesn't overlap with bottom navigation
+    minHeight: '70%',
   },
   header: { 
     flexDirection: "row", 
@@ -403,13 +588,17 @@ const styles = StyleSheet.create({
   },
   dropdownOverlay: {
     position: "absolute",
-    top: sy(273), // Position directly below the leave type input field
-    left: sx(16),
-    right: sx(16),
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     zIndex: 9999,
     elevation: 20,
+    alignItems: "flex-start", // Prevent centering
+    justifyContent: "flex-start", // Prevent centering
   },
   dropdownOptions: {
+    position: "absolute",
     backgroundColor: "#fff",
     borderRadius: sx(12),
     borderWidth: 1,
@@ -419,6 +608,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     maxHeight: sy(200), // Limit height to prevent overflow
+    alignSelf: "flex-start", // Ensure no centering
   },
   dropdownOption: {
     paddingHorizontal: sx(16),
@@ -476,7 +666,8 @@ const styles = StyleSheet.create({
   },
   submitContainer: {
     paddingHorizontal: sx(16),
-    paddingVertical: sy(16),
+    paddingVertical: sy(12), // Reduced vertical padding to move button up
+    paddingBottom: sy(16), // Reduced bottom padding
   },
   submitButton: {
     backgroundColor: COLOR.brand,
@@ -492,5 +683,66 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: sx(16),
     fontWeight: "600",
+  },
+  // Date picker styles (applied on all platforms)
+  webDatePickerOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    zIndex: 1000,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  webDatePickerContainer: {
+    backgroundColor: "#fff",
+    borderRadius: sx(12),
+    padding: sx(20),
+    marginHorizontal: sx(20),
+    minWidth: sx(300),
+    maxWidth: sx(400),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 16,
+  },
+  webDatePickerTitle: {
+    fontSize: sx(18),
+    fontWeight: "600",
+    color: COLOR.ink,
+    marginBottom: sy(16),
+    textAlign: "center",
+  },
+  webDateInput: {
+    width: "90%",
+    padding: sx(12),
+    borderWidth: 1,
+    borderColor: COLOR.divider,
+    borderRadius: sx(8),
+    fontSize: sx(16),
+    marginBottom: sy(16),
+    backgroundColor: "#fff",
+  },
+  webDatePickerButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: sx(12),
+  },
+  webDatePickerButton: {
+    paddingHorizontal: sx(16),
+    paddingVertical: sy(8),
+    borderRadius: sx(8),
+    backgroundColor: COLOR.brand,
+  },
+  webDatePickerButtonText: {
+    color: "#fff",
+    fontSize: sx(14),
+    fontWeight: "600",
+  },
+  mobileDatePickerContainer: {
+    width: "100%",
   },
 });

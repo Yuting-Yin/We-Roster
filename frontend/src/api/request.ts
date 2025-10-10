@@ -11,6 +11,7 @@ interface RequestCardDto {
   date: string; // Already formatted by backend
   timeRange?: string; // Already formatted by backend
   isIncomingSwap?: boolean;
+  needsResponse?: boolean; // True if this request needs the current user to respond
   createdAt: string;
   reviewedAt?: string;
   reviewedBy?: string;
@@ -96,6 +97,7 @@ export async function getAwaitingRequests(month?: number, year?: number): Promis
     date: dto.date,
     timeRange: dto.timeRange,
     isIncomingSwap: dto.isIncomingSwap,
+    needsResponse: dto.needsResponse,
     shiftId: dto.shiftId,
     location: dto.location,
     address: dto.address
@@ -121,6 +123,7 @@ export async function getHistoryRequests(month?: number, year?: number): Promise
     date: dto.date,
     timeRange: dto.timeRange,
     isIncomingSwap: dto.isIncomingSwap,
+    needsResponse: dto.needsResponse,
     shiftId: dto.shiftId,
     location: dto.location,
     address: dto.address

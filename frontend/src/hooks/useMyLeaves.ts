@@ -122,8 +122,8 @@ export function useMyLeaves(month?: string, opts: Options = {}) {
           
           // Format date as "Start Date - End Date"
           let dateString: string;
-          if (startTime.toDateString() === endTime.toDateString()) {
-            // Same day: just show the date once
+          if (leave.leaveType === "Day Leave" || startTime.toDateString() === endTime.toDateString()) {
+            // Day Leave or same day: just show the date once
             dateString = fmt(startTime, { day: "2-digit", month: "short" });
           } else {
             // Different days: show "Start Date - End Date"
@@ -134,7 +134,7 @@ export function useMyLeaves(month?: string, opts: Options = {}) {
 
           return {
             id: leave.id,
-            date: dateString, // Format as "Start Date - End Date" or just date if same day
+            date: dateString, // Format as "Start Date - End Date" or just date if Day Leave or same day
             type: leave.leaveType,
             category: category,
             state: statusMap[leave.status] || leave.status,
