@@ -89,7 +89,6 @@ export default function RootNavigator() {
 
         <Stack.Screen 
           name="EditDashboard" 
-          component={EditDashboard} 
           options={{
             headerShown: true, 
             title: "Edit Dashboard",
@@ -102,7 +101,13 @@ export default function RootNavigator() {
               fontWeight: "normal",
             },
           }}
-       />
+        >
+          {() => (
+            <SettingsProvider>
+              <EditDashboard />
+            </SettingsProvider>
+          )}
+        </Stack.Screen>
 
         <Stack.Screen 
           name="Notifications" 
