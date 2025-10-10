@@ -175,7 +175,7 @@ export default function NewLeaveRequest({
 
   const handleFromDateChange = (event: any, selectedDate?: Date) => {
     setShowFromDatePicker(false);
-    if (selectedDate) {
+    if (selectedDate && !isNaN(selectedDate.getTime())) {
       setFromDate(selectedDate);
       // Auto-calculate toDate based on leave type
       if (leaveType) {
@@ -187,7 +187,7 @@ export default function NewLeaveRequest({
 
   const handleToDateChange = (event: any, selectedDate?: Date) => {
     setShowToDatePicker(false);
-    if (selectedDate) {
+    if (selectedDate && !isNaN(selectedDate.getTime())) {
       setToDate(selectedDate);
     }
   };
@@ -321,11 +321,13 @@ export default function NewLeaveRequest({
               <Text style={styles.webDatePickerTitle}>Select Start Date</Text>
               <input
                 type="date"
-                value={fromDate.toISOString().split('T')[0]}
+                value={fromDate && !isNaN(fromDate.getTime()) ? fromDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
                 min={new Date().toISOString().split('T')[0]}
                 onChange={(e) => {
                   const selectedDate = new Date(e.target.value);
-                  handleFromDateChange(null, selectedDate);
+                  if (!isNaN(selectedDate.getTime())) {
+                    handleFromDateChange(null, selectedDate);
+                  }
                 }}
                 style={styles.webDateInput}
               />
@@ -343,7 +345,7 @@ export default function NewLeaveRequest({
           <DateTimePicker
             value={fromDate}
             mode="date"
-            display="default"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             onChange={handleFromDateChange}
             minimumDate={new Date()}
           />
@@ -361,11 +363,13 @@ export default function NewLeaveRequest({
               <Text style={styles.webDatePickerTitle}>Select End Date</Text>
               <input
                 type="date"
-                value={toDate.toISOString().split('T')[0]}
-                min={fromDate.toISOString().split('T')[0]}
+                value={toDate && !isNaN(toDate.getTime()) ? toDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                min={fromDate && !isNaN(fromDate.getTime()) ? fromDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
                 onChange={(e) => {
                   const selectedDate = new Date(e.target.value);
-                  handleToDateChange(null, selectedDate);
+                  if (!isNaN(selectedDate.getTime())) {
+                    handleToDateChange(null, selectedDate);
+                  }
                 }}
                 style={styles.webDateInput}
               />
@@ -383,7 +387,7 @@ export default function NewLeaveRequest({
           <DateTimePicker
             value={toDate}
             mode="date"
-            display="default"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             onChange={handleToDateChange}
             minimumDate={fromDate}
           />
