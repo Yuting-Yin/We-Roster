@@ -278,7 +278,16 @@ export default function NewLeaveRequest({
               <View style={styles.dateRow}>
                 <View style={styles.dateField}>
                   <Text style={styles.dateLabel}>From</Text>
-                  <Pressable style={styles.dateInput} onPress={() => setShowFromDatePicker(true)}>
+                  <Pressable 
+                    style={styles.dateInput} 
+                    onPress={() => {
+                      if (Platform.OS === 'web') {
+                        setShowFromDatePicker(true);
+                      } else {
+                        setShowMobileFromPicker(true);
+                      }
+                    }}
+                  >
                     <Text style={styles.dateInputText}>{formatDate(fromDate)}</Text>
                     <Ionicons name="calendar-outline" size={sx(20)} color={COLOR.label} />
                   </Pressable>
@@ -286,7 +295,16 @@ export default function NewLeaveRequest({
                 
                 <View style={styles.dateField}>
                   <Text style={styles.dateLabel}>To</Text>
-                  <Pressable style={[styles.dateInput, styles.dateInputReadOnly]} onPress={() => setShowToDatePicker(true)}>
+                  <Pressable 
+                    style={[styles.dateInput, styles.dateInputReadOnly]} 
+                    onPress={() => {
+                      if (Platform.OS === 'web') {
+                        setShowToDatePicker(true);
+                      } else {
+                        setShowMobileToPicker(true);
+                      }
+                    }}
+                  >
                     <Text style={styles.dateInputText}>{formatDate(toDate)}</Text>
                     <Ionicons name="calendar-outline" size={sx(20)} color="#CCCCCC" />
                   </Pressable>
@@ -362,8 +380,8 @@ export default function NewLeaveRequest({
         </View>
       )}
       
-      {/* Date Pickers */}
-      {showFromDatePicker && (
+      {/* Date Pickers - Web Only */}
+      {showFromDatePicker && Platform.OS === 'web' && (
         <View style={styles.webDatePickerOverlay}>
           <Pressable 
             style={StyleSheet.absoluteFill} 
@@ -407,7 +425,7 @@ export default function NewLeaveRequest({
         </View>
       )}
       
-      {showToDatePicker && (
+      {showToDatePicker && Platform.OS === 'web' && (
         <View style={styles.webDatePickerOverlay}>
           <Pressable 
             style={StyleSheet.absoluteFill} 
