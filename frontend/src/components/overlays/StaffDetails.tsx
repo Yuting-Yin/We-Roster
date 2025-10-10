@@ -74,10 +74,11 @@ export default function StaffDetails({ visible, staff, shiftMap, onClose, return
   return (
     <Modal
       visible={visible}
-      transparent={false}
+      transparent={true}
       animationType="slide"
       onRequestClose={handleClose}
-      presentationStyle="fullScreen"
+      presentationStyle="overFullScreen"
+      statusBarTranslucent={false}
     >
       <SafeAreaView style={styles.container}>
         {/* Header with Back button */}
@@ -204,7 +205,7 @@ export default function StaffDetails({ visible, staff, shiftMap, onClose, return
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E8EEF6",
+    backgroundColor: "rgba(232, 238, 246, 0.98)",
   },
 
   header: {
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#E8EEF6",
+    backgroundColor: "rgba(232, 238, 246, 0.98)",
   },
   headerTitle: { 
     color: COLOR.ink, 
@@ -228,7 +229,7 @@ const styles = StyleSheet.create({
   },
 
   profileSection: {
-    backgroundColor: "#E8EEF6",
+    backgroundColor: "rgba(232, 238, 246, 0.98)",
     alignItems: "center",
     paddingBottom: sy(24),
   },
@@ -305,7 +306,7 @@ const styles = StyleSheet.create({
 
   contentContainer: {
     flexGrow: 1,
-    backgroundColor: "#E8EEF6",
+    backgroundColor: "rgba(232, 238, 246, 0.98)",
     paddingTop: sy(20),
     paddingBottom: sy(20),
   },

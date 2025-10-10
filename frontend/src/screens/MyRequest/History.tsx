@@ -35,6 +35,12 @@ export default function History() {
   // Register overlays with context for auto-close functionality
   const { registerOverlay, unregisterOverlay } = useOverlayContext();
   
+  // Get requests data first
+  const { historyRequests: requests, loading, error, refreshRequests: refresh } = useRequests(
+    selectedMonth.getMonth() + 1, 
+    selectedMonth.getFullYear()
+  );
+
   // Register with refresh context
   const { registerRefreshCallback, unregisterRefreshCallback } = useRequestRefresh();
   
@@ -57,10 +63,6 @@ export default function History() {
     () => setRequestDetailVisible(false),
     () => setShowFilter(false)
   ]);
-  const { historyRequests: requests, loading, error, refreshRequests: refresh } = useRequests(
-    selectedMonth.getMonth() + 1, 
-    selectedMonth.getFullYear()
-  );
 
   // Refresh data when component mounts to ensure latest data is shown
   React.useEffect(() => {

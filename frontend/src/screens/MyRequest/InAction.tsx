@@ -38,6 +38,13 @@ export default function InAction() {
   // Register overlays with context for auto-close functionality
   const { registerOverlay, unregisterOverlay } = useOverlayContext();
   
+  // Get requests data first
+  const { requests, loading, error, refresh } = useRequestByStatus(
+    "AWAITING",
+    selectedMonth.getMonth() + 1,
+    selectedMonth.getFullYear()
+  );
+
   // Register with refresh context
   const { registerRefreshCallback, unregisterRefreshCallback } = useRequestRefresh();
   
@@ -63,11 +70,6 @@ export default function InAction() {
     () => setRequestDetailVisible(false),
     () => setShowFilter(false)
   ]);
-  const { requests, loading, error, refresh } = useRequestByStatus(
-    "AWAITING",
-    selectedMonth.getMonth() + 1,
-    selectedMonth.getFullYear()
-  );
 
   // Refresh data when component mounts to ensure latest data is shown
   React.useEffect(() => {

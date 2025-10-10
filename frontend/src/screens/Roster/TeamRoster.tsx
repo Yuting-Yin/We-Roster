@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { View, Text, StyleSheet, ScrollView, Pressable, Animated, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRoute } from "@react-navigation/native";
 import { COLOR } from "@/theme/colors";
@@ -10,6 +10,7 @@ import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
 import { useTeamRosterData, useTeamRosterFilterOptions } from "@/hooks/useTeamRoster";
 import { getAvailableDates } from "@/api/teamroster";
 import TeamRosterFilter from "@/components/overlays/TeamRosterFilter";
+import StaffDetails, { StaffMember as StaffDetailsMember } from "@/components/overlays/StaffDetails";
 import { fmt } from "@/lib/date";
 
 // Types for team roster data
@@ -94,6 +95,16 @@ export default function TeamRoster() {
 
   // State for collapsible tables
   const [collapsedHospitals, setCollapsedHospitals] = useState<Set<string>>(new Set());
+  
+  // State for staff details overlay
+  const [staffDetailsVisible, setStaffDetailsVisible] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState<StaffDetailsMember | undefined>(undefined);
+  
+  // Animation for refresh icon
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  
+  // ScrollView ref
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // Convert API data to component format
   const teamRosterTables: TeamRosterTable[] = useMemo(() => {
@@ -119,6 +130,7 @@ export default function TeamRoster() {
   useAutoCloseOverlays([
     () => setFilterVisible(false)
   ]);
+
 
   // Filter data based on filter values
   const filteredData = useMemo(() => {
@@ -170,6 +182,42 @@ export default function TeamRoster() {
     setDisplayDate(nextDay);
   };
 
+  // Handle staff member click
+  const handleStaffPress = (staff: TeamRosterShift['assignedStaff'][0]) => {
+    const staffDetails: StaffDetailsMember = {
+      id: parseInt(staff.id),
+      name: staff.name,
+      initials: staff.initials,
+      email: `${staff.name.toLowerCase().replace(/\s+/g, '.')}@weroster.com`, // Generate email
+      phone: "+1-555-0123", // Placeholder phone
+      designation: staff.designation,
+      accreditation: `${staff.designation?.toUpperCase()}-2023-001` // Placeholder accreditation
+    };
+    
+    setSelectedStaff(staffDetails);
+    setStaffDetailsVisible(true);
+  };
+
+  // Handle staff details overlay close
+  const handleStaffDetailsClose = () => {
+    setStaffDetailsVisible(false);
+    setSelectedStaff(undefined);
+  };
+
+
+  // Handle refresh button press
+  const handleRefresh = () => {
+    // Start rotation animation
+    rotateAnim.setValue(0);
+    Animated.timing(rotateAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
+    
+    refreshRoster();
+  };
+
   const toggleHospitalCollapse = (hospital: string) => {
     const newCollapsed = new Set(collapsedHospitals);
     if (newCollapsed.has(hospital)) {
@@ -189,14 +237,39 @@ export default function TeamRoster() {
     return hospitalCells.find(c => c.room === room && c.shiftType === shiftType);
   };
 
-  // Render staff list with icons
+  // Render staff list with avatars and highlighting
   const renderStaffList = (staff: TeamRosterShift['assignedStaff']) => {
-    return staff.map((person, index) => (
-      <View key={`${person.id}-${index}`} style={styles.staffRow}>
-        <Ionicons name="person-outline" size={sx(12)} color={BORDER_COLOR} />
-        <Text style={styles.staffName}>{person.name}</Text>
-      </View>
-    ));
+    return staff.map((person, index) => {
+      // Check if this staff member matches the designation filter
+      const isHighlighted = filter.designations.length > 0 && 
+        filter.designations.includes(person.designation);
+      
+      return (
+        <Pressable 
+          key={`${person.id}-${index}`} 
+          style={styles.staffRow}
+          onPress={() => handleStaffPress(person)}
+        >
+          <View style={[
+            styles.staffAvatar,
+            isHighlighted && styles.staffAvatarHighlighted
+          ]}>
+            <Text style={[
+              styles.staffAvatarText,
+              isHighlighted && styles.staffAvatarTextHighlighted
+            ]}>
+              {person.initials}
+            </Text>
+          </View>
+          <Text style={[
+            styles.staffName,
+            isHighlighted && styles.staffNameHighlighted
+          ]}>
+            {person.name}
+          </Text>
+        </Pressable>
+      );
+    });
   };
 
   // Render shifts in a cell
@@ -232,8 +305,9 @@ export default function TeamRoster() {
       <View 
         key={key}
         style={[
-          styles.tableCell,
-          !isLastColumn && styles.tableCellBorder
+          isLastColumn ? styles.tableCellNarrow : styles.tableCell,
+          !isLastColumn && styles.tableCellBorder, // Only non-last columns get full borders
+          isLastColumn && styles.tableCellLeftBorder // AH column gets left border only
         ]}
       >
         {cell && cell.shifts.length > 0 ? (
@@ -295,25 +369,31 @@ export default function TeamRoster() {
         </Pressable>
 
         {!isCollapsed && (
-          <View style={styles.tableWrapper}>
-            {/* Table Header Row */}
-            <View style={styles.tableHeaderRow}>
-              <View style={[styles.sessionHeaderCell, styles.headerCellBorder]}>
-                <Text style={styles.headerText}>Session</Text>
-              </View>
-              {shiftColumns.map((col, index) => (
-                <View 
-                  key={col} 
-                  style={[
-                    styles.shiftHeaderCell,
-                    styles.headerCellBorder,
-                    index < shiftColumns.length - 1 && styles.shiftHeaderCellBorder
-                  ]}
-                >
-                  <Text style={styles.headerText}>{col}</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.tableScrollContainer}
+            contentContainerStyle={styles.tableScrollContent}
+          >
+            <View style={styles.tableWrapper}>
+              {/* Table Header Row */}
+              <View style={styles.tableHeaderRow}>
+                <View style={[styles.sessionHeaderCell, styles.headerCellLeft, styles.headerCellRight]}>
+                  <Text style={styles.headerText}>Session</Text>
                 </View>
-              ))}
-            </View>
+                {shiftColumns.map((col, index) => (
+                  <View 
+                    key={col} 
+                    style={[
+                      index === shiftColumns.length - 1 ? styles.shiftHeaderCellNarrow : styles.shiftHeaderCell,
+                      styles.headerCellLeft,
+                      index < shiftColumns.length - 1 && styles.headerCellRight // Only non-last columns get right border
+                    ]}
+                  >
+                    <Text style={styles.headerText}>{col}</Text>
+                  </View>
+                ))}
+              </View>
 
             {/* Table Body - Rows */}
             {shiftTypeRows.map((row, rowIndex) => {
@@ -370,7 +450,8 @@ export default function TeamRoster() {
                 </View>
               );
             })}
-          </View>
+            </View>
+          </ScrollView>
         )}
       </View>
     );
@@ -384,7 +465,7 @@ export default function TeamRoster() {
           style={styles.filterButton}
           onPress={() => setFilterVisible(true)}
         >
-          <Ionicons name="options-outline" size={sx(24)} color={COLOR.ink} />
+          <Ionicons name="options-outline" size={sx(18)} color={COLOR.ink} />
         </Pressable>
 
         <View style={styles.dateContainer}>
@@ -392,22 +473,43 @@ export default function TeamRoster() {
             style={styles.dateNavButton}
             onPress={handlePreviousDay}
           >
-            <Ionicons name="chevron-back" size={sx(24)} color={COLOR.ink} />
+            <Ionicons name="chevron-back" size={sx(18)} color={COLOR.ink} />
           </Pressable>
           <Text style={styles.dateText}>{formattedDate}</Text>
           <Pressable 
             style={styles.dateNavButton}
             onPress={handleNextDay}
           >
-            <Ionicons name="chevron-forward" size={sx(24)} color={COLOR.ink} />
+            <Ionicons name="chevron-forward" size={sx(18)} color={COLOR.ink} />
           </Pressable>
         </View>
 
-        <View style={styles.placeholder} />
+        <Pressable 
+          style={styles.refreshButton}
+          onPress={handleRefresh}
+        >
+          <Animated.View
+            style={{
+              transform: [{
+                rotate: rotateAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '360deg'],
+                })
+              }]
+            }}
+          >
+            <Ionicons 
+              name="refresh" 
+              size={sx(18)} 
+              color={COLOR.ink}
+            />
+          </Animated.View>
+        </Pressable>
       </View>
 
       {/* Team Roster Tables */}
       <ScrollView 
+        ref={scrollViewRef}
         style={styles.content} 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -445,6 +547,14 @@ export default function TeamRoster() {
         shiftTypeOptions={filterOptions?.shiftTypes || []}
         designationOptions={filterOptions?.designations || []}
       />
+
+      {/* Staff Details Overlay */}
+      <StaffDetails
+        visible={staffDetailsVisible}
+        staff={selectedStaff}
+        onClose={handleStaffDetailsClose}
+        returnToTab="Roster"
+      />
     </View>
   );
 }
@@ -456,24 +566,20 @@ const styles = StyleSheet.create({
   },
   
   toolbar: {
+    height: sy(48),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLOR.divider,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: sx(16),
-    paddingVertical: sy(16),
+    paddingHorizontal: sx(10),
     backgroundColor: "#fff",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#000",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 9.4,
-    elevation: 3,
   },
   
   filterButton: {
-    width: sx(24),
-    height: sy(24),
+    width: sx(36),
+    height: sy(36),
+    borderRadius: sx(8),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -482,8 +588,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: sx(8),
-    flex: 1,
-    justifyContent: "center",
   },
   
   dateNavButton: {
@@ -491,18 +595,22 @@ const styles = StyleSheet.create({
     height: sy(32),
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: sx(16),
+    borderRadius: sx(6),
   },
   
-  placeholder: {
-    width: sx(24),
-    height: sy(24),
+
+  refreshButton: {
+    width: sx(36),
+    height: sy(36),
+    borderRadius: sx(8),
+    alignItems: "center",
+    justifyContent: "center",
   },
+
   
   dateText: {
-    fontSize: sx(14),
-    fontWeight: "500",
     color: COLOR.ink,
+    fontWeight: "600",
   },
   
   
@@ -534,19 +642,29 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   
-  tableWrapper: {
+  tableScrollContainer: {
     flex: 1,
+  },
+
+  tableScrollContent: {
+    minWidth: '100%',
+  },
+
+  tableWrapper: {
+    minWidth: sx(600), // Make table wider to enable horizontal scroll
   },
   
   tableHeaderRow: {
     flexDirection: "row",
     backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER_COLOR,
   },
   
   sessionHeaderCell: {
-    width: sx(90),
+    width: sx(120), // Increased width
     paddingVertical: sy(8),
-    paddingHorizontal: sx(8),
+    paddingHorizontal: sx(12),
     justifyContent: "center",
     alignItems: "center",
     borderBottomWidth: 1,
@@ -554,23 +672,29 @@ const styles = StyleSheet.create({
   },
   
   shiftHeaderCell: {
-    flex: 1,
+    width: sx(150), // Default width for shift columns
     paddingVertical: sy(8),
-    paddingHorizontal: sx(8),
+    paddingHorizontal: sx(12),
     justifyContent: "center",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER_COLOR,
+    // Removed borderBottomWidth to prevent double borders with table rows
+  },
+
+  shiftHeaderCellNarrow: {
+    width: sx(120), // Narrower width for AH column
+    paddingVertical: sy(8),
+    paddingHorizontal: sx(12),
+    justifyContent: "center",
+    alignItems: "center",
+    // Removed borderBottomWidth to prevent double borders with table rows
   },
   
-  headerCellBorder: {
-    borderRightWidth: 1,
-    borderRightColor: BORDER_COLOR,
+  headerCellLeft: {
     borderLeftWidth: 1,
     borderLeftColor: BORDER_COLOR,
   },
 
-  shiftHeaderCellBorder: {
+  headerCellRight: {
     borderRightWidth: 1,
     borderRightColor: BORDER_COLOR,
   },
@@ -587,16 +711,19 @@ const styles = StyleSheet.create({
     minHeight: sy(60),
     borderTopWidth: 1,
     borderTopColor: BORDER_COLOR,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER_COLOR,
   },
 
   tableRowFirst: {
     borderTopWidth: 0,
   },
+
   
   sessionCell: {
-    width: sx(90),
+    width: sx(120), // Match header width
     paddingVertical: sy(8),
-    paddingHorizontal: sx(8),
+    paddingHorizontal: sx(12),
     justifyContent: "center",
     alignItems: "center",
   },
@@ -609,17 +736,25 @@ const styles = StyleSheet.create({
   },
   
   onCallCell: {
-    flex: 1,
+    width: sx(450), // Wider for On Call content
     paddingVertical: sy(8),
-    paddingHorizontal: sx(8),
+    paddingHorizontal: sx(12),
     borderLeftWidth: 1,
     borderLeftColor: BORDER_COLOR,
   },
   
   tableCell: {
-    flex: 1,
+    width: sx(150), // Default width for shift columns
     paddingVertical: sy(8),
-    paddingHorizontal: sx(8),
+    paddingHorizontal: sx(12),
+    justifyContent: "flex-start",
+    alignItems: "flex-start",
+  },
+
+  tableCellNarrow: {
+    width: sx(120), // Narrower width for AH column
+    paddingVertical: sy(8),
+    paddingHorizontal: sx(12),
     justifyContent: "flex-start",
     alignItems: "flex-start",
   },
@@ -627,6 +762,11 @@ const styles = StyleSheet.create({
   tableCellBorder: {
     borderRightWidth: 1,
     borderRightColor: BORDER_COLOR,
+    borderLeftWidth: 1,
+    borderLeftColor: BORDER_COLOR,
+  },
+
+  tableCellLeftBorder: {
     borderLeftWidth: 1,
     borderLeftColor: BORDER_COLOR,
   },
@@ -659,8 +799,24 @@ const styles = StyleSheet.create({
   staffRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: sx(4),
+    gap: sx(6),
     marginTop: sy(2),
+    paddingVertical: sy(2),
+  },
+  
+  staffAvatar: {
+    width: sx(20),
+    height: sx(20),
+    borderRadius: sx(10),
+    backgroundColor: COLOR.brand,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  
+  staffAvatarText: {
+    fontSize: sx(8),
+    fontWeight: "600",
+    color: "#fff",
   },
   
   staffName: {
@@ -668,6 +824,23 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: "#000",
     flex: 1,
+  },
+
+  // Highlighting styles for filtered staff
+  staffAvatarHighlighted: {
+    backgroundColor: "#FFD700", // Gold color for highlighting
+    borderWidth: 2,
+    borderColor: "#FFA500", // Orange border for emphasis
+  },
+
+  staffAvatarTextHighlighted: {
+    color: "#000", // Black text on gold background
+    fontWeight: "700",
+  },
+
+  staffNameHighlighted: {
+    color: "#FF6B35", // Orange text for highlighted staff names
+    fontWeight: "600",
   },
   
   loadingContainer: {
