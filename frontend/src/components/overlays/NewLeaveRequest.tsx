@@ -471,37 +471,33 @@ export default function NewLeaveRequest({
       
       {/* Mobile DateTimePickers */}
       {Platform.OS !== 'web' && showMobileFromPicker && (
-        <View style={styles.mobileDateTimePickerOverlay}>
-          <DateTimePicker
-            value={fromDate}
-            mode="date"
-            display="default"
-            onChange={(event, selectedDate) => {
-              setShowMobileFromPicker(false);
-              if (selectedDate) {
-                handleFromDateChange(event, selectedDate);
-              }
-            }}
-            minimumDate={new Date()}
-          />
-        </View>
+        <DateTimePicker
+          value={fromDate}
+          mode="date"
+          display="default"
+          onChange={(event, selectedDate) => {
+            setShowMobileFromPicker(false);
+            if (selectedDate) {
+              handleFromDateChange(event, selectedDate);
+            }
+          }}
+          minimumDate={new Date()}
+        />
       )}
       
       {Platform.OS !== 'web' && showMobileToPicker && (
-        <View style={styles.mobileDateTimePickerOverlay}>
-          <DateTimePicker
-            value={toDate}
-            mode="date"
-            display="default"
-            onChange={(event, selectedDate) => {
-              setShowMobileToPicker(false);
-              if (selectedDate) {
-                handleToDateChange(event, selectedDate);
-              }
-            }}
-            minimumDate={fromDate}
-          />
-        </View>
+        <DateTimePicker
+          value={toDate}
+          mode="date"
+          display="default"
+          onChange={(event, selectedDate) => {
+            setShowMobileToPicker(false);
+            if (selectedDate) {
+              handleToDateChange(event, selectedDate);
+            }
+          }}
+          minimumDate={fromDate}
+        />
       )}
       
       {/* Toast notifications */}
@@ -732,16 +728,5 @@ const styles = StyleSheet.create({
   },
   mobileDatePickerContainer: {
     width: "100%",
-  },
-  mobileDateTimePickerOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1000,
   },
 });
