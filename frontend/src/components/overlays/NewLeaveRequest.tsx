@@ -54,6 +54,8 @@ export default function NewLeaveRequest({
   // Date picker states
   const [showFromDatePicker, setShowFromDatePicker] = React.useState(false);
   const [showToDatePicker, setShowToDatePicker] = React.useState(false);
+  const [showMobileFromPicker, setShowMobileFromPicker] = React.useState(false);
+  const [showMobileToPicker, setShowMobileToPicker] = React.useState(false);
   
   // Toast state
   const [successToast, setSuccessToast] = React.useState(false);
@@ -384,20 +386,29 @@ export default function NewLeaveRequest({
               />
             ) : (
               <View style={styles.mobileDatePickerContainer}>
-                <TextInput
-                  style={styles.webDateInput}
-                  value={fromDate.toLocaleDateString('en-US')}
-                  editable={false}
-                  placeholder="Select date"
-                />
-                <DateTimePicker
-                  value={fromDate}
-                  mode="date"
-                  display="default"
-                  onChange={handleFromDateChange}
-                  minimumDate={new Date()}
-                  style={styles.mobileDatePicker}
-                />
+                <Pressable onPress={() => setShowMobileFromPicker(true)}>
+                  <TextInput
+                    style={styles.webDateInput}
+                    value={fromDate.toLocaleDateString('en-US')}
+                    editable={false}
+                    placeholder="Select date"
+                    pointerEvents="none"
+                  />
+                </Pressable>
+                {showMobileFromPicker && (
+                  <DateTimePicker
+                    value={fromDate}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowMobileFromPicker(false);
+                      if (selectedDate) {
+                        handleFromDateChange(event, selectedDate);
+                      }
+                    }}
+                    minimumDate={new Date()}
+                  />
+                )}
               </View>
             )}
             <View style={styles.webDatePickerButtons}>
@@ -435,20 +446,29 @@ export default function NewLeaveRequest({
               />
             ) : (
               <View style={styles.mobileDatePickerContainer}>
-                <TextInput
-                  style={styles.webDateInput}
-                  value={toDate.toLocaleDateString('en-US')}
-                  editable={false}
-                  placeholder="Select date"
-                />
-                <DateTimePicker
-                  value={toDate}
-                  mode="date"
-                  display="default"
-                  onChange={handleToDateChange}
-                  minimumDate={fromDate}
-                  style={styles.mobileDatePicker}
-                />
+                <Pressable onPress={() => setShowMobileToPicker(true)}>
+                  <TextInput
+                    style={styles.webDateInput}
+                    value={toDate.toLocaleDateString('en-US')}
+                    editable={false}
+                    placeholder="Select date"
+                    pointerEvents="none"
+                  />
+                </Pressable>
+                {showMobileToPicker && (
+                  <DateTimePicker
+                    value={toDate}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowMobileToPicker(false);
+                      if (selectedDate) {
+                        handleToDateChange(event, selectedDate);
+                      }
+                    }}
+                    minimumDate={fromDate}
+                  />
+                )}
               </View>
             )}
             <View style={styles.webDatePickerButtons}>
@@ -691,14 +711,5 @@ const styles = StyleSheet.create({
   },
   mobileDatePickerContainer: {
     width: "100%",
-    position: "relative",
-  },
-  mobileDatePicker: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: 0, // Hide the native picker, show TextInput instead
   },
 });
