@@ -97,7 +97,9 @@ export default function ConfirmationDialog({
               <Text style={styles.title}>{title}</Text>
             </View>
             
-            <Text style={styles.message}>{message}</Text>
+            {message && message.trim() && (
+              <Text style={styles.message}>{message}</Text>
+            )}
           </View>
           
           <View style={styles.buttonContainer}>
@@ -183,16 +185,17 @@ const styles = StyleSheet.create({
     lineHeight: sy(22),
     marginBottom: sy(24),
     textAlign: 'center',
+    minHeight: sy(22), // Ensure message has minimum height
   },
   buttonContainer: {
     flexDirection: 'row',
-    gap: sx(12),
+    gap: sx(8),
     marginTop: sx(8),
   },
   button: {
     flex: 1,
-    paddingVertical: sy(14),
-    paddingHorizontal: sx(20),
+    paddingVertical: sy(12),
+    paddingHorizontal: sx(16),
     borderRadius: sx(12),
     alignItems: 'center',
     justifyContent: 'center',
@@ -205,17 +208,21 @@ const styles = StyleSheet.create({
     borderColor: COLOR.divider,
   },
   cancelButtonText: {
-    fontSize: sx(16),
+    fontSize: sx(14),
     fontWeight: '600',
     color: COLOR.label,
+    textAlign: 'center',
+    flexWrap: 'wrap',
   },
   confirmButton: {
     backgroundColor: COLOR.brand,
   },
   confirmButtonText: {
-    fontSize: sx(16),
+    fontSize: sx(14),
     fontWeight: '600',
     color: '#fff',
+    textAlign: 'center',
+    flexWrap: 'wrap',
   },
   confirmButtonDestructive: {
     backgroundColor: COLOR.red,
