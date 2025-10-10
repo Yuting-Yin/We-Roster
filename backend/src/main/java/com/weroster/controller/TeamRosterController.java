@@ -74,9 +74,11 @@ public class TeamRosterController {
             System.out.println("🔍 TeamRosterController - Found " + shifts.size() + " shifts for date " + date);
             
             // Debug: Log first few shifts
-            shifts.stream().limit(3).forEach(shift -> {
+            shifts.stream().limit(5).forEach(shift -> {
                 System.out.println("🔍 TeamRosterController - Shift: " + shift.getId() + 
                     " start=" + shift.getStartTs() + 
+                    " type=" + shift.getType() + 
+                    " name=" + shift.getName() +
                     " dept=" + (shift.getDepartment() != null ? shift.getDepartment().getName() : "null") +
                     " hospital=" + (shift.getDepartment() != null && shift.getDepartment().getHospital() != null ? shift.getDepartment().getHospital().getName() : "null"));
             });
@@ -303,6 +305,18 @@ public class TeamRosterController {
                        (shift.getName().contains("[OC]") || 
                         shift.getName().toLowerCase().contains("on call") ||
                         shift.getName().toLowerCase().contains("on-call"));
+            
+            // Debug On Call matching
+            if (shift.getName() != null && (shift.getName().contains("[OC]") || 
+                shift.getName().toLowerCase().contains("on call") ||
+                shift.getName().toLowerCase().contains("on-call"))) {
+                String detectedType = determineShiftType(shift);
+                System.out.println("🔍 TeamRosterController - On Call shift match: " + shift.getId() + 
+                    " name=" + shift.getName() + 
+                    " detectedType=" + detectedType + 
+                    " requestedType=" + shiftType + 
+                    " match=" + detectedType.equals(shiftType));
+            }
         } else {
             // For regular rooms, check location match
             roomMatch = shift.getLocation() != null && 
@@ -312,10 +326,19 @@ public class TeamRosterController {
         if (!roomMatch) return false;
         
         // Check shift type match
-        return determineShiftType(shift).equals(shiftType);
+        String detectedType = determineShiftType(shift);
+        boolean typeMatch = detectedType.equals(shiftType);
+        
+        return typeMatch;
     }
 
     private String determineShiftType(Shift shift) {
+        // First check if the shift has an explicit type set
+        if (shift.getType() != null && !shift.getType().isEmpty()) {
+            return shift.getType();
+        }
+        
+        // Fallback to hour-based determination
         int hour = shift.getStartTs().getHour();
         
         if (hour >= 8 && hour < 13) {
