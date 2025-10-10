@@ -260,7 +260,7 @@ export default function NewLeaveRequest({
             keyboardShouldPersistTaps="handled"
             style={{ flex: 1 }}
             contentContainerStyle={{ 
-              paddingBottom: sy(80), // Reduced padding but still enough for keyboard
+              paddingBottom: sy(60), // Reduced padding since submit button is moved up
             }}
             showsVerticalScrollIndicator={true}
             scrollEventThrottle={16}
@@ -328,14 +328,16 @@ export default function NewLeaveRequest({
                   textAlignVertical="top"
                   style={styles.reasonInput}
                   onFocus={() => {
-                    // Auto-scroll to show reason input when keyboard appears
+                    // Auto-scroll so "Reason For Leave" header aligns with bottom of overlay heading
                     setTimeout(() => {
-                      // Scroll to ensure the reason input is visible above keyboard
+                      // Calculate position: header height + divider + sections above reason section
+                      // Header (~60px) + divider (~1px) + select leave type (~80px) + select date (~120px) + some spacing
+                      const targetY = 280; // Position where reason header aligns with bottom of overlay heading
                       scrollViewRef.current?.scrollTo({ 
-                        y: 200, // Scroll down enough to show the text input above keyboard
+                        y: targetY,
                         animated: true 
                       });
-                    }, 100); // Faster response time
+                    }, 100); // Fast response time
                   }}
                 />
               </View>
@@ -631,8 +633,8 @@ const styles = StyleSheet.create({
   },
   submitContainer: {
     paddingHorizontal: sx(16),
-    paddingVertical: sy(16),
-    paddingBottom: sy(20), // Extra padding for better spacing
+    paddingVertical: sy(12), // Reduced vertical padding to move button up
+    paddingBottom: sy(16), // Reduced bottom padding
   },
   submitButton: {
     backgroundColor: COLOR.brand,
