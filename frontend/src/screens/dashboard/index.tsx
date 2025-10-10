@@ -11,7 +11,6 @@ import { useMyLeaves } from "@/hooks/useMyLeaves";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDutyAssignments } from "@/hooks/useDutyAssignments";
 import type { DutyItem, ShiftItem, LeaveItem } from "@/types/dashboard";
-import type { DutyAssignmentData } from "@/api/duty";
 
 import { styles } from "./styles";
 import { Section } from "./components/Section";
@@ -22,7 +21,6 @@ import { PaginationDots } from "./components/PaginationDots";
 import { DutyCard } from "./components/cards/DutyCard";
 import { ShiftCard } from "./components/cards/ShiftCard";
 import { LeaveCard } from "./components/cards/LeaveCard";
-import TeamMemberProfile from "@/components/overlays/TeamMemberProfile";
 
 import { DutyCardSkeleton } from "./components/skeletons/DutyCardSkeleton";
 import { ShiftCardSkeleton } from "./components/skeletons/ShiftCardSkeleton";
@@ -44,26 +42,21 @@ export default function Dashboard() {
   const navigation = useNavigation<any>();
   const { logout } = useAuth();
   const [sideVisible, setSideVisible] = useState(false);
-  const [profileVisible, setProfileVisible] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<DutyAssignmentData | null>(null);
 
   // Register overlays with context for auto-close functionality
-  const { registerOverlay, unregisterOverlay } = useOverlayContext();
+  const { registerOverlay, unregisterOverlay, requestTeamMemberNav } = useOverlayContext();
   
   React.useEffect(() => {
     registerOverlay('dashboard-side', () => setSideVisible(false));
-    registerOverlay('dashboard-profile', () => setProfileVisible(false));
     
     return () => {
       unregisterOverlay('dashboard-side');
-      unregisterOverlay('dashboard-profile');
     };
   }, [registerOverlay, unregisterOverlay]);
 
   // Auto-close overlays when navigating to other tabs
   useAutoCloseOverlays([
-    () => setSideVisible(false),
-    () => setProfileVisible(false)
+    () => setSideVisible(false)
   ]);
 
   // Handle shift card press - navigate to Roster page with specific date
@@ -96,14 +89,18 @@ export default function Dashboard() {
     }, 100); // Small delay to ensure tab navigation completes first
   };
 
-  // Handle duty card press - show team member profile
+  // Handle duty card press - navigate to My Team and show staff details
   const handleDutyPress = (dutyItem: DutyItem) => {
-    // Find the corresponding duty assignment data
-    const assignment = dutyAssignments.find(a => a.staffId === dutyItem.id);
-    if (assignment) {
-      setSelectedMember(assignment);
-      setProfileVisible(true);
-    }
+    // Request navigation to the staff member in My Team
+    requestTeamMemberNav(
+      Number(dutyItem.id),
+      dutyItem.name,
+      dutyItem.initials,
+      'Dashboard' // Return to Dashboard tab after closing
+    );
+    
+    // Navigate to My Team tab (the overlay will open automatically)
+    navigation.navigate('My Team');
   };
 
   // Handle "View My Team" button press - navigate to Team Roster
@@ -520,9 +517,10 @@ export default function Dashboard() {
           contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
           renderItem={({ item }) => (item?.id ? <DutyCard item={item} onPress={() => handleDutyPress(item)} /> : <DutyCardSkeleton />)}
           flatListProps={dutySnap}
-          footer={<PaginationDots count={Math.max(duty.length, loading ? 3 : 0)} index={dutyIdx} />}
+          footer={<PaginationDots count={Math.max(Math.min(duty.length, 5), loading ? 3 : 0)} index={dutyIdx} />}
           emptyText="No team members on duty"
           flatListRef={dutyFlatListRef}
+          maxCards={5}
         />
 
         {/* Real data: Current user's shift assignments this week */}
@@ -533,9 +531,10 @@ export default function Dashboard() {
           contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
           renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => handleShiftPress(item)} /> : <ShiftCardSkeleton />)}
           flatListProps={myShiftSnap}
-          footer={<PaginationDots count={Math.max(myShifts.length, weekLoading ? 3 : 0)} index={myShiftIdx} />}
+          footer={<PaginationDots count={Math.max(Math.min(myShifts.length, 5), weekLoading ? 3 : 0)} index={myShiftIdx} />}
           emptyText="No shifts scheduled this week"
           flatListRef={myShiftFlatListRef}
+          maxCards={5}
         />
 
         {/* Real data: Available open shifts this week */}
@@ -546,9 +545,10 @@ export default function Dashboard() {
           contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
           renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => handleOpenShiftPress(item)} /> : <ShiftCardSkeleton />)}
           flatListProps={openShiftSnap}
-          footer={<PaginationDots count={Math.max(openShiftsFormatted.length, openShiftsLoading ? 3 : 0)} index={openShiftIdx} />}
+          footer={<PaginationDots count={Math.max(Math.min(openShiftsFormatted.length, 5), openShiftsLoading ? 3 : 0)} index={openShiftIdx} />}
           emptyText="No open shifts available this week"
           flatListRef={openShiftFlatListRef}
+          maxCards={5}
         />
 
         {/* Real data: Current user's leave requests this month */}
@@ -559,9 +559,10 @@ export default function Dashboard() {
           contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
           renderItem={({ item }) => (item?.id ? <LeaveCard item={item} onPress={() => handleLeavePress(item)} /> : <LeaveCardSkeleton />)}
           flatListProps={leaveSnap}
-          footer={<PaginationDots count={Math.max(leaves.length, leavesLoading ? 3 : 0)} index={leaveIdx} />}
+          footer={<PaginationDots count={Math.max(Math.min(leaves.length, 5), leavesLoading ? 3 : 0)} index={leaveIdx} />}
           emptyText="No leave requests this month"
           flatListRef={leaveFlatListRef}
+          maxCards={5}
         />
       </ScrollView>
 
@@ -587,14 +588,6 @@ export default function Dashboard() {
           email: user?.email || email 
         }}
       />
-
-      {/* Team Member Profile Overlay */}
-      <TeamMemberProfile
-        visible={profileVisible}
-        onClose={() => setProfileVisible(false)}
-        member={selectedMember}
-      />
-
     </SafeAreaView>
   );
 }
