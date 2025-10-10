@@ -161,9 +161,11 @@ const styles = StyleSheet.create({
     elevation: 8,
     // Ensure proper mobile spacing
     marginHorizontal: sx(16),
+    // Allow dialog to expand based on content
+    alignSelf: 'center',
   },
   content: {
-    flex: 1,
+    // Remove flex: 1 to allow natural height
     paddingBottom: sy(8), // Add extra spacing at bottom of content
   },
   header: {
@@ -184,14 +186,14 @@ const styles = StyleSheet.create({
     fontSize: sx(16),
     color: COLOR.label,
     lineHeight: sy(22),
-    marginBottom: sy(32),
+    marginBottom: sy(24),
     textAlign: 'center',
     minHeight: sy(22), // Ensure message has minimum height
   },
   buttonContainer: {
     flexDirection: 'row',
     gap: sx(8),
-    marginTop: sx(16),
+    marginTop: sx(8),
   },
   button: {
     flex: 1,
