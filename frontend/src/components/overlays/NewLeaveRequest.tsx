@@ -54,8 +54,6 @@ export default function NewLeaveRequest({
   // Date picker states
   const [showFromDatePicker, setShowFromDatePicker] = React.useState(false);
   const [showToDatePicker, setShowToDatePicker] = React.useState(false);
-  const [showMobileFromPicker, setShowMobileFromPicker] = React.useState(false);
-  const [showMobileToPicker, setShowMobileToPicker] = React.useState(false);
   
   // Toast state
   const [successToast, setSuccessToast] = React.useState(false);
@@ -280,13 +278,7 @@ export default function NewLeaveRequest({
                   <Text style={styles.dateLabel}>From</Text>
                   <Pressable 
                     style={styles.dateInput} 
-                    onPress={() => {
-                      if (Platform.OS === 'web') {
-                        setShowFromDatePicker(true);
-                      } else {
-                        setShowMobileFromPicker(true);
-                      }
-                    }}
+                    onPress={() => setShowFromDatePicker(true)}
                   >
                     <Text style={styles.dateInputText}>{formatDate(fromDate)}</Text>
                     <Ionicons name="calendar-outline" size={sx(20)} color={COLOR.label} />
@@ -297,13 +289,7 @@ export default function NewLeaveRequest({
                   <Text style={styles.dateLabel}>To</Text>
                   <Pressable 
                     style={[styles.dateInput, styles.dateInputReadOnly]} 
-                    onPress={() => {
-                      if (Platform.OS === 'web') {
-                        setShowToDatePicker(true);
-                      } else {
-                        setShowMobileToPicker(true);
-                      }
-                    }}
+                    onPress={() => setShowToDatePicker(true)}
                   >
                     <Text style={styles.dateInputText}>{formatDate(toDate)}</Text>
                     <Ionicons name="calendar-outline" size={sx(20)} color="#CCCCCC" />
@@ -380,8 +366,8 @@ export default function NewLeaveRequest({
         </View>
       )}
       
-      {/* Date Pickers - Web Only */}
-      {showFromDatePicker && Platform.OS === 'web' && (
+      {/* Date Pickers */}
+      {showFromDatePicker && (
         <View style={styles.webDatePickerOverlay}>
           <Pressable 
             style={StyleSheet.absoluteFill} 
@@ -403,15 +389,13 @@ export default function NewLeaveRequest({
                 style={styles.webDateInput}
               />
             ) : (
-              <Pressable onPress={() => setShowMobileFromPicker(true)}>
-                <TextInput
-                  style={styles.webDateInput}
-                  value={fromDate.toLocaleDateString('en-US')}
-                  editable={false}
-                  placeholder="Select date"
-                  pointerEvents="none"
-                />
-              </Pressable>
+              <DateTimePicker
+                value={fromDate}
+                mode="date"
+                display="default"
+                onChange={handleFromDateChange}
+                minimumDate={new Date()}
+              />
             )}
             <View style={styles.webDatePickerButtons}>
               <Pressable 
@@ -425,7 +409,7 @@ export default function NewLeaveRequest({
         </View>
       )}
       
-      {showToDatePicker && Platform.OS === 'web' && (
+      {showToDatePicker && (
         <View style={styles.webDatePickerOverlay}>
           <Pressable 
             style={StyleSheet.absoluteFill} 
@@ -447,15 +431,13 @@ export default function NewLeaveRequest({
                 style={styles.webDateInput}
               />
             ) : (
-              <Pressable onPress={() => setShowMobileToPicker(true)}>
-                <TextInput
-                  style={styles.webDateInput}
-                  value={toDate.toLocaleDateString('en-US')}
-                  editable={false}
-                  placeholder="Select date"
-                  pointerEvents="none"
-                />
-              </Pressable>
+              <DateTimePicker
+                value={toDate}
+                mode="date"
+                display="default"
+                onChange={handleToDateChange}
+                minimumDate={fromDate}
+              />
             )}
             <View style={styles.webDatePickerButtons}>
               <Pressable 
@@ -469,36 +451,6 @@ export default function NewLeaveRequest({
         </View>
       )}
       
-      {/* Mobile DateTimePickers */}
-      {Platform.OS !== 'web' && showMobileFromPicker && (
-        <DateTimePicker
-          value={fromDate}
-          mode="date"
-          display="default"
-          onChange={(event, selectedDate) => {
-            setShowMobileFromPicker(false);
-            if (selectedDate) {
-              handleFromDateChange(event, selectedDate);
-            }
-          }}
-          minimumDate={new Date()}
-        />
-      )}
-      
-      {Platform.OS !== 'web' && showMobileToPicker && (
-        <DateTimePicker
-          value={toDate}
-          mode="date"
-          display="default"
-          onChange={(event, selectedDate) => {
-            setShowMobileToPicker(false);
-            if (selectedDate) {
-              handleToDateChange(event, selectedDate);
-            }
-          }}
-          minimumDate={fromDate}
-        />
-      )}
       
       {/* Toast notifications */}
       <SuccessToast visible={successToast} text={toastMessage} />
