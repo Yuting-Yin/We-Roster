@@ -7,7 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "plugins": ["expo-dev-client"],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -22,8 +21,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.werostermobile",
-      "usesCleartextTraffic": true
+      "package": "com.anonymous.werostermobile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
