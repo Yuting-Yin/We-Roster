@@ -29,40 +29,6 @@ export default function EditDashboard() {
     );
   };
 
-  const moveToTop = (index: number) => {
-    if (index > 0) {
-      const newComponents = [...components];
-      const item = newComponents.splice(index, 1)[0];
-      newComponents.unshift(item);
-      setComponents(newComponents);
-    }
-  };
-
-  const moveUp = (index: number) => {
-    if (index > 0) {
-      const newComponents = [...components];
-      [newComponents[index - 1], newComponents[index]] = [newComponents[index], newComponents[index - 1]];
-      setComponents(newComponents);
-    }
-  };
-
-  const moveDown = (index: number) => {
-    if (index < components.length - 1) {
-      const newComponents = [...components];
-      [newComponents[index], newComponents[index + 1]] = [newComponents[index + 1], newComponents[index]];
-      setComponents(newComponents);
-    }
-  };
-
-  const moveToBottom = (index: number) => {
-    if (index < components.length - 1) {
-      const newComponents = [...components];
-      const item = newComponents.splice(index, 1)[0];
-      newComponents.push(item);
-      setComponents(newComponents);
-    }
-  };
-
   const handleSave = async () => {
     try {
       await updateDashboardSections(components);
@@ -76,76 +42,26 @@ export default function EditDashboard() {
     <View style={styles.container}>
       <View style={styles.infoHeader}>
         <Ionicons name="information-circle-outline" size={sx(18)} color={COLOR.brand} />
-        <Text style={styles.infoText}>Tap buttons to reorder sections • Checkbox to show/hide</Text>
+        <Text style={styles.infoText}>Select which sections to display on your dashboard</Text>
       </View>
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.listContent}>
-        {components.map((item, index) => (
-          <View key={item.id} style={styles.sectionWrapper}>
-            <View style={styles.componentItem}>
-              {/* Order Number */}
-              <View style={styles.orderBadge}>
-                <Text style={styles.orderNumber}>{index + 1}</Text>
-              </View>
-              
-              {/* Checkbox and Content */}
-              <View style={styles.componentLeft}>
-                <Pressable 
-                  style={styles.checkbox} 
-                  onPress={() => handleToggleComponent(item.id)}
-                >
-                  <Ionicons 
-                    name={item.enabled ? "checkbox" : "square-outline"} 
-                    size={sx(24)} 
-                    color={item.enabled ? COLOR.brand : COLOR.label} 
-                  />
-                </Pressable>
-                <View style={styles.textContainer}>
-                  <Text style={styles.componentTitle}>{item.title}</Text>
-                  <Text style={styles.componentSubtitle}>{item.subtitle}</Text>
-                </View>
-              </View>
+        {components.map((item) => (
+          <Pressable 
+            key={item.id} 
+            style={styles.componentItem}
+            onPress={() => handleToggleComponent(item.id)}
+          >
+            <Ionicons 
+              name={item.enabled ? "checkbox" : "square-outline"} 
+              size={sx(28)} 
+              color={item.enabled ? COLOR.brand : COLOR.label} 
+            />
+            <View style={styles.textContainer}>
+              <Text style={styles.componentTitle}>{item.title}</Text>
+              <Text style={styles.componentSubtitle}>{item.subtitle}</Text>
             </View>
-            
-            {/* Reorder Action Buttons */}
-            <View style={styles.actionButtons}>
-              <Pressable 
-                style={[styles.actionButton, index === 0 && styles.actionButtonDisabled]} 
-                onPress={() => moveToTop(index)}
-                disabled={index === 0}
-              >
-                <Ionicons name="arrow-up-circle-outline" size={sx(18)} color={index === 0 ? COLOR.label : COLOR.brand} />
-                <Text style={[styles.actionButtonText, index === 0 && styles.actionButtonTextDisabled]}>Move to Top</Text>
-              </Pressable>
-              
-              <Pressable 
-                style={[styles.actionButton, index === 0 && styles.actionButtonDisabled]} 
-                onPress={() => moveUp(index)}
-                disabled={index === 0}
-              >
-                <Ionicons name="arrow-up-outline" size={sx(18)} color={index === 0 ? COLOR.label : COLOR.brand} />
-                <Text style={[styles.actionButtonText, index === 0 && styles.actionButtonTextDisabled]}>Move Up</Text>
-              </Pressable>
-              
-              <Pressable 
-                style={[styles.actionButton, index === components.length - 1 && styles.actionButtonDisabled]} 
-                onPress={() => moveDown(index)}
-                disabled={index === components.length - 1}
-              >
-                <Ionicons name="arrow-down-outline" size={sx(18)} color={index === components.length - 1 ? COLOR.label : COLOR.brand} />
-                <Text style={[styles.actionButtonText, index === components.length - 1 && styles.actionButtonTextDisabled]}>Move Down</Text>
-              </Pressable>
-              
-              <Pressable 
-                style={[styles.actionButton, index === components.length - 1 && styles.actionButtonDisabled]} 
-                onPress={() => moveToBottom(index)}
-                disabled={index === components.length - 1}
-              >
-                <Ionicons name="arrow-down-circle-outline" size={sx(18)} color={index === components.length - 1 ? COLOR.label : COLOR.brand} />
-                <Text style={[styles.actionButtonText, index === components.length - 1 && styles.actionButtonTextDisabled]}>Move to Bottom</Text>
-              </Pressable>
-            </View>
-          </View>
+          </Pressable>
         ))}
       </ScrollView>
       
@@ -182,95 +98,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    paddingBottom: sy(20),
-  },
-  sectionWrapper: {
-    backgroundColor: '#FFFFFF',
-    marginBottom: sy(12),
-    borderRadius: sx(8),
-    marginHorizontal: sx(12),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    paddingVertical: sy(12),
   },
   componentItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: sx(16),
-    paddingVertical: sy(14),
-    gap: sx(12),
-  },
-  orderBadge: {
-    width: sx(36),
-    height: sx(36),
-    borderRadius: sx(18),
-    backgroundColor: COLOR.brand,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  orderNumber: {
-    color: '#FFFFFF',
-    fontSize: sx(18),
-    fontWeight: '700',
-  },
-  componentLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: sx(10),
-  },
-  checkbox: {
-    padding: sx(4),
+    paddingHorizontal: sx(20),
+    paddingVertical: sy(16),
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: COLOR.divider,
+    gap: sx(16),
   },
   textContainer: {
     flex: 1,
   },
   componentTitle: {
     fontSize: sx(16),
-    fontWeight: '600',
+    fontWeight: '500',
     color: COLOR.ink,
     marginBottom: sy(2),
   },
   componentSubtitle: {
-    fontSize: sx(13),
+    fontSize: sx(14),
     color: COLOR.label,
-    lineHeight: sx(18),
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: sx(8),
-    paddingHorizontal: sx(16),
-    paddingBottom: sy(12),
-    paddingTop: sy(4),
-    borderTopWidth: 1,
-    borderTopColor: COLOR.divider,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sx(6),
-    paddingHorizontal: sx(12),
-    paddingVertical: sy(8),
-    backgroundColor: COLOR.subtleBlue,
-    borderRadius: sx(6),
-    borderWidth: 1,
-    borderColor: COLOR.brand,
-  },
-  actionButtonDisabled: {
-    opacity: 0.4,
-    borderColor: COLOR.divider,
-    backgroundColor: COLOR.bg,
-  },
-  actionButtonText: {
-    fontSize: sx(13),
-    fontWeight: '500',
-    color: COLOR.brand,
-  },
-  actionButtonTextDisabled: {
-    color: COLOR.label,
+    lineHeight: sx(20),
   },
   saveButtonContainer: {
     paddingHorizontal: sx(20),
