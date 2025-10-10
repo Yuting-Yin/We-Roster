@@ -51,6 +51,7 @@ export default function NewLeaveRequest({
   const [dropdownPosition, setDropdownPosition] = React.useState({ top: 0, left: 0, width: 0 });
   const dropdownRef = React.useRef<View>(null);
   const reasonInputRef = React.useRef<TextInput>(null);
+  const scrollViewRef = React.useRef<ScrollView>(null);
   
   // Date picker states
   const [showFromDatePicker, setShowFromDatePicker] = React.useState(false);
@@ -242,6 +243,7 @@ export default function NewLeaveRequest({
         <KeyboardAvoidingView 
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          style={{ flex: 1 }}
         >
           {/* Header */}
           <View style={styles.header}>
@@ -254,13 +256,18 @@ export default function NewLeaveRequest({
           <View style={styles.divider} />
 
           <ScrollView
+            ref={scrollViewRef}
             keyboardShouldPersistTaps="handled"
             style={{ flex: 1 }}
             contentContainerStyle={{ 
               paddingBottom: sy(20),
               flexGrow: 1 
             }}
-            showsVerticalScrollIndicator={false}
+            showsVerticalScrollIndicator={true}
+            scrollEventThrottle={16}
+            decelerationRate="fast"
+            bounces={true}
+            scrollsToTop={false}
           >
             {/* Select Leave Type */}
             <View style={styles.section}>
@@ -320,7 +327,10 @@ export default function NewLeaveRequest({
                   textAlignVertical="top"
                   style={styles.reasonInput}
                   onFocus={() => {
-                    // Focus handling is managed by KeyboardAvoidingView and ScrollView
+                    // Auto-scroll to reason input when keyboard appears
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollToEnd({ animated: true });
+                    }, 300);
                   }}
                 />
               </View>
