@@ -385,31 +385,15 @@ export default function NewLeaveRequest({
                 style={styles.webDateInput}
               />
             ) : (
-              <View style={styles.mobileDatePickerContainer}>
-                <Pressable onPress={() => setShowMobileFromPicker(true)}>
-                  <TextInput
-                    style={styles.webDateInput}
-                    value={fromDate.toLocaleDateString('en-US')}
-                    editable={false}
-                    placeholder="Select date"
-                    pointerEvents="none"
-                  />
-                </Pressable>
-                {showMobileFromPicker && (
-                  <DateTimePicker
-                    value={fromDate}
-                    mode="date"
-                    display="default"
-                    onChange={(event, selectedDate) => {
-                      setShowMobileFromPicker(false);
-                      if (selectedDate) {
-                        handleFromDateChange(event, selectedDate);
-                      }
-                    }}
-                    minimumDate={new Date()}
-                  />
-                )}
-              </View>
+              <Pressable onPress={() => setShowMobileFromPicker(true)}>
+                <TextInput
+                  style={styles.webDateInput}
+                  value={fromDate.toLocaleDateString('en-US')}
+                  editable={false}
+                  placeholder="Select date"
+                  pointerEvents="none"
+                />
+              </Pressable>
             )}
             <View style={styles.webDatePickerButtons}>
               <Pressable 
@@ -445,31 +429,15 @@ export default function NewLeaveRequest({
                 style={styles.webDateInput}
               />
             ) : (
-              <View style={styles.mobileDatePickerContainer}>
-                <Pressable onPress={() => setShowMobileToPicker(true)}>
-                  <TextInput
-                    style={styles.webDateInput}
-                    value={toDate.toLocaleDateString('en-US')}
-                    editable={false}
-                    placeholder="Select date"
-                    pointerEvents="none"
-                  />
-                </Pressable>
-                {showMobileToPicker && (
-                  <DateTimePicker
-                    value={toDate}
-                    mode="date"
-                    display="default"
-                    onChange={(event, selectedDate) => {
-                      setShowMobileToPicker(false);
-                      if (selectedDate) {
-                        handleToDateChange(event, selectedDate);
-                      }
-                    }}
-                    minimumDate={fromDate}
-                  />
-                )}
-              </View>
+              <Pressable onPress={() => setShowMobileToPicker(true)}>
+                <TextInput
+                  style={styles.webDateInput}
+                  value={toDate.toLocaleDateString('en-US')}
+                  editable={false}
+                  placeholder="Select date"
+                  pointerEvents="none"
+                />
+              </Pressable>
             )}
             <View style={styles.webDatePickerButtons}>
               <Pressable 
@@ -481,6 +449,37 @@ export default function NewLeaveRequest({
             </View>
           </View>
         </View>
+      )}
+      
+      {/* Mobile DateTimePickers */}
+      {Platform.OS !== 'web' && showMobileFromPicker && (
+        <DateTimePicker
+          value={fromDate}
+          mode="date"
+          display="default"
+          onChange={(event, selectedDate) => {
+            setShowMobileFromPicker(false);
+            if (selectedDate) {
+              handleFromDateChange(event, selectedDate);
+            }
+          }}
+          minimumDate={new Date()}
+        />
+      )}
+      
+      {Platform.OS !== 'web' && showMobileToPicker && (
+        <DateTimePicker
+          value={toDate}
+          mode="date"
+          display="default"
+          onChange={(event, selectedDate) => {
+            setShowMobileToPicker(false);
+            if (selectedDate) {
+              handleToDateChange(event, selectedDate);
+            }
+          }}
+          minimumDate={fromDate}
+        />
       )}
       
       {/* Toast notifications */}
