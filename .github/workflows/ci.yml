@@ -37,7 +37,7 @@ jobs:
 
       - name: Run tests
         working-directory: backend
-        run: ./gradlew clean test jacocoTestReport --no-daemon
+        run: ./gradlew clean test --no-daemon
 
   frontend:
     name: Frontend (Expo/Jest)
