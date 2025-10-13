@@ -223,7 +223,8 @@ public class SwapController {
             
             // Check if it's a validation error (user not found, etc.) or a system error (database, etc.)
             if (e.getMessage().contains("not found") || e.getMessage().contains("required") || 
-                e.getMessage().contains("Cannot swap") || e.getMessage().contains("could not be parsed")) {
+                e.getMessage().contains("Cannot swap") || e.getMessage().contains("could not be parsed") ||
+                e.getMessage().contains("already exists")) {
                 return ResponseEntity.status(400).body(response);
             } else {
                 return ResponseEntity.status(500).body(response);
