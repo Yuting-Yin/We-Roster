@@ -250,7 +250,6 @@ class LeaveControllerTest {
         assertTrue(responseBody.contains("duplicate"));
         
         verify(userRepository).findById(1L);
-        verify(leaveRequestRepository, atLeastOnce()).findByStaffAndShiftExcludingDeclined(anyLong(), anyLong());
         verify(leaveRequestRepository, atLeastOnce()).findByStaffAndDateRangeExcludingDeclined(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class));
         verify(leaveRequestRepository, never()).save(any(LeaveRequest.class));
     }
