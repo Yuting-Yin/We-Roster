@@ -20,6 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -90,8 +91,8 @@ class LeaveControllerTest {
     void createLeaveRequest_WithValidAllDayRequest_ShouldReturnSuccess() {
         // Arrange
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(leaveRequestRepository.findByStaffAndDateRange(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class)))
-                .thenReturn(Arrays.asList());
+        when(leaveRequestRepository.findByStaffAndDateRangeExcludingDeclined(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(Collections.emptyList());
         
         LeaveRequest savedLeaveRequest = new LeaveRequest();
         savedLeaveRequest.setId(1L);
@@ -108,7 +109,7 @@ class LeaveControllerTest {
         assertNotNull(response.getBody());
         
         verify(userRepository).findById(1L);
-        verify(leaveRequestRepository).findByStaffAndDateRange(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class));
+        verify(leaveRequestRepository).findByStaffAndDateRangeExcludingDeclined(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class));
         verify(leaveRequestRepository).save(any(LeaveRequest.class));
     }
 
@@ -122,8 +123,10 @@ class LeaveControllerTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
         when(shiftRepository.findById(1L)).thenReturn(Optional.of(testShift));
-        when(leaveRequestRepository.findByStaffAndDateRange(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class)))
-                .thenReturn(Arrays.asList());
+        when(leaveRequestRepository.findByStaffAndShiftExcludingDeclined(anyLong(), anyLong()))
+                .thenReturn(Collections.emptyList());
+        when(leaveRequestRepository.findByStaffAndDateRangeExcludingDeclined(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(Collections.emptyList());
         LeaveRequest savedLeaveRequest = new LeaveRequest();
         savedLeaveRequest.setId(2L);
         savedLeaveRequest.setStaff(testStaff);
@@ -140,7 +143,8 @@ class LeaveControllerTest {
         
         verify(userRepository).findById(1L);
         verify(shiftRepository).findById(1L);
-        verify(leaveRequestRepository).findByStaffAndDateRange(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class));
+        verify(leaveRequestRepository).findByStaffAndShiftExcludingDeclined(anyLong(), anyLong());
+        verify(leaveRequestRepository).findByStaffAndDateRangeExcludingDeclined(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class));
         verify(leaveRequestRepository).save(any(LeaveRequest.class));
     }
 
@@ -196,7 +200,7 @@ class LeaveControllerTest {
         existingLeave.setStatus("PENDING");
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(leaveRequestRepository.findByStaffAndDateRange(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class)))
+        when(leaveRequestRepository.findByStaffAndDateRangeExcludingDeclined(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(Arrays.asList(existingLeave));
 
         // Act
@@ -210,7 +214,7 @@ class LeaveControllerTest {
         assertTrue(responseBody.contains("duplicate"));
         
         verify(userRepository).findById(1L);
-        verify(leaveRequestRepository).findByStaffAndDateRange(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class));
+        verify(leaveRequestRepository).findByStaffAndDateRangeExcludingDeclined(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class));
         verify(leaveRequestRepository, never()).save(any(LeaveRequest.class));
     }
 
@@ -231,7 +235,9 @@ class LeaveControllerTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
         when(shiftRepository.findById(1L)).thenReturn(Optional.of(testShift));
-        when(leaveRequestRepository.findByStaffAndDateRange(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class)))
+        when(leaveRequestRepository.findByStaffAndShiftExcludingDeclined(anyLong(), anyLong()))
+                .thenReturn(Arrays.asList(existingLeave));
+        when(leaveRequestRepository.findByStaffAndDateRangeExcludingDeclined(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(Arrays.asList(existingLeave));
 
         // Act
@@ -245,7 +251,8 @@ class LeaveControllerTest {
         assertTrue(responseBody.contains("duplicate"));
         
         verify(userRepository).findById(1L);
-        verify(leaveRequestRepository).findByStaffAndDateRange(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class));
+        verify(leaveRequestRepository).findByStaffAndShiftExcludingDeclined(anyLong(), anyLong());
+        verify(leaveRequestRepository).findByStaffAndDateRangeExcludingDeclined(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class));
         verify(leaveRequestRepository, never()).save(any(LeaveRequest.class));
     }
 

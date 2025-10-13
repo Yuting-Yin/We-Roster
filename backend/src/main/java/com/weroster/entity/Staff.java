@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -16,6 +18,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(exclude = {"hospital", "designation", "user", "staffDepartments", "shiftAssignments"})
+@ToString(exclude = {"hospital", "designation", "user", "staffDepartments", "shiftAssignments"})
 public class Staff {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
