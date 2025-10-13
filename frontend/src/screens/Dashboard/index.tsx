@@ -493,7 +493,7 @@ export default function Dashboard() {
             actionLabel="View My Team" 
             onAction={handleViewMyTeam}
             data={loading && duty.length === 0 ? placeholderArray<DutyItem>(3) : duty}
-            keyExtractor={(i, idx) => (i?.id ?? `duty-skel-${idx}`)}
+            keyExtractor={(i, idx) => (i?.id ? `duty-${i.id}` : `duty-skel-${idx}`)}
             contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
             renderItem={({ item }) => (item?.id ? <DutyCard item={item} onPress={() => handleDutyPress(item)} /> : <DutyCardSkeleton />)}
             flatListProps={dutySnap}
@@ -512,7 +512,7 @@ export default function Dashboard() {
             actionLabel="View All" 
             onAction={() => navigation.navigate('Roster', { screen: 'MY ROSTER' })}
             data={weekLoading && myShifts.length === 0 ? placeholderArray<ShiftItem>(3) : myShifts}
-            keyExtractor={(i, idx) => (i?.id ?? `myshift-skel-${idx}`)}
+            keyExtractor={(i, idx) => (i?.id ? `myshift-${i.id}` : `myshift-skel-${idx}`)}
             contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
             renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => handleShiftPress(item)} /> : <ShiftCardSkeleton />)}
             flatListProps={myShiftSnap}
@@ -531,7 +531,7 @@ export default function Dashboard() {
             actionLabel="View All" 
             onAction={() => navigation.navigate('Roster', { screen: 'OPEN SHIFTS' })}
             data={openShiftsLoading && openShiftsFormatted.length === 0 ? placeholderArray<any>(3) : openShiftsFormatted}
-            keyExtractor={(i, idx) => (i?.id ?? `openshift-skel-${idx}`)}
+            keyExtractor={(i, idx) => (i?.id ? `openshift-${i.id}` : `openshift-skel-${idx}`)}
             contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
             renderItem={({ item }) => (item?.id ? <ShiftCard item={item} onPress={() => handleOpenShiftPress(item)} /> : <ShiftCardSkeleton />)}
             flatListProps={openShiftSnap}
@@ -550,7 +550,7 @@ export default function Dashboard() {
             actionLabel="View All" 
             onAction={() => navigation.navigate('My Request')}
             data={leavesLoading && leaves.length === 0 ? placeholderArray<LeaveItem>(3) : leaves}
-            keyExtractor={(i, idx) => String(i?.id ?? `leave-skel-${idx}`)}
+            keyExtractor={(i, idx) => (i?.id ? `leave-${i.id}` : `leave-skel-${idx}`)}
             contentContainerStyle={{ paddingHorizontal: LEFT_PAD }}
             renderItem={({ item }) => (item?.id ? <LeaveCard item={item} onPress={() => handleLeavePress(item)} /> : <LeaveCardSkeleton />)}
             flatListProps={leaveSnap}
