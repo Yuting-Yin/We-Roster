@@ -124,8 +124,8 @@ export default function Dashboard() {
   const { assignments: dutyAssignments, loading: dutyLoading, error: dutyError, refresh: refreshDuty } = useDutyAssignments();
   
   // Convert duty assignments to DutyItem format for compatibility
-  const duty: DutyItem[] = dutyAssignments.map(assignment => ({
-    id: assignment.staffId,
+  const duty: DutyItem[] = dutyAssignments.map((assignment, index) => ({
+    id: `${assignment.staffId}-${assignment.shiftId}-${index}`, // Create unique ID by combining staffId, shiftId, and index
     initials: assignment.staffInitials,
     name: assignment.staffName,
     role: assignment.staffDesignation,
