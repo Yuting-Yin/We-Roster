@@ -112,7 +112,7 @@ export default function DayTimeline({
           const endMinutes = toMinutes(ev.end);
           const isOvernight = endMinutes < startMinutes;
           const isOpenShift = ev.action === 'plus';
-          const isPastEvent = isDateInPast(ev.date);
+          const isPastEvent = isDateInPast(new Date());
           
           // For overnight shifts, we'll show them as two separate visual elements
           // or adjust the rendering to handle the midnight crossover

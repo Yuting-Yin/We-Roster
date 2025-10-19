@@ -81,15 +81,11 @@ export default function History() {
       // Convert LeaveItem to RequestCardData format
       const requestData: RequestCardData = {
         id: params.leaveId.toString(),
-        type: params.leaveData.type,
+        requestType: 'Leave Request' as any,
+        requestSubType: params.leaveData.type as any,
         status: params.leaveData.state === 'Approved' || params.leaveData.state === 'APPROVED' ? 'APPROVED' : 'AWAITING',
         date: params.leaveData.date,
-        time: params.leaveData.category,
-        reason: params.leaveData.reason || '',
-        requestDate: params.leaveData.requestDate || '',
-        startTime: params.leaveData.startTime || '',
-        endTime: params.leaveData.endTime || '',
-        shiftId: '', // Leave requests don't have shift IDs
+        timeRange: params.leaveData.category,
       };
       
       setSelectedRequest(requestData);

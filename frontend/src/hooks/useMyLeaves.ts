@@ -94,7 +94,7 @@ export function useMyLeaves(month?: string, opts: Options = {}) {
           const endTime = new Date(leave.endTime);
           
           // Map status to display format
-          const statusMap: Record<string, string> = {
+          const statusMap: Record<string, "Approved" | "Awaiting" | "Declined" | "PENDING" | "APPROVED" | "REJECTED"> = {
             'PENDING': 'Awaiting',
             'APPROVED': 'Approved',
             'REJECTED': 'Declined'
@@ -137,7 +137,7 @@ export function useMyLeaves(month?: string, opts: Options = {}) {
             date: dateString, // Format as "Start Date - End Date" or just date if Day Leave or same day
             type: leave.leaveType,
             category: category,
-            state: statusMap[leave.status] || leave.status,
+            state: statusMap[leave.status] || (leave.status as "Approved" | "Awaiting" | "Declined" | "PENDING" | "APPROVED" | "REJECTED"),
             requestDate: leave.requestDate,
             startTime: leave.startTime,
             endTime: leave.endTime,
