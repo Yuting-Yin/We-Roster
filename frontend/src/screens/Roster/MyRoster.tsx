@@ -93,8 +93,17 @@ export default function MyRoster() {
   // Convert open shifts to EventItem format and filter for current date
   const openShiftEvents = useMemo(() => {
     const dateKey = date.toISOString().split('T')[0];
+    console.log('🔍 MyRoster - Processing open shifts:', {
+      selectedDate: date.toISOString(),
+      dateKey,
+      allOpenShifts: openShiftsData.map(s => ({ id: s.id, date: s.date, start: s.start, end: s.end }))
+    });
     return openShiftsData
-      .filter(shift => shift.date === dateKey)
+      .filter(shift => {
+        const matches = shift.date === dateKey;
+        console.log('🔍 MyRoster - Shift filtering:', { shiftId: shift.id, shiftDate: shift.date, dateKey, matches });
+        return matches;
+      })
       .map(shift => ({
         id: `openshift-${shift.id}`,
         start: shift.start,
@@ -532,7 +541,7 @@ export default function MyRoster() {
                 ]);
               } catch (e) {
                 console.error('Error refreshing data:', e);
-                setUserErr(e?.message ?? "Failed to load users");
+                setUserErr((e as Error)?.message ?? "Failed to load users");
               } finally {
                 setLoadingUsers(false);
                 stopRefreshAnimation();

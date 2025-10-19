@@ -386,7 +386,8 @@ public class OpenShiftController {
         System.out.println("🔍 OpenShiftController - Converting open shift " + openShift.getId() + 
                           ": startTs=" + shift.getStartTs() + 
                           ", endTs=" + shift.getEndTs() + 
-                          ", date=" + dateStr);
+                          ", date=" + dateStr + 
+                          ", originalLocalDate=" + shift.getStartTs().toLocalDate());
         
         OpenShiftDto.OpenShiftDtoBuilder builder = OpenShiftDto.builder()
             .id(openShift.getId())
