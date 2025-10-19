@@ -90,6 +90,18 @@ export default function MyRoster() {
   const weekStartDate = useMemo(() => startOfWeekMon(date), [date]);
   const { openShifts: openShiftsData, loading: openShiftsLoading, error: openShiftsError, refresh: refreshOpenShifts } = useOpenShiftsWeek(weekStartDate, user?.email);
   
+  // Debug: Log all open shifts data
+  React.useEffect(() => {
+    console.log('🔍 MyRoster - All open shifts data:', openShiftsData.map(s => ({ 
+      id: s.id, 
+      date: s.date, 
+      start: s.start, 
+      end: s.end,
+      originalStartTs: s.startTs,
+      originalEndTs: s.endTs
+    })));
+  }, [openShiftsData]);
+  
   // Convert open shifts to EventItem format and filter for current date
   const openShiftEvents = useMemo(() => {
     const dateKey = date.toISOString().split('T')[0];
@@ -119,6 +131,11 @@ export default function MyRoster() {
   // If an open shift has the same time as a regular shift, merge them into ONE card
   // If multiple open shifts have the same time, show only one with a "view more" link
   const events = useMemo(() => {
+    console.log('🔍 MyRoster - Combining events for date:', {
+      selectedDate: date.toISOString().split('T')[0],
+      myShifts: myShifts.map(s => ({ id: s.id, start: s.start, end: s.end, action: s.action })),
+      openShiftEvents: openShiftEvents.map(s => ({ id: s.id, start: s.start, end: s.end, action: s.action }))
+    });
     const merged: EventItem[] = [];
     const usedOpenShiftIds = new Set<string>();
     
