@@ -93,17 +93,8 @@ export default function MyRoster() {
   // Convert open shifts to EventItem format and filter for current date
   const openShiftEvents = useMemo(() => {
     const dateKey = date.toISOString().split('T')[0];
-    console.log('🔍 MyRoster - Processing open shifts:', {
-      selectedDate: date.toISOString(),
-      dateKey,
-      allOpenShifts: openShiftsData.map(s => ({ id: s.id, date: s.date, start: s.start, end: s.end }))
-    });
     return openShiftsData
-      .filter(shift => {
-        const matches = shift.date === dateKey;
-        console.log('🔍 MyRoster - Shift filtering:', { shiftId: shift.id, shiftDate: shift.date, dateKey, matches });
-        return matches;
-      })
+      .filter(shift => shift.date === dateKey)
       .map(shift => ({
         id: `openshift-${shift.id}`,
         start: shift.start,
@@ -566,13 +557,8 @@ export default function MyRoster() {
             // Combine regular shifts and open shifts for the week view
             const regularShifts = getEventsForDate(d);
             const dateKey = d.toISOString().split('T')[0];
-            console.log('🔍 WeekView - Processing date:', { date: d.toISOString(), dateKey });
             const openShifts = openShiftsData
-              .filter(shift => {
-                const matches = shift.date === dateKey;
-                console.log('🔍 WeekView - Shift filtering:', { shiftId: shift.id, shiftDate: shift.date, dateKey, matches });
-                return matches;
-              })
+              .filter(shift => shift.date === dateKey)
               .map(shift => ({
                 id: `openshift-${shift.id}`,
                 start: shift.start,
