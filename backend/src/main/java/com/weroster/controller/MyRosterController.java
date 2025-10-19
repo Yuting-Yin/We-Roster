@@ -435,7 +435,7 @@ public class MyRosterController {
             
             // Build response
             ShiftDetailsDto response = ShiftDetailsDto.builder()
-                .date(shift.getStartTs().toLocalDate().toString())
+                .date(shift.getStartTs().toInstant(java.time.ZoneOffset.UTC).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString())
                 .shiftId(shift.getId())
                 .startTime(shift.getStartTs().format(DateTimeFormatter.ofPattern("HH:mm")))
                 .endTime(shift.getEndTs().format(DateTimeFormatter.ofPattern("HH:mm")))
@@ -561,7 +561,7 @@ public class MyRosterController {
             // Group assignments by date
             Map<String, List<ShiftAssignment>> assignmentsByDate = assignments.stream()
                 .collect(Collectors.groupingBy(
-                    sa -> sa.getShift().getStartTs().toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE)
+                    sa -> sa.getShift().getStartTs().toInstant(java.time.ZoneOffset.UTC).atZone(java.time.ZoneOffset.UTC).toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE)
                 ));
             
             // Process each date
