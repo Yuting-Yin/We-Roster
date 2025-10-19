@@ -13,7 +13,7 @@ import SwapShift from "@/components/overlays/SwapShift";
 import TinyMenu from "@/components/overlays/TinyMenu";
 import SuccessToast from "@/components/overlays/SuccessToast";
 import { COLOR } from "@/theme/colors";
-import { sx } from "@/theme/metrics";
+import { sx, sy } from "@/theme/metrics";
 import { EventItem } from "@/types/roster";
 import { fmt } from "@/lib/date";
 
@@ -90,9 +90,26 @@ export default function MyRoster() {
   const weekStartDate = useMemo(() => startOfWeekMon(date), [date]);
   const { openShifts: openShiftsData, loading: openShiftsLoading, error: openShiftsError, refresh: refreshOpenShifts } = useOpenShiftsWeek(weekStartDate, user?.email);
   
+  // Debug: Log all open shifts data
+  React.useEffect(() => {
+    console.log('🔍 MyRoster - All open shifts data:', openShiftsData.map(s => ({ 
+      id: s.id, 
+      date: s.date, 
+      start: s.start, 
+      end: s.end,
+      originalStartTs: s.startTs,
+      originalEndTs: s.endTs
+    })));
+  }, [openShiftsData]);
+  
+  // Use local date to avoid timezone conversion issues
+  const dateKey = useMemo(() => 
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`, 
+    [date]
+  );
+
   // Convert open shifts to EventItem format and filter for current date
   const openShiftEvents = useMemo(() => {
-    const dateKey = date.toISOString().split('T')[0];
     return openShiftsData
       .filter(shift => shift.date === dateKey)
       .map(shift => ({
@@ -119,6 +136,11 @@ export default function MyRoster() {
   // If an open shift has the same time as a regular shift, merge them into ONE card
   // If multiple open shifts have the same time, show only one with a "view more" link
   const events = useMemo(() => {
+    console.log('🔍 MyRoster - Combining events for date:', {
+      selectedDate: dateKey,
+      myShifts: myShifts.map(s => ({ id: s.id, start: s.start, end: s.end, action: s.action })),
+      openShiftEvents: openShiftEvents.map(s => ({ id: s.id, start: s.start, end: s.end, action: s.action }))
+    });
     const merged: EventItem[] = [];
     const usedOpenShiftIds = new Set<string>();
     
@@ -235,7 +257,14 @@ export default function MyRoster() {
   const [swapVisible, setSwapVisible] = React.useState(false);
 
   const [toast, setToast] = React.useState(false);
+  const [errorToast, setErrorToast] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState("");
   const showToast = () => { setToast(true); setTimeout(() => setToast(false), 1800); };
+  const showErrorToast = (message: string) => { 
+    setErrorMessage(message); 
+    setErrorToast(true); 
+    setTimeout(() => setErrorToast(false), 3000); 
+  };
 
   // Refresh animation state
   const [isRefreshing, setIsRefreshing] = React.useState(false);
@@ -346,6 +375,7 @@ export default function MyRoster() {
     registerOverlay('myroster-leave', () => setLeaveVisible(false));
     registerOverlay('myroster-swap', () => setSwapVisible(false));
     registerOverlay('myroster-toast', () => setToast(false));
+    registerOverlay('myroster-error-toast', () => setErrorToast(false));
     
     return () => {
       unregisterOverlay('myroster-detail');
@@ -355,6 +385,7 @@ export default function MyRoster() {
       unregisterOverlay('myroster-leave');
       unregisterOverlay('myroster-swap');
       unregisterOverlay('myroster-toast');
+      unregisterOverlay('myroster-error-toast');
     };
   }, [registerOverlay, unregisterOverlay]);
 
@@ -366,7 +397,8 @@ export default function MyRoster() {
     () => setReqVisible(false),
     () => setLeaveVisible(false),
     () => setSwapVisible(false),
-    () => setToast(false)
+    () => setToast(false),
+    () => setErrorToast(false)
   ]);
 
   // Track if we've already restored to prevent multiple restorations
@@ -451,7 +483,8 @@ export default function MyRoster() {
       setOpenShiftDetailVisible(false);
       refreshOpenShifts(); // Refresh open shifts data
     } else if (result.error) {
-      // Show error toast or handle error
+      // Show user-friendly error toast
+      showErrorToast(result.error);
       console.error("Failed to apply for open shift:", result.error);
     }
   };
@@ -532,7 +565,7 @@ export default function MyRoster() {
                 ]);
               } catch (e) {
                 console.error('Error refreshing data:', e);
-                setUserErr(e?.message ?? "Failed to load users");
+                setUserErr((e as Error)?.message ?? "Failed to load users");
               } finally {
                 setLoadingUsers(false);
                 stopRefreshAnimation();
@@ -556,7 +589,8 @@ export default function MyRoster() {
           getEventsFor={(d) => {
             // Combine regular shifts and open shifts for the week view
             const regularShifts = getEventsForDate(d);
-            const dateKey = d.toISOString().split('T')[0];
+            // Use local date to avoid timezone conversion issues
+            const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             const openShifts = openShiftsData
               .filter(shift => shift.date === dateKey)
               .map(shift => ({
@@ -707,11 +741,41 @@ export default function MyRoster() {
       />
 
       <SuccessToast visible={toast} text="Successfully submitted" />
+      
+      {/* Error Toast */}
+      {errorToast && (
+        <View style={styles.errorToast}>
+          <Ionicons name="alert-circle-outline" size={sx(18)} color={COLOR.warn} />
+          <Text style={styles.errorToastText}>{errorMessage}</Text>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   calendarStack: { position: "relative", zIndex: 2, elevation: 4 },
+  errorToast: {
+    position: "absolute", 
+    left: sx(16), 
+    right: sx(16), 
+    bottom: sy(16),
+    backgroundColor: COLOR.warnBg, 
+    borderWidth: 1, 
+    borderColor: COLOR.warn,
+    borderRadius: sx(10), 
+    paddingVertical: sy(10), 
+    paddingHorizontal: sx(12),
+    flexDirection: "row", 
+    alignItems: "center", 
+    zIndex: 60, 
+    elevation: 16,
+  },
+  errorToastText: { 
+    marginLeft: sx(8), 
+    color: COLOR.warn, 
+    fontSize: sx(14), 
+    fontWeight: "600" 
+  },
 });
 

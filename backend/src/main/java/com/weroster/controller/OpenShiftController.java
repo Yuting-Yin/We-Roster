@@ -378,11 +378,22 @@ public class OpenShiftController {
             hospitalAddress = shift.getDepartment().getHospital().getAddress();
         }
         
+        // Use the start timestamp to determine the date, but ensure we're using the correct timezone
+        // For overnight shifts, the date should be based on when the shift STARTS, not when it ends
+        // Convert to UTC to avoid timezone issues - the date should be based on the actual start time
+        LocalDate startDate = shift.getStartTs().toInstant(java.time.ZoneOffset.UTC).atZone(java.time.ZoneOffset.UTC).toLocalDate();
+        String dateStr = startDate.format(dateFormatter);
+        System.out.println("🔍 OpenShiftController - Converting open shift " + openShift.getId() + 
+                          ": startTs=" + shift.getStartTs() + 
+                          ", endTs=" + shift.getEndTs() + 
+                          ", date=" + dateStr + 
+                          ", originalLocalDate=" + shift.getStartTs().toLocalDate());
+        
         OpenShiftDto.OpenShiftDtoBuilder builder = OpenShiftDto.builder()
             .id(openShift.getId())
             .startTs(shift.getStartTs())
             .endTs(shift.getEndTs())
-            .date(shift.getStartTs().toLocalDate().format(dateFormatter))
+            .date(dateStr)
             .start(shift.getStartTs().format(timeFormatter))
             .end(shift.getEndTs().format(timeFormatter))
             .session(shift.getType())

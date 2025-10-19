@@ -14,8 +14,8 @@ export function useAutoCloseOverlays(overlayStates: Array<() => void>) {
 
   useEffect(() => {
     // Listen for tab press events
-    const unsubscribeTabPress = navigation.addListener('tabPress', () => {
-      // Close all overlays when any tab is pressed
+    const unsubscribeTabPress = navigation.addListener('state', () => {
+      // Close all overlays when navigation state changes (including tab presses)
       closeAllOverlays();
     });
 

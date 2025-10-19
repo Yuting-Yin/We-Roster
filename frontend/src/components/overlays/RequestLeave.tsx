@@ -38,7 +38,7 @@ export default function RequestLeave({
   
   // Determine leave type based on allDay toggle
   const leaveType = React.useMemo(() => {
-    return allDay ? "Day Leave" : "Partial Leave";
+    return allDay ? "Day Leave" : "Shift Leave";
   }, [allDay]);
   const [submitting, setSubmitting] = React.useState(false);
   
