@@ -381,7 +381,7 @@ public class OpenShiftController {
         // Use the start timestamp to determine the date, but ensure we're using the correct timezone
         // For overnight shifts, the date should be based on when the shift STARTS, not when it ends
         // Convert to UTC to avoid timezone issues - the date should be based on the actual start time
-        LocalDate startDate = shift.getStartTs().toInstant().atZone(java.time.ZoneOffset.UTC).toLocalDate();
+        LocalDate startDate = shift.getStartTs().toInstant(java.time.ZoneOffset.UTC).atZone(java.time.ZoneOffset.UTC).toLocalDate();
         String dateStr = startDate.format(dateFormatter);
         System.out.println("🔍 OpenShiftController - Converting open shift " + openShift.getId() + 
                           ": startTs=" + shift.getStartTs() + 
