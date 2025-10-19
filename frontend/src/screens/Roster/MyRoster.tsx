@@ -566,8 +566,13 @@ export default function MyRoster() {
             // Combine regular shifts and open shifts for the week view
             const regularShifts = getEventsForDate(d);
             const dateKey = d.toISOString().split('T')[0];
+            console.log('🔍 WeekView - Processing date:', { date: d.toISOString(), dateKey });
             const openShifts = openShiftsData
-              .filter(shift => shift.date === dateKey)
+              .filter(shift => {
+                const matches = shift.date === dateKey;
+                console.log('🔍 WeekView - Shift filtering:', { shiftId: shift.id, shiftDate: shift.date, dateKey, matches });
+                return matches;
+              })
               .map(shift => ({
                 id: `openshift-${shift.id}`,
                 start: shift.start,
