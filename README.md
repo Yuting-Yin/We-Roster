@@ -151,7 +151,7 @@ We-Roster/
 ### Sprint 3
 | Date | Description | Commit Log |
 | ---- | ----------- | --- |
-| [Date] | [Description] | [commit-hash] |
+| 26-Sep-2025 | Final version | [59b0979][59b0979b3ab146e79cc755c5c00e01eb8932201c](https://github.com/Yuting-Yin/We-Roster/commit/59b0979b3ab146e79cc755c5c00e01eb8932201c) |
 
 ## Repository
 **GitHub**: [https://github.com/Yuting-Yin/We-Roster](https://github.com/Yuting-Yin/We-Roster)
