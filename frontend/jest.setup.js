@@ -70,10 +70,10 @@ jest.mock('react-native', () => {
     reset: jest.fn(),
   });
 
-  return {
+  const mockedModule = {
     ...RN,
     Alert: { alert: jest.fn() },
-    Platform: { ...RN.Platform, OS: 'ios', select: jest.fn((obj) => obj.ios) },
+    Platform: RN.Platform,
     Dimensions: {
       ...RN.Dimensions,
       get: jest.fn(() => ({ width: 375, height: 667 })),
@@ -100,10 +100,27 @@ jest.mock('react-native', () => {
       DevMenu: {},
     },
   };
+
+  return mockedModule;
 });
 
 // Global fetch mock
 global.fetch = jest.fn();
+
+// Post-mock tweaks for Platform utilities
+const RN = require('react-native');
+
+Object.defineProperty(RN.Platform, 'OS', {
+  value: 'ios',
+  configurable: true,
+});
+
+if (typeof RN.Platform.select === 'function') {
+  jest.spyOn(RN.Platform, 'select').mockImplementation((options) => {
+    if (!options) return undefined;
+    return options.ios ?? options.default ?? Object.values(options)[0];
+  });
+}
 
 // Mock console methods to reduce noise in tests
 global.console = {
