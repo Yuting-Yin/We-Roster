@@ -38,6 +38,29 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 // Mock React Native primitives while preserving default implementations
+jest.mock('react-native/Libraries/TurboModule/TurboModuleRegistry', () => {
+  const emptyModule = {
+    addListener: jest.fn(),
+    removeListeners: jest.fn(),
+    dismiss: jest.fn(),
+    reload: jest.fn(),
+    show: jest.fn(),
+    setCallback: jest.fn(),
+  };
+
+  return {
+    __esModule: true,
+    default: {
+      get: jest.fn(() => emptyModule),
+      getEnforcing: jest.fn(() => emptyModule),
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+    },
+    get: jest.fn(() => emptyModule),
+    getEnforcing: jest.fn(() => emptyModule),
+  };
+});
+
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
 
@@ -71,6 +94,10 @@ jest.mock('react-native', () => {
       create: jest.fn(() => ({
         panHandlers: {},
       })),
+    },
+    NativeModules: {
+      ...RN.NativeModules,
+      DevMenu: {},
     },
   };
 });
