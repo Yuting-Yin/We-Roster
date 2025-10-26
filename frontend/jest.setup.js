@@ -80,16 +80,9 @@ jest.mock('react-native', () => {
     reset: jest.fn(),
   });
 
-  const mockedModule = {
+  return {
     ...RN,
     Alert: { alert: jest.fn() },
-    Platform: RN.Platform,
-    Dimensions: {
-      ...RN.Dimensions,
-      get: jest.fn(() => ({ width: 375, height: 667 })),
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-    },
     Animated: {
       ...RN.Animated,
       timing: jest.fn(() => createAnimationMock()),
@@ -110,8 +103,6 @@ jest.mock('react-native', () => {
       DevMenu: {},
     },
   };
-
-  return mockedModule;
 });
 
 // Global fetch mock
@@ -125,11 +116,24 @@ Object.defineProperty(RN.Platform, 'OS', {
   configurable: true,
 });
 
-if (typeof RN.Platform.select === 'function') {
-  jest.spyOn(RN.Platform, 'select').mockImplementation((options) => {
-    if (!options) return undefined;
-    return options.ios ?? options.default ?? Object.values(options)[0];
-  });
+RN.Platform.select = jest.fn((options) => {
+  if (!options) return undefined;
+  return options.ios ?? options.default ?? Object.values(options)[0];
+});
+
+jest.spyOn(RN.Dimensions, 'get').mockImplementation(() => ({
+  width: 375,
+  height: 667,
+}));
+
+if (typeof RN.Dimensions.addEventListener === 'function') {
+  jest.spyOn(RN.Dimensions, 'addEventListener').mockImplementation(() => ({
+    remove: jest.fn(),
+  }));
+}
+
+if (typeof RN.Dimensions.removeEventListener === 'function') {
+  jest.spyOn(RN.Dimensions, 'removeEventListener').mockImplementation(() => {});
 }
 
 // Mock console methods to reduce noise in tests
