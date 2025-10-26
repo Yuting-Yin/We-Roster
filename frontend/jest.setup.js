@@ -21,6 +21,16 @@ jest.mock('@expo/vector-icons', () => ({
   Feather: 'Feather',
 }));
 
+jest.mock('react-native/Libraries/Utilities/NativePlatformConstantsIOS', () => ({
+  getConstants: () => ({
+    forceTouchAvailable: false,
+    interfaceIdiom: 'phone',
+    isTesting: true,
+    osVersion: '14.5',
+    systemName: 'iOS',
+  }),
+}));
+
 // Mock navigation
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
