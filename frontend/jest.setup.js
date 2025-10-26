@@ -37,84 +37,40 @@ jest.mock('@react-navigation/native', () => ({
   },
 }));
 
-// Mock React Native components
+// Mock React Native primitives while preserving default implementations
 jest.mock('react-native', () => {
-  // Mock specific components that are commonly used
-  const mockComponent = (name) => {
-    const Component = function(props) {
-      return props.children || null;
-    };
-    Component.displayName = name;
-    return Component;
-  };
+  const RN = jest.requireActual('react-native');
+
+  const createAnimationMock = () => ({
+    start: jest.fn(),
+    stop: jest.fn(),
+    reset: jest.fn(),
+  });
 
   return {
-    Alert: {
-      alert: jest.fn(),
-    },
-    Platform: {
-      OS: 'ios',
-      select: jest.fn((obj) => obj.ios),
-    },
-    NativeModules: {
-      DevMenu: {},
-    },
-    // Mock commonly used components
-    View: mockComponent('View'),
-    Text: mockComponent('Text'),
-    TouchableOpacity: mockComponent('TouchableOpacity'),
-    ScrollView: mockComponent('ScrollView'),
-    FlatList: mockComponent('FlatList'),
-    SafeAreaView: mockComponent('SafeAreaView'),
-    StyleSheet: {
-      create: jest.fn((styles) => styles),
-      flatten: jest.fn(),
-    },
+    ...RN,
+    Alert: { alert: jest.fn() },
+    Platform: { ...RN.Platform, OS: 'ios', select: jest.fn((obj) => obj.ios) },
     Dimensions: {
+      ...RN.Dimensions,
       get: jest.fn(() => ({ width: 375, height: 667 })),
       addEventListener: jest.fn(),
       removeEventListener: jest.fn(),
     },
-    // Add other commonly used React Native exports
     Animated: {
-      View: mockComponent('Animated.View'),
-      Text: mockComponent('Animated.Text'),
-      Value: jest.fn(),
-      timing: jest.fn(),
-      spring: jest.fn(),
-      decay: jest.fn(),
-      sequence: jest.fn(),
-      parallel: jest.fn(),
-      stagger: jest.fn(),
-      loop: jest.fn(),
-      event: jest.fn(),
-      createAnimatedComponent: jest.fn(),
+      ...RN.Animated,
+      timing: jest.fn(() => createAnimationMock()),
+      spring: jest.fn(() => createAnimationMock()),
+      decay: jest.fn(() => createAnimationMock()),
+      sequence: jest.fn(() => createAnimationMock()),
+      parallel: jest.fn(() => createAnimationMock()),
+      loop: jest.fn(() => createAnimationMock()),
     },
     PanResponder: {
-      create: jest.fn(),
-    },
-    Easing: {
-      linear: jest.fn(),
-      ease: jest.fn(),
-      quad: jest.fn(),
-      cubic: jest.fn(),
-      poly: jest.fn(),
-      sin: jest.fn(),
-      circle: jest.fn(),
-      exp: jest.fn(),
-      elastic: jest.fn(),
-      back: jest.fn(),
-      bounce: jest.fn(),
-      bezier: jest.fn(),
-      in: jest.fn(),
-      out: jest.fn(),
-      inOut: jest.fn(),
-    },
-    PixelRatio: {
-      get: jest.fn(() => 2),
-      getFontScale: jest.fn(() => 1),
-      getPixelSizeForLayoutSize: jest.fn((layoutSize) => layoutSize * 2),
-      roundToNearestPixel: jest.fn((layoutSize) => Math.round(layoutSize * 2) / 2),
+      ...RN.PanResponder,
+      create: jest.fn(() => ({
+        panHandlers: {},
+      })),
     },
   };
 });
