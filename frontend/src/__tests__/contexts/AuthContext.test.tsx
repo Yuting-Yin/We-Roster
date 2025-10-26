@@ -2,6 +2,7 @@ import React from 'react';
 import { render, act, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { API_BASE } from '@/lib/api';
 
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -103,7 +104,7 @@ describe('AuthContext', () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'http://192.168.0.173:8080/api/v1/auth/login',
+      `${API_BASE}/api/v1/auth/login`,
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

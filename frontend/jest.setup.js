@@ -14,6 +14,13 @@ jest.mock('expo-clipboard', () => ({
   setStringAsync: jest.fn(),
 }));
 
+jest.mock('@expo/vector-icons', () => ({
+  Ionicons: 'Ionicons',
+  MaterialIcons: 'MaterialIcons',
+  AntDesign: 'AntDesign',
+  Feather: 'Feather',
+}));
+
 // Mock navigation
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({

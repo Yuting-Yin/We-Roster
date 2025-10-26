@@ -1,4 +1,4 @@
-import { fetchJson, ApiError } from '@/lib/api';
+import { fetchJson, ApiError, API_BASE } from '@/lib/api';
 
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -28,7 +28,7 @@ describe('API Utils', () => {
       const result = await fetchJson('/api/test');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://192.168.0.173:8080/api/test',
+        `${API_BASE}/api/test`,
         expect.objectContaining({
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -51,7 +51,7 @@ describe('API Utils', () => {
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://192.168.0.173:8080/api/test',
+        `${API_BASE}/api/test`,
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify(mockData),
@@ -75,7 +75,7 @@ describe('API Utils', () => {
       await fetchJson('/api/protected');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://192.168.0.173:8080/api/protected',
+        `${API_BASE}/api/protected`,
         expect.objectContaining({
           headers: expect.objectContaining({
             'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
 import { getAvailableUsers } from '@/api/user';
+import { API_BASE } from '@/lib/api';
 
 // Mock the fetch function
 global.fetch = jest.fn();
@@ -36,7 +37,7 @@ describe('User API', () => {
       const result = await getAvailableUsers();
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://192.168.0.173:8080/api/v1/users/available',
+        `${API_BASE}/api/v1/users/available`,
         expect.objectContaining({
           headers: { 'Content-Type': 'application/json' },
         })
