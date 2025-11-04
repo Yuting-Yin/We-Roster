@@ -57,7 +57,7 @@ export default memo(function OpenShiftsFilter({
     <Modal visible={visible} animationType="none" transparent onRequestClose={onClose}>
       <Pressable style={styles.mask} onPress={onClose}>
         <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
-          {/* 顶部栏 */}
+          {/* Top bar */}
           <View style={styles.topbar}>
             <Pressable onPress={onClear} hitSlop={10}><Text style={styles.clear}>Clear all</Text></Pressable>
             <Text style={styles.title}>FILTER</Text>

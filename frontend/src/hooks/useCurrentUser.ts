@@ -5,8 +5,8 @@ import type { User } from "@/types/user";
 import { useAuth } from "@/contexts/AuthContext";
 
 type Options = {
-  mock?: boolean;   // 开发期离线测试
-  delayMs?: number; // 人造延迟
+  mock?: boolean;   // Offline testing during development
+  delayMs?: number; // Artificial delay
 };
 
 export function useCurrentUser(opts: Options = {}) {
@@ -95,7 +95,7 @@ export function useCurrentUser(opts: Options = {}) {
 
   const refresh = async () => load();
 
-  // ===== 衍生/归一化字段 =====
+  // ===== Derived/normalized fields =====
   const firstName = deriveFirstName(user) ?? "there";
   const displayName = deriveDisplayName(user) ?? firstName;
   const email = user?.email ?? "";

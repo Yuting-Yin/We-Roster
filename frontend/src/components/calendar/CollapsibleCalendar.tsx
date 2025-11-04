@@ -11,7 +11,7 @@ import { useRosterPeriod } from "@/hooks/useRosterPeriod";
 const CARET_SIZE = sx(28);
 const CARET_ICON = sx(16);
 const DOT_SIZE = sx(4);
-const COL_W_PCT = 100 / 7; // 每列百分比宽度
+const COL_W_PCT = 100 / 7; // Percentage width per column
 
 /* =================== Helpers =================== */
 const fmt = (d: Date, opt: Intl.DateTimeFormatOptions) =>
@@ -29,7 +29,7 @@ const endOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
 /* Weeks beginning on Monday */
 function startOfWeekMon(d: Date) {
   const r = new Date(d);
-  const day = r.getDay(); // 0 Sun .. 6 Sat
+  const day = r.getDay(); // 0 = Sunday .. 6 = Saturday
   const diff = (day + 6) % 7; // Mon=0
   r.setDate(r.getDate() - diff);
   r.setHours(0, 0, 0, 0);
@@ -46,7 +46,7 @@ function getWeekDays(value: Date): Date[] {
   });
 }
 
-/** 生成从 anchor 起连续 count 个月，仅包含当月天数；并提供第一天的列索引（Mon=0..Sun=6） */
+/** Generate count consecutive months starting from anchor, containing only days of that month; also provides column index of first day (Mon=0..Sun=6) */
 function buildMonths(anchor: Date, count = 2) {
   return Array.from({ length: count }, (_, k) => {
     const first = startOfMonth(new Date(anchor.getFullYear(), anchor.getMonth() + k, 1));
@@ -59,7 +59,7 @@ function buildMonths(anchor: Date, count = 2) {
     }
 
     return {
-      title: fmt(first, { month: "long" }), // 只显示月份名
+      title: fmt(first, { month: "long" }), // Show only month name
       first,
       firstWeekdayMon0,
       days,
@@ -370,7 +370,7 @@ export default function CollapsibleCalendar({
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: sx(12) }}>
               {months.map((m, idx) => (
                 <View key={`${m.title}-${idx}`} style={styles.monthBlock}>
-                  {/* 标题行：高度固定；x 根据当月第一天的列对齐 */}
+                  {/* Title row: fixed height; x aligned according to first day's column of the month */}
                   <View style={styles.monthTitleRow}>
                     <View
                       style={[
@@ -382,9 +382,9 @@ export default function CollapsibleCalendar({
                     </View>
                   </View>
 
-                  {/* 网格：先渲染 offset 个透明占位，再渲染当月所有天 */}
+                  {/* Grid: first render offset transparent placeholders, then render all days of the month */}
                   <View style={styles.gridWrap}>
-                    {/* 透明占位，保证列对齐（不显示非本月的日期） */}
+                    {/* Transparent placeholders to ensure column alignment (don't display dates outside current month) */}
                     {Array.from({ length: m.firstWeekdayMon0 }).map((_, i) => (
                       <View key={`spacer-${i}`} style={styles.gridCellSpacer} />
                     ))}
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
   headerSide: { width: sx(28), alignItems: "flex-start", justifyContent: "center" },
   headerTitle: { color: COLOR.ink, fontSize: sx(14), fontWeight: "600" },
 
-  /* 收起态 */
+  /* Collapsed state */
   calendarContent: { paddingBottom: 0 },
   dayLabelsContainer: {
     flexDirection: "row",
@@ -583,13 +583,13 @@ const styles = StyleSheet.create({
   /* ====== Month block ====== */
   monthBlock: { marginBottom: sx(10) },
 
-  // 标题行占位，高度固定
+  // Title row placeholder, fixed height
   monthTitleRow: {
     position: "relative",
-    height: sx(20), // 固定 y（标题所在的行高度）
+    height: sx(20), // Fixed y (row height where title is located)
     marginBottom: sx(4),
   },
-  // 标题宽度为 1 列，x 通过 left 百分比定位；内部文本居中
+  // Title width is 1 column, x positioned via left percentage; text centered inside
   monthTitleCell: {
     position: "absolute",
     top: 0, // fixed y
