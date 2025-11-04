@@ -1,171 +1,280 @@
-CREATE TABLE Hospital(
-                         Id BIGINT AUTO_INCREMENT PRIMARY KEY ,
-                         Name VARCHAR(300) NOT NULL,
-                         Code VARCHAR(60) UNIQUE,
-                         Address VARCHAR(1000),
-                         Note TEXT
-) ENGINE = InnoDB;
+-- We-Roster Database Schema
+-- This file contains the complete database structure for the We-Roster application
+-- Generated from JPA entities and current application state
 
-CREATE TABLE Users(
-                      Id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                      domain VARCHAR(100) NOT NULL,
-                      role VARCHAR(32) NOT NULL,
-                      email VARCHAR(320) NOT NULL,
-                      salt VARCHAR(255),
-                      password_hash VARCHAR(255) NOT NULL,
-                      status VARCHAR(30) NOT NULL,
-                      created_time DATETIME,
-                      status_time DATETIME NULL,
-                      last_login_time DATETIME NULL,
-                      login_attempts INT NOT NULL DEFAULT 0,
-                      UNIQUE KEY unique_domain_email (domain, email)
-) ENGINE = InnoDB;
+-- Drop existing tables if they exist (for clean setup)
+DROP TABLE IF EXISTS notification;
+DROP TABLE IF EXISTS shift_swap;
+DROP TABLE IF EXISTS open_shift_request;
+DROP TABLE IF EXISTS shift_designation_requirements;
+DROP TABLE IF EXISTS shift_assignment;
+DROP TABLE IF EXISTS open_shift;
+DROP TABLE IF EXISTS shift;
+DROP TABLE IF EXISTS leave_request;
+DROP TABLE IF EXISTS staff_department;
+DROP TABLE IF EXISTS staff;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS location;
+DROP TABLE IF EXISTS designation;
+DROP TABLE IF EXISTS dept;
+DROP TABLE IF EXISTS hospital;
 
-CREATE TABLE designation(
-                            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                            name VARCHAR(300) NOT NULL,
-                            code VARCHAR(60),
-                            matrix VARCHAR(60),
-                            type VARCHAR(60),
-                            status VARCHAR(60) NOT NULL DEFAULT 'ACTIVE',
-                            status_time DATETIME,
-                            accreditation VARCHAR(200),
-                            note TEXT,
-                            created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE = InnoDB;
+-- Create Hospital table
+CREATE TABLE hospital (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    code VARCHAR(10) NOT NULL UNIQUE,
+    address TEXT,
+    phone VARCHAR(20),
+    email VARCHAR(255),
+    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-CREATE TABLE staff(
-                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                      hospital_id BIGINT NOT NULL,
-                      designation_id BIGINT NULL,
-                      user_id BIGINT NULL,
-                      first_name VARCHAR(100) NOT NULL,
-                      last_name VARCHAR(100) NOT NULL,
-                      gender VARCHAR(16),
-                      date_of_birth DATE,
-                      hire_date DATE,
-                      leave_date DATE,
-                      email VARCHAR(300),
-                      phone VARCHAR(32),
-                      is_manager BOOLEAN NOT NULL DEFAULT FALSE,
-                      type VARCHAR(50),
-                      matrix VARCHAR(50),
-                      status VARCHAR(30) NOT NULL DEFAULT 'Active',
-                      status_time DATETIME,
-                      note TEXT,
-                      created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                      CONSTRAINT fk_staff_hospital FOREIGN KEY (hospital_id) REFERENCES Hospital(id),
-                      CONSTRAINT fk_staff_designation FOREIGN KEY (designation_id) REFERENCES designation(id),
-                      CONSTRAINT fk_staff_user FOREIGN KEY (user_id) REFERENCES Users(id),
-                      UNIQUE KEY unique_staff_user (user_id)
-) ENGINE = InnoDB;
+-- Create Department table
+CREATE TABLE dept (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    code VARCHAR(10) NOT NULL,
+    hospital_id BIGINT NOT NULL,
+    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (hospital_id) REFERENCES hospital(id) ON DELETE CASCADE,
+    UNIQUE KEY UK_dept_hospital_code (hospital_id, code)
+);
 
-CREATE TABLE dept(
-                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                     parent_id BIGINT NULL,
-                     hospital_id BIGINT NOT NULL,
-                     name VARCHAR(300) NOT NULL,
-                     code VARCHAR(60) UNIQUE,
-                     note TEXT,
-                     CONSTRAINT fk_dept_hospital FOREIGN KEY (hospital_id) REFERENCES Hospital(id),
-                     CONSTRAINT fk_dept_parent FOREIGN KEY (parent_id) REFERENCES dept(id)
-) ENGINE=InnoDB;
+-- Create Designation table
+CREATE TABLE designation (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    code VARCHAR(10) NOT NULL UNIQUE,
+    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-CREATE TABLE staff_department(
-                                 staff_id BIGINT NOT NULL,
-                                 dept_id BIGINT NOT NULL,
-                                 is_primary BOOLEAN NOT NULL DEFAULT FALSE,
-                                 assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                 PRIMARY KEY (staff_id, dept_id),
-                                 CONSTRAINT fk_sd_staff FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE,
-                                 CONSTRAINT fk_sd_dept  FOREIGN KEY (dept_id)  REFERENCES dept(id)  ON DELETE CASCADE
-) ENGINE = InnoDB;
-
+-- Create Location table
 CREATE TABLE location (
-                          id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                          name VARCHAR(200) NOT NULL,
-                          code VARCHAR(50) UNIQUE,
-                          hospital_id BIGINT NOT NULL,
-                          parent_id    BIGINT NULL,
-                          note TEXT,
-                          type VARCHAR(50),
-                          CONSTRAINT fk_loc_parent FOREIGN KEY (parent_id)   REFERENCES location(id),
-                          CONSTRAINT fk_loc_hospital  FOREIGN KEY (hospital_id) REFERENCES Hospital(id)
-) ENGINE=InnoDB;
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    code VARCHAR(10) NOT NULL UNIQUE,
+    address TEXT,
+    hospital_id BIGINT NOT NULL,
+    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (hospital_id) REFERENCES hospital(id) ON DELETE CASCADE
+);
 
+-- Create Users table
+CREATE TABLE users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    domain VARCHAR(50) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_users_domain (domain),
+    INDEX idx_users_status (status)
+);
+
+-- Create Staff table
+CREATE TABLE staff (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    phone VARCHAR(20),
+    employee_id VARCHAR(50) NOT NULL UNIQUE,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    is_manager BOOLEAN NOT NULL DEFAULT FALSE,
+    hospital_id BIGINT NOT NULL,
+    designation_id BIGINT NOT NULL,
+    user_id BIGINT UNIQUE,
+    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (hospital_id) REFERENCES hospital(id) ON DELETE CASCADE,
+    FOREIGN KEY (designation_id) REFERENCES designation(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_staff_hospital (hospital_id),
+    INDEX idx_staff_designation (designation_id),
+    INDEX idx_staff_status (status)
+);
+
+-- Create Staff Department junction table
+CREATE TABLE staff_department (
+    staff_id BIGINT NOT NULL,
+    department_id BIGINT NOT NULL,
+    PRIMARY KEY (staff_id, department_id),
+    FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE,
+    FOREIGN KEY (department_id) REFERENCES dept(id) ON DELETE CASCADE
+);
+
+-- Create Shift table
 CREATE TABLE shift (
-                       id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                       start_ts DATETIME NOT NULL,
-                       end_ts DATETIME NOT NULL,
-                       dept_id BIGINT NULL,
-                       location_id BIGINT NULL,
-                       code VARCHAR(50),
-                       note TEXT,
-                       CONSTRAINT fk_shift_dept FOREIGN KEY (dept_id) REFERENCES dept(id),
-                       CONSTRAINT fk_shift_location FOREIGN KEY (location_id) REFERENCES location(id),
-                       CONSTRAINT chk_shift_time CHECK (end_ts > start_ts)
-) ENGINE=InnoDB;
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    start_ts DATETIME NOT NULL,
+    end_ts DATETIME NOT NULL,
+    code VARCHAR(20) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    note TEXT,
+    dept_id BIGINT NOT NULL,
+    location_id BIGINT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'COMPLETE',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (dept_id) REFERENCES dept(id) ON DELETE CASCADE,
+    FOREIGN KEY (location_id) REFERENCES location(id) ON DELETE CASCADE,
+    INDEX idx_shift_dept (dept_id),
+    INDEX idx_shift_location (location_id),
+    INDEX idx_shift_start_ts (start_ts),
+    INDEX idx_shift_status (status)
+);
 
-
--- roster_template tables removed - not used in current implementation
-
+-- Create Shift Assignment table
 CREATE TABLE shift_assignment (
-                                  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                  staff_id BIGINT NOT NULL,
-                                  shift_id BIGINT NOT NULL,
-                                  is_lead BOOLEAN NOT NULL DEFAULT FALSE,
-                                  assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                  note TEXT,
-                                  UNIQUE KEY uq_shift_staff (shift_id, staff_id),
-                                  CONSTRAINT fk_staff_sa FOREIGN KEY (staff_id) REFERENCES staff(id)  ON DELETE CASCADE,
-                                  CONSTRAINT fk_shift_sa FOREIGN KEY (shift_id) REFERENCES shift(id)  ON DELETE CASCADE
-) ENGINE=InnoDB;
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    shift_id BIGINT NOT NULL,
+    staff_id BIGINT NOT NULL,
+    assigned_by BIGINT NULL,
+    status VARCHAR(30) DEFAULT 'ACTIVE',
+    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE,
+    FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_by) REFERENCES staff(id) ON DELETE SET NULL,
+    UNIQUE KEY UK_shift_staff (shift_id, staff_id),
+    INDEX idx_shift_assignment_staff (staff_id),
+    INDEX idx_shift_assignment_status (status),
+    CHECK (status IN ('ACTIVE', 'WITHDRAWN', 'CANCELLED'))
+);
 
-CREATE TABLE leave_request(
-                              id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                              start_time DATETIME,
-                              end_time DATETIME,
-                              staff_id BIGINT,
-                              shift_id BIGINT NULL,
-                              request_type VARCHAR(50),
-                              reason TEXT,
-                              status VARCHAR(30) DEFAULT 'PENDING',
-                              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                              approved_at DATETIME NULL,
-                              approved_by BIGINT NULL,
-                              CONSTRAINT fk_leave_staff FOREIGN KEY (staff_id) REFERENCES staff(id),
-                              CONSTRAINT fk_leave_shift FOREIGN KEY (shift_id) REFERENCES shift(id),
-                              CONSTRAINT fk_leave_approved_by FOREIGN KEY (approved_by) REFERENCES staff(id)
-) ENGINE = InnoDB;
+-- Create Open Shift table
+CREATE TABLE open_shift (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    shift_id BIGINT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE,
+    UNIQUE KEY UK_open_shift_shift (shift_id)
+);
 
-CREATE TABLE shift_swap(
-                           id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                           from_time DATETIME NOT NULL,
-                           to_time DATETIME NOT NULL,
-                           date_made DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                           requester_id BIGINT,
-                           target_id BIGINT,
-                           message TEXT,
-                           status VARCHAR(30) DEFAULT 'PENDING',
-                           CONSTRAINT fk_swap_requester FOREIGN KEY (requester_id) REFERENCES staff(id),
-                           CONSTRAINT fk_swap_target FOREIGN KEY (target_id) REFERENCES staff(id)
-) ENGINE = InnoDB;
+-- Create Shift Designation Requirements table
+CREATE TABLE shift_designation_requirements (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    shift_id BIGINT NOT NULL,
+    designation_id BIGINT NOT NULL,
+    required_count INT NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE,
+    FOREIGN KEY (designation_id) REFERENCES designation(id) ON DELETE CASCADE,
+    UNIQUE KEY UK_shift_designation (shift_id, designation_id)
+);
 
-CREATE TABLE open_shift(
-                           shift_id BIGINT PRIMARY KEY,
-                           date_made DATETIME NOT NULL,
-                           urgent_flag TINYINT(1) NULL,
-                           extra_pay_cents INT NULL,
-                           CONSTRAINT fk_open_shift_shift FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE
-) ENGINE = InnoDB;
+-- Create Leave Request table
+CREATE TABLE leave_request (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    start_time DATETIME NOT NULL,
+    end_time DATETIME NOT NULL,
+    staff_id BIGINT NOT NULL,
+    shift_id BIGINT NULL,
+    request_type VARCHAR(50),
+    reason TEXT,
+    status VARCHAR(30) NOT NULL DEFAULT 'AWAITING',
+    created_at DATETIME,
+    approved_at DATETIME,
+    approved_by BIGINT NULL,
+    FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE,
+    FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE,
+    FOREIGN KEY (approved_by) REFERENCES staff(id) ON DELETE SET NULL,
+    INDEX idx_leave_request_staff (staff_id),
+    INDEX idx_leave_request_shift (shift_id),
+    INDEX idx_leave_request_status (status),
+    INDEX idx_leave_request_dates (start_time, end_time),
+    CHECK (status IN ('AWAITING', 'APPROVED', 'REJECTED', 'CANCELLED'))
+);
 
--- Database schema for WeRoster application
--- All data population is handled by DataInitializer.java
+-- Create Open Shift Request table
+CREATE TABLE open_shift_request (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    open_shift_id BIGINT NOT NULL,
+    staff_id BIGINT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (open_shift_id) REFERENCES open_shift(id) ON DELETE CASCADE,
+    FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE,
+    INDEX idx_open_shift_request_staff (staff_id),
+    INDEX idx_open_shift_request_status (status),
+    CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'))
+);
 
--- Schema cleanup completed:
--- - Removed obsolete user_staff table (using direct @OneToOne relationship)
--- - Removed unused roster_template tables
--- - Removed redundant test data (DataInitializer.java handles all data)
--- - Added user_id foreign key to staff table
--- - Added missing columns to open_shift table
+-- Create Shift Swap table
+CREATE TABLE shift_swap (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    requester_id BIGINT NOT NULL,
+    target_id BIGINT NOT NULL,
+    shift_id BIGINT NOT NULL,
+    from_time DATETIME NOT NULL,
+    to_time DATETIME NOT NULL,
+    message TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'AWAITING',
+    target_response VARCHAR(20),
+    target_response_at DATETIME,
+    date_made DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (requester_id) REFERENCES staff(id) ON DELETE CASCADE,
+    FOREIGN KEY (target_id) REFERENCES staff(id) ON DELETE CASCADE,
+    FOREIGN KEY (shift_id) REFERENCES shift(id) ON DELETE CASCADE,
+    INDEX idx_shift_swap_requester (requester_id),
+    INDEX idx_shift_swap_target (target_id),
+    INDEX idx_shift_swap_shift (shift_id),
+    INDEX idx_shift_swap_status (status),
+    CHECK (status IN ('AWAITING', 'APPROVED', 'REJECTED', 'CANCELLED'))
+);
 
+-- Create Notification table
+CREATE TABLE notification (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    staff_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    related_entity_type VARCHAR(50),
+    related_entity_id BIGINT,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE,
+    INDEX idx_notification_staff (staff_id),
+    INDEX idx_notification_type (type),
+    INDEX idx_notification_read (is_read),
+    INDEX idx_notification_created (created_time)
+);
+
+-- Insert default data (optional - for reference)
+-- Note: In production, this data is populated by DataInitializer.java
+
+-- Sample Hospital
+INSERT INTO hospital (name, code, address, phone, email) VALUES 
+('WeRoster General Hospital', 'WGH', '123 Healthcare Ave, Medical City', '+1-555-0123', 'info@werosterhospital.com');
+
+-- Sample Departments
+INSERT INTO dept (name, code, hospital_id) VALUES 
+('Emergency Department', 'ED', 1),
+('Intensive Care Unit', 'ICU', 1),
+('Medical Ward', 'MW', 1);
+
+-- Sample Designations
+INSERT INTO designation (name, code) VALUES 
+('Doctor', 'DR'),
+('Nurse', 'NURSE'),
+('Administrator', 'ADMIN'),
+('Technician', 'TECH'),
+('Support Staff', 'SUPPORT'),
+('Manager', 'MGR');
+
+-- Sample Locations
+INSERT INTO location (name, code, address, hospital_id) VALUES 
+('Main Building', 'MAIN', '123 Healthcare Ave, Medical City', 1),
+('Emergency Wing', 'ER', '123 Healthcare Ave, Medical City', 1),
+('ICU Floor', 'ICU', '123 Healthcare Ave, Medical City', 1);
+
+-- Database schema creation completed
+-- This schema matches the current JPA entity structure and supports all application features

@@ -4,10 +4,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { fmt as fmtDate, dayKey } from "@/lib/date";
+import { isDateInPast, getPastDateErrorMessage } from "@/lib/dateValidation";
 import Chip from "@/components/common/Chip";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { createLeaveRequest } from "@/api/leave";
 import SuccessToast from "@/components/overlays/SuccessToast";
+import { useNotificationContext } from "@/contexts/NotificationContext";
 import FailToast from "@/components/overlays/FailToast";
 import WarningToast from "@/components/overlays/WarningToast";
 
@@ -22,6 +24,7 @@ export default function RequestLeave({
   shiftId?: string; // ID of the shift this leave request is for
 }) {
   const { user, loading, error } = useCurrentUser({ mock: false });
+  const { refreshUnreadCount } = useNotificationContext();
   
   // Debug logging for user data
   React.useEffect(() => {
@@ -30,9 +33,13 @@ export default function RequestLeave({
     console.log('🔍 RequestLeave - Error:', error);
   }, [user, loading, error]);
 
-  const [leaveType] = React.useState<string | null>(null);
   const [reason, setReason] = React.useState("");
   const [allDay, setAllDay] = React.useState(false);
+  
+  // Determine leave type based on allDay toggle
+  const leaveType = React.useMemo(() => {
+    return allDay ? "Day Leave" : "Shift Leave";
+  }, [allDay]);
   const [submitting, setSubmitting] = React.useState(false);
   
   // Toast state
@@ -99,6 +106,13 @@ export default function RequestLeave({
 
   const submit = async () => {
     if (submitting) return;
+    
+    // Check if the date is in the past
+    if (isDateInPast(date)) {
+      showWarningToast(getPastDateErrorMessage(date));
+      return;
+    }
+    
     try {
       setSubmitting(true);
       const payload = {
@@ -133,6 +147,9 @@ export default function RequestLeave({
       } else {
         showSuccessToast('Successfully submitted');
       }
+      
+      // Refresh notification count after successful submission
+      refreshUnreadCount();
       onSubmitted?.();
     } catch (e: any) {
       console.error('🔍 Leave Request - Error:', e);

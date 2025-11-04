@@ -63,6 +63,9 @@ public class Staff {
     @Column(name = "matrix", length = 50)
     private String matrix;
     
+    @Column(name = "accreditation", length = 200)
+    private String accreditation;
+    
     @Column(name = "status", nullable = false, length = 30)
     @Builder.Default
     private String status = "Active";

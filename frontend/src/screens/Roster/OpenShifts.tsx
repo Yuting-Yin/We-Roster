@@ -1,26 +1,46 @@
 // src/screens/Roster/OpenShifts.tsx
-import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable } from "react-native";
+import React, { useMemo, useState, useEffect } from "react";
+import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { useAutoCloseOverlays } from "@/hooks/useAutoCloseOverlays";
 import { useOverlayContext } from "@/contexts/OverlayContext";
+import { useOpenShiftsData, useOpenShiftDetails, useOpenShiftApplication } from "@/hooks/useOpenShifts";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useFilterMetadata } from "@/hooks/useFilterMetadata";
 import { fmt } from "@/lib/date";
+import type { OpenShiftDto } from "@/api/openshift";
 
 import OpenShiftsFilter, { FilterValue, Session } from "@/components/overlays/OpenShiftsFilter";
 import OpenShiftDetails, { OpenShiftDetail, Coworker } from "@/components/overlays/OpenShiftDetails";
 import SuccessToast from "@/components/overlays/SuccessToast";
+import WarningToast from "@/components/overlays/WarningToast";
 
 /* ================= Helpers ================= */
-const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const addDays = (d: Date, n: number) => {
+  return new Date(Date.UTC(
+    d.getUTCFullYear(),
+    d.getUTCMonth(),
+    d.getUTCDate() + n,
+    0, 0, 0, 0
+  ));
+};
 const startOfWeekMon = (d: Date) => {
-  const r = new Date(d);
-  const day = r.getDay(); // 0..6 (Sun..Sat)
-  const diff = day === 0 ? -6 : 1 - day; // Monday as first day
-  r.setDate(r.getDate() + diff);
-  r.setHours(0, 0, 0, 0);
-  return r;
+  // Create a completely new date using UTC components to avoid any timezone issues
+  const year = d.getUTCFullYear();
+  const month = d.getUTCMonth();
+  const date = d.getUTCDate();
+  const dayOfWeek = d.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  
+  // Calculate days to subtract to get to Monday
+  const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 6 days back, Monday = 0 days back
+  
+  // Create the Monday date using UTC constructor
+  const mondayDate = new Date(Date.UTC(year, month, date - daysToSubtract, 0, 0, 0, 0));
+  
+  return mondayDate;
 };
 const addMonths = (d: Date, n: number) => {
   const r = new Date(d);
@@ -35,41 +55,52 @@ const weekLabel = (ws: Date) => {
   return `${left} - ${right}`;
 };
 
-/* ================= Types & Mock ================= */
+/* ================= Types ================= */
 type Item = {
   id: string;
   date: string;          // YYYY-MM-DD
   session: Session;      // "AM" | "PM" | "AH" | "ON_CALL"
   start: string;         // "08:00"
   end: string;           // "13:00"
-  location: string;      // e.g. "PMCC"
-  designation: string;   // e.g. "Anaes Coordinator"
+  location: string;      // e.g. "ED Room 1"
+  hospitalName: string;  // e.g. "WeRoster General Hospital"
+  designation: string;   // e.g. "Registered Nurse" or "Any"
+  payment?: string;      // e.g. "$500"
+  urgent?: boolean;      // Urgent flag
+  status?: string;       // AVAILABLE, READY_TO_RUN, etc.
+  hospitalAddress?: string; // Hospital physical address
 };
-
-const MOCK: Item[] = [
-  { id: "1", date: "2025-09-16", session: "AM", start: "08:00", end: "13:00", location: "PMCC", designation: "Anaes Coordinator" },
-  { id: "2", date: "2025-09-18", session: "PM", start: "13:00", end: "18:00", location: "PMCC", designation: "Anaes Coordinator" },
-  { id: "3", date: "2025-09-19", session: "AM", start: "08:00", end: "13:00", location: "PMCC", designation: "Anaes Coordinator" },
-  { id: "4", date: "2025-09-19", session: "PM", start: "13:00", end: "18:00", location: "PMCC", designation: "Anaes Coordinator" },
-  { id: "5", date: "2025-10-14", session: "AM", start: "08:00", end: "13:00", location: "PMCC", designation: "Anaes Coordinator" },
-  { id: "6", date: "2025-10-14", session: "PM", start: "13:00", end: "18:00", location: "PMCC", designation: "Anaes Coordinator" },
-];
 
 /* ================= Component ================= */
 export default function OpenShifts() {
   /* ---- Week navigation ---- */
+  const route = useRoute<any>();
   const today = new Date();
   const currentWeek = startOfWeekMon(today);
+  
   const [weekStart, setWeekStart] = useState<Date>(currentWeek);
   const maxWeekStart = addMonths(currentWeek, 2);
+  
+  // Update week when navigation params change
+  useEffect(() => {
+    if (route.params?.selectedDate) {
+      const selectedDate = new Date(route.params.selectedDate + 'T00:00:00');
+      const newWeekStart = startOfWeekMon(selectedDate);
+      setWeekStart(newWeekStart);
+    }
+  }, [route.params?.selectedDate]);
 
   const canGoPrev = weekStart.getTime() > currentWeek.getTime();
   const canGoNext = weekStart.getTime() < maxWeekStart.getTime();
+  
+  /* ---- Load data from API ---- */
+  const { user } = useCurrentUser();
+  const { openShifts, loading, error, refresh } = useOpenShiftsData(weekStart);
+  const { metadata: filterMetadata, loading: metadataLoading } = useFilterMetadata();
 
   /* ---- Filter overlay ---- */
   const [filterVisible, setFilterVisible] = useState(false);
   const [filter, setFilter] = useState<FilterValue>({
-    preset: "Preset",
     sessions: [],
     locations: [],
     designations: [],
@@ -80,20 +111,34 @@ export default function OpenShifts() {
   const [detailShift, setDetailShift] = useState<OpenShiftDetail | undefined>(undefined);
 
   const [toast, setToast] = useState(false);
-  const showToast = () => { setToast(true); setTimeout(() => setToast(false), 1800); };
+  const [warningToast, setWarningToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("Successfully submitted");
+  const showToast = (msg = "Successfully submitted") => { 
+    setToastMessage(msg);
+    setToast(true); 
+    setTimeout(() => setToast(false), 1800); 
+  };
+  const showWarning = (msg: string) => {
+    setToastMessage(msg);
+    setWarningToast(true);
+    setTimeout(() => setWarningToast(false), 2500);
+  };
 
   // Register overlays with context for auto-close functionality
-  const { registerOverlay, unregisterOverlay } = useOverlayContext();
+  const { registerOverlay, unregisterOverlay, requestTeamMemberNav } = useOverlayContext();
+  const navigation = useNavigation<any>();
   
   React.useEffect(() => {
     registerOverlay('openshifts-filter', () => setFilterVisible(false));
     registerOverlay('openshifts-detail', () => setDetailVisible(false));
     registerOverlay('openshifts-toast', () => setToast(false));
+    registerOverlay('openshifts-warning', () => setWarningToast(false));
     
     return () => {
       unregisterOverlay('openshifts-filter');
       unregisterOverlay('openshifts-detail');
       unregisterOverlay('openshifts-toast');
+      unregisterOverlay('openshifts-warning');
     };
   }, [registerOverlay, unregisterOverlay]);
 
@@ -101,31 +146,86 @@ export default function OpenShifts() {
   useAutoCloseOverlays([
     () => setFilterVisible(false),
     () => setDetailVisible(false),
-    () => setToast(false)
+    () => setToast(false),
+    () => setWarningToast(false)
   ]);
 
-  const coworkers: Coworker[] = [
-    { id: "u_tv", name: "Thu Vo", initials: "TV" },
-    { id: "u_pr", name: "Pristine R.", initials: "PR" },
-    { id: "u_jc", name: "Jill C.", initials: "JC" },
-  ];
+  // Track if we've already restored to prevent multiple restorations
+  const [hasRestored, setHasRestored] = useState(false);
 
-  /* ---- Data: by week + filter ---- */
+  // Restore overlay state when returning from team member navigation
+  const { teamMemberNavRequest, clearTeamMemberNavRequest } = useOverlayContext();
+  useEffect(() => {
+    if (teamMemberNavRequest?.overlayState && !hasRestored) {
+      const { type, event } = teamMemberNavRequest.overlayState;
+      
+      // Only restore if we're currently on the OpenShifts screen and it's an open-shift-details type
+      if (route.name === 'OPEN SHIFTS' && type === 'open-shift-details' && event) {
+        setDetailShift(event);
+        setDetailVisible(true);
+        setHasRestored(true);
+      }
+    }
+    
+    // Reset restoration flag when teamMemberNavRequest changes
+    if (!teamMemberNavRequest && hasRestored) {
+      setHasRestored(false);
+    }
+  }, [teamMemberNavRequest, route.name, hasRestored]);
+
+  /* ---- Convert API data to Item format and apply filters ---- */
   const filtered = useMemo(() => {
-    const ws = weekStart;
-    const we = addDays(ws, 6);
-    let arr = MOCK.filter(i => {
-      const d = new Date(i.date);
-      return d >= ws && d <= we;
+    // Calculate the end of the current week (Sunday) for validation
+    // weekStart is already Monday, so weekEndDate should be Sunday (Monday + 6 days)
+    const weekEndDate = new Date(weekStart);
+    weekEndDate.setUTCDate(weekStart.getUTCDate() + 6); // Monday + 6 days = Sunday
+    weekEndDate.setUTCHours(0, 0, 0, 0);
+    
+    // Convert OpenShiftDto to Item format
+    const allItems: Item[] = [];
+    Object.entries(openShifts).forEach(([date, shifts]) => {
+      // Parse date as UTC to avoid timezone issues
+      const shiftDate = new Date(date + 'T00:00:00.000Z');
+      
+      // Fix timezone issue by using UTC date components for comparison
+      const shiftDateUTC = new Date(shiftDate.getUTCFullYear(), shiftDate.getUTCMonth(), shiftDate.getUTCDate());
+      const weekStartUTC = new Date(weekStart.getUTCFullYear(), weekStart.getUTCMonth(), weekStart.getUTCDate());
+      const weekEndDateUTC = new Date(weekEndDate.getUTCFullYear(), weekEndDate.getUTCMonth(), weekEndDate.getUTCDate());
+      
+      const isInCurrentWeek = shiftDateUTC >= weekStartUTC && shiftDateUTC <= weekEndDateUTC;
+      
+      // Only process shifts within the current week
+      if (isInCurrentWeek) {
+        shifts.forEach(shift => {
+          allItems.push({
+            id: shift.id.toString(),
+            date: shift.date,
+            session: shift.session,
+            start: shift.start,
+            end: shift.end,
+            location: shift.locationName || "Unknown",
+            hospitalName: shift.hospitalName || "Unknown",
+            designation: shift.designationRequirements.length > 0 
+              ? shift.designationRequirements.map(r => r.designationName).join(", ")
+              : "Any",
+            payment: shift.formattedPayment,
+            urgent: shift.urgentFlag,
+            status: shift.status,
+            hospitalAddress: shift.hospitalAddress,
+          });
+        });
+      }
     });
 
+    // Apply filters
+    let arr = allItems;
     if (filter.sessions.length) arr = arr.filter(i => filter.sessions.includes(i.session));
-    if (filter.locations.length) arr = arr.filter(i => filter.locations.includes(i.location));
-    if (filter.designations.length) arr = arr.filter(i => filter.designations.includes(i.designation));
+    if (filter.locations.length) arr = arr.filter(i => filter.locations.includes(i.hospitalName));
+    if (filter.designations.length) arr = arr.filter(i => filter.designations.some(d => i.designation.includes(d)));
 
     arr.sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
     return arr;
-  }, [weekStart, filter]);
+  }, [openShifts, filter, weekStart]);
 
   /* ---- Group by day ---- */
   const sections = useMemo(() => {
@@ -142,8 +242,36 @@ export default function OpenShifts() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const toggleDay = (k: string) => setCollapsed(s => ({ ...s, [k]: !s[k] }));
 
+  /* ---- Handle navigation to specific shift ---- */
+  const highlightShiftId = route.params?.highlightShiftId;
+  
+  // Automatically open details for the highlighted shift
+  useEffect(() => {
+    if (highlightShiftId && !loading && filtered.length > 0) {
+      // Find the shift by ID
+      const shift = filtered.find(it => it.id === highlightShiftId.toString());
+      if (shift) {
+        // Small delay to ensure the list has rendered
+        const timeoutId = setTimeout(() => {
+          openDetailsFor(shift);
+          // Clear the highlight param to prevent reopening on next navigation
+          navigation.setParams({ highlightShiftId: undefined });
+        }, 500);
+        
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [highlightShiftId, loading, filtered]);
+
   /* ---- Card action: open details ---- */
+  const { applyForShift, submitting } = useOpenShiftApplication();
+  
   const openDetailsFor = (it: Item) => {
+    // Find the full OpenShiftDto from the API data to get all details
+    const fullShift = Object.values(openShifts)
+      .flat()
+      .find(s => s.id.toString() === it.id);
+    
     const detail: OpenShiftDetail = {
       id: it.id,
       date: it.date,
@@ -151,13 +279,53 @@ export default function OpenShifts() {
       end: it.end,
       session: it.session,
       location: it.location,
-      address: "305 Grattan St, Melbourne VIC 3000, Australia",
+      hospitalName: fullShift?.hospitalName || "Hospital",
+      address: fullShift?.hospitalAddress || "Address not available",
       designation: it.designation,
-      theatre: "Theatre 1",
-      pay: 500,
+      theatre: it.location,
+      pay: it.payment ? parseFloat(it.payment.replace('$', '')) : 0,
+      urgent: it.urgent,
+      status: it.status,
+      canApply: fullShift?.canApply !== false,
+      applicationStatus: fullShift?.applicationStatus,
+      assignedStaff: fullShift?.assignedStaff || [],
+      requirements: fullShift?.designationRequirements || [],
     };
     setDetailShift(detail);
     setDetailVisible(true);
+  };
+  
+  /* ---- Apply for open shift ---- */
+  const handleApply = async (openShiftId: string, message?: string) => {
+    if (!user?.email) return;
+    
+    const result = await applyForShift({ openShiftId: parseInt(openShiftId), message });
+    
+    if (result.success) {
+      showToast();
+      setDetailVisible(false);
+      refresh(); // Refresh the list
+    } else if (result.error) {
+      // Handle validation errors with friendly warnings (don't log to console)
+      const errorMsg = result.error.toLowerCase();
+      if (errorMsg.includes("already applied") || errorMsg.includes("duplicate")) {
+        showWarning("You have already applied for this shift");
+        setDetailVisible(false);
+      } else if (errorMsg.includes("already assigned")) {
+        showWarning("You are already assigned to this shift");
+        setDetailVisible(false);
+      } else if (errorMsg.includes("locked") || errorMsg.includes("approved")) {
+        showWarning("This shift is no longer accepting applications");
+        setDetailVisible(false);
+      } else if (errorMsg.includes("designation") || errorMsg.includes("required")) {
+        showWarning("Your designation doesn't match the requirements");
+        setDetailVisible(false);
+      } else {
+        // Show generic warning for other validation errors
+        showWarning(result.error);
+        setDetailVisible(false);
+      }
+    }
   };
 
   /* ---- Toolbar ---- */
@@ -192,8 +360,12 @@ export default function OpenShifts() {
       </View>
 
       {/* Refresh */}
-      <Pressable style={styles.iconBtn} onPress={() => { /* TODO: 拉取最新 open shifts */ }} android_ripple={{ color: "#eaeaea" }}>
-        <Ionicons name="refresh" size={sx(18)} color={COLOR.ink} />
+      <Pressable style={styles.iconBtn} onPress={refresh} android_ripple={{ color: "#eaeaea" }}>
+        {loading ? (
+          <ActivityIndicator size="small" color={COLOR.brand} />
+        ) : (
+          <Ionicons name="refresh" size={sx(18)} color={COLOR.ink} />
+        )}
       </Pressable>
     </View>
   );
@@ -239,7 +411,14 @@ export default function OpenShifts() {
 
                   {/* Main info */}
                   <View style={styles.mainCol}>
-                    <View style={styles.row}><Text style={styles.time}>{it.start} - {it.end}</Text></View>
+                    <View style={styles.row}>
+                      <Text style={styles.time}>{it.start} - {it.end}</Text>
+                      {it.urgent && (
+                        <View style={styles.urgentBadge}>
+                          <Text style={styles.urgentText}>URGENT</Text>
+                        </View>
+                      )}
+                    </View>
                     <View style={styles.row}>
                       <Ionicons name="business-outline" size={sx(14)} color={COLOR.label} />
                       <Text style={styles.meta}>{it.location}</Text>
@@ -248,6 +427,12 @@ export default function OpenShifts() {
                       <Ionicons name="person-outline" size={sx(14)} color={COLOR.label} />
                       <Text style={styles.meta}>{it.designation}</Text>
                     </View>
+                    {it.payment && (
+                      <View style={styles.row}>
+                        <Ionicons name="cash-outline" size={sx(14)} color={COLOR.success} />
+                        <Text style={[styles.meta, { color: COLOR.success, fontWeight: "600" }]}>{it.payment}</Text>
+                      </View>
+                    )}
                   </View>
 
                   {/* Action */}
@@ -266,8 +451,26 @@ export default function OpenShifts() {
           );
         }}
         ListEmptyComponent={
-          <View style={{ padding: sx(16), alignItems: "center" }}>
-            <Text style={{ color: COLOR.label }}>No open shifts in this week.</Text>
+          <View style={{ padding: sx(16), alignItems: "center", marginTop: sy(40) }}>
+            {loading ? (
+              <>
+                <ActivityIndicator size="large" color={COLOR.brand} />
+                <Text style={{ color: COLOR.label, marginTop: sy(12) }}>Loading open shifts...</Text>
+              </>
+            ) : error ? (
+              <>
+                <Ionicons name="alert-circle-outline" size={sx(48)} color={COLOR.warn} />
+                <Text style={{ color: COLOR.label, marginTop: sy(12) }}>{error}</Text>
+                <Pressable onPress={refresh} style={{ marginTop: sy(12), padding: sx(8) }}>
+                  <Text style={{ color: COLOR.brand }}>Retry</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Ionicons name="calendar-outline" size={sx(48)} color={COLOR.label} />
+                <Text style={{ color: COLOR.label, marginTop: sy(12) }}>No open shifts in this week.</Text>
+              </>
+            )}
           </View>
         }
       />
@@ -278,25 +481,44 @@ export default function OpenShifts() {
         value={filter}
         onChange={setFilter}
         onApply={() => setFilterVisible(false)}
-        onClear={() => setFilter({ preset: "Preset", sessions: [], locations: [], designations: [] })}
+        onClear={() => setFilter({ sessions: [], locations: [], designations: [] })}
         onClose={() => setFilterVisible(false)}
+        locationOptions={filterMetadata.hospitals}
+        designationOptions={filterMetadata.designations}
       />
 
       {/* Details Overlay */}
       <OpenShiftDetails
         visible={detailVisible}
         shift={detailShift}
-        coworkers={coworkers}
+        coworkers={detailShift?.assignedStaff || []}
         onClose={() => setDetailVisible(false)}
         onApply={() => {
-          // TODO: 调接口提交申请
-          setDetailVisible(false);
-          showToast();
+          if (detailShift) {
+            handleApply(detailShift.id);
+          }
+        }}
+        onCoworkerPress={(coworker) => {
+          // Navigate to My Team tab and show staff details
+          const staffId = parseInt(coworker.id, 10);
+          if (!isNaN(staffId)) {
+            // Capture current overlay state to restore later
+            const overlayState = {
+              type: 'open-shift-details' as const,
+              event: detailShift,
+              date: new Date(), // OpenShifts doesn't have a specific date context
+            };
+            requestTeamMemberNav(staffId, coworker.name, coworker.initials, "Roster", overlayState);
+            navigation.navigate("My Team");
+          }
         }}
       />
 
       {/* Toast */}
-      <SuccessToast visible={toast} text="Successfully submitted" />
+      <SuccessToast visible={toast} text={toastMessage} />
+      
+      {/* Warning Toast */}
+      <WarningToast visible={warningToast} text={toastMessage} />
     </View>
   );
 }
@@ -347,8 +569,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 6,
     elevation: 1,
+    alignItems: "center", // Vertically center all items in the row
   },
-  sessionCol: { width: sx(52), marginRight: sx(10) },
+  sessionCol: { 
+    width: sx(52), 
+    marginRight: sx(10),
+    alignItems: "center",
+    justifyContent: "center", // Center the badge vertically
+  },
   sessionBadge: {
     alignItems: "center",
     justifyContent: "center",
@@ -361,12 +589,31 @@ const styles = StyleSheet.create({
   },
   sessionText: { color: COLOR.brand, fontWeight: "700", fontSize: sx(11), textAlign: "center", lineHeight: sy(14) },
 
-  mainCol: { flex: 1, gap: sy(6) },
+  mainCol: { 
+    flex: 1, 
+    gap: sy(6),
+    justifyContent: "center", // Vertically center content
+  },
   row: { flexDirection: "row", alignItems: "center", gap: sx(6) },
   time: { color: COLOR.ink, fontWeight: "700" },
   meta: { color: COLOR.ink },
+  urgentBadge: {
+    backgroundColor: COLOR.warnBg,
+    paddingHorizontal: sx(6),
+    paddingVertical: sy(2),
+    borderRadius: sx(4),
+    marginLeft: sx(8),
+  },
+  urgentText: {
+    color: COLOR.warn,
+    fontSize: sx(10),
+    fontWeight: "700",
+  },
 
-  actionCol: { justifyContent: "center" },
+  actionCol: { 
+    justifyContent: "center",
+    alignItems: "center",
+  },
   roundBtn: {
     width: sx(40),
     height: sy(40),

@@ -54,7 +54,13 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 0,
     marginRight: CARD_GAP,
     width: CARD_W,
-    backgroundColor: COLOR.card,
+    backgroundColor: COLOR.bg,
+    justifyContent: "flex-start", // Align content to top
+    minHeight: sy(180), // Ensure minimum height
+  },
+  cardContent: {
+    flex: 1, // Take remaining space
+    justifyContent: "center", // Center content vertically in remaining space
   },
   cardTopRow: { flexDirection: "row", marginBottom: sy(8), marginHorizontal: sx(16) },
   initials: {
@@ -68,7 +74,7 @@ export const styles = StyleSheet.create({
     marginTop: sx(6),
   },
   initialsText: { color: "#fff", fontSize: sx(20), fontWeight: "600", lineHeight: sx(20) },
-  cardName: { color: COLOR.text, fontSize: sx(16), marginBottom: sy(2), fontWeight: "600" },
+  cardName: { color: COLOR.text, fontSize: sx(16), marginBottom: sy(8), marginHorizontal: sx(16), fontWeight: "600" },
   cardDivider: { height: 1, backgroundColor: COLOR.brand, marginHorizontal: sx(16), marginBottom: sy(8) },
   cardBottomRow: { flexDirection: "row", justifyContent: "space-between", marginHorizontal: sx(16) },
 
@@ -80,9 +86,16 @@ export const styles = StyleSheet.create({
     padding: sx(16),
     marginRight: CARD_GAP,
     minWidth: CARD_W,
-    backgroundColor: COLOR.card,
+    width: CARD_W,
+    backgroundColor: COLOR.bg,
+    minHeight: sy(180), // Ensure minimum height to prevent content overflow
+    justifyContent: "flex-start", // Align content to top
   },
   shiftDate: { color: COLOR.ink, fontSize: sx(16), marginBottom: sy(4), fontWeight: "600" },
+  shiftCardContent: {
+    flex: 1, // Take remaining space
+    justifyContent: "center", // Center content vertically in remaining space
+  },
   bonusText: { color: COLOR.ink, fontSize: sx(16), fontWeight: "bold" },
   urgentBadge: {
     alignSelf: "flex-start",
@@ -108,9 +121,15 @@ export const styles = StyleSheet.create({
     paddingHorizontal: sx(16),
     marginRight: CARD_GAP,
     minWidth: Math.round(sx(260)),
-    backgroundColor: COLOR.card,
+    backgroundColor: COLOR.bg,
+    justifyContent: "flex-start", // Align content to top
+    minHeight: sy(180), // Ensure minimum height
   },
   leaveDate: { color: COLOR.ink, fontSize: sx(16), marginBottom: sy(8), fontWeight: "600" },
+  leaveCardContent: {
+    flex: 1, // Take remaining space
+    justifyContent: "center", // Center content vertically in remaining space
+  },
   stateBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -128,4 +147,52 @@ export const styles = StyleSheet.create({
 
   // text
   meta12: { color: COLOR.ink, fontSize: sx(12) },
+
+  // Empty state
+  emptyContainer: {
+    paddingVertical: sy(32),
+    paddingHorizontal: sx(16),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    color: COLOR.ink,
+    fontSize: sx(14),
+    textAlign: "center",
+  },
+
+  // Empty dashboard state
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: sx(32),
+    paddingVertical: sy(64),
+    marginTop: sy(40),
+  },
+  emptyStateTitle: {
+    fontSize: sx(20),
+    fontWeight: "600",
+    color: COLOR.ink,
+    marginTop: sy(16),
+    marginBottom: sy(8),
+  },
+  emptyStateText: {
+    fontSize: sx(14),
+    color: COLOR.label,
+    textAlign: "center",
+    lineHeight: sx(20),
+    marginBottom: sy(24),
+  },
+  emptyStateButton: {
+    backgroundColor: COLOR.brand,
+    paddingHorizontal: sx(24),
+    paddingVertical: sy(12),
+    borderRadius: sx(8),
+  },
+  emptyStateButtonText: {
+    color: "#FFFFFF",
+    fontSize: sx(16),
+    fontWeight: "600",
+  },
 });

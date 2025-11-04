@@ -32,8 +32,30 @@ public class ShiftAssignment {
     private Boolean isLead = false;
     
     @Column(name = "assigned_at", nullable = false)
-    private LocalDateTime assignedAt;
+    @Builder.Default
+    private LocalDateTime assignedAt = LocalDateTime.now();
+    
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "assigned_by")
+    private Staff assignedBy;
+    
+    @Column(name = "status", length = 30, nullable = false)
+    @Builder.Default
+    private String status = "ACTIVE";
     
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
+    
+    // Helper methods
+    public boolean isActive() {
+        return "ACTIVE".equals(status);
+    }
+    
+    public boolean isWithdrawn() {
+        return "WITHDRAWN".equals(status);
+    }
+    
+    public boolean isCancelled() {
+        return "CANCELLED".equals(status);
+    }
 }

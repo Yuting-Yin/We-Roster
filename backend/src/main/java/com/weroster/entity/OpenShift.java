@@ -19,16 +19,29 @@ public class OpenShift {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "shift_id", nullable = false)
     private Shift shift;
-    
-    @Column(name = "date_made", nullable = false)
-    private LocalDateTime dateMade;
     
     @Column(name = "urgent_flag")
     private Boolean urgentFlag;
     
     @Column(name = "extra_pay_cents")
     private Integer extraPayCents;
+    
+    @Column(name = "status", length = 30)
+    @Builder.Default
+    private String status = "AVAILABLE"; // AVAILABLE, READY_TO_RUN, APPROVED_FOR_FORMAL, CANCELLED
+    
+    @Column(name = "total_staff_needed", nullable = false)
+    @Builder.Default
+    private Integer totalStaffNeeded = 1;
+    
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "created_by")
+    private Staff createdBy;
+    
+    @Column(name = "created_at", nullable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

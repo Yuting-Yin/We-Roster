@@ -5,16 +5,17 @@ import com.weroster.entity.*;
 import com.weroster.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
@@ -34,6 +35,59 @@ public class MyRosterController {
     @Autowired
     private UserRepository userRepository;
     
+    @Autowired
+    private LeaveRequestRepository leaveRequestRepository;
+    
+    @Autowired
+    private ShiftSwapRepository shiftSwapRepository;
+    
+    @Autowired
+    private OpenShiftRequestRepository openShiftRequestRepository;
+    
+    /**
+     * Helper method to get current user from Authorization header
+     */
+    private User getCurrentUser(String authHeader) {
+        try {
+            System.out.println("🔍 MyRosterController - getCurrentUser called with authHeader: " + 
+                (authHeader != null ? authHeader.substring(0, Math.min(20, authHeader.length())) + "..." : "null"));
+            
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                System.out.println("🔍 MyRosterController - Missing or invalid authorization header");
+                throw new RuntimeException("Missing or invalid authorization header");
+            }
+            
+            String token = authHeader.substring(7); // Remove "Bearer " prefix
+            System.out.println("🔍 MyRosterController - Extracted token: " + token);
+            
+            // Simplified token parsing - in production, use proper JWT library
+            if (!token.startsWith("jwt_token_")) {
+                System.out.println("🔍 MyRosterController - Invalid token format");
+                throw new RuntimeException("Invalid token format");
+            }
+            
+            String[] parts = token.split("_");
+            System.out.println("🔍 MyRosterController - Token parts: " + Arrays.toString(parts));
+            if (parts.length < 3) {
+                System.out.println("🔍 MyRosterController - Not enough token parts");
+                throw new RuntimeException("Invalid token format");
+            }
+            
+            Long userId = Long.parseLong(parts[2]);
+            System.out.println("🔍 MyRosterController - Parsed userId: " + userId);
+            
+            User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+            System.out.println("🔍 MyRosterController - Found user: " + user.getEmail());
+            return user;
+                
+        } catch (Exception e) {
+            System.out.println("🔍 MyRosterController - Authentication error: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Authentication failed: " + e.getMessage());
+        }
+    }
+    
     /**
      * Helper method to find staff linked to a user using direct relationship
      */
@@ -44,8 +98,23 @@ public class MyRosterController {
             .orElseThrow(() -> new RuntimeException("No staff linked to user"));
     }
     
+    /**
+     * Get priority for shift type sorting (higher = more important)
+     */
+    private int getPriority(String shiftCode) {
+        switch (shiftCode) {
+            case "ON_CALL": return 4;
+            case "AH": return 3;
+            case "PM": return 2;
+            case "AM": return 1;
+            default: return 0;
+        }
+    }
+    
     @GetMapping("/day")
-    public ResponseEntity<DayRosterDto> getDayRoster(@RequestParam(required = false) String date) {
+    public ResponseEntity<DayRosterDto> getDayRoster(
+            @RequestParam(required = false) String date,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
             LocalDateTime targetDate = date != null ? 
                 LocalDate.parse(date).atStartOfDay() : 
@@ -53,10 +122,8 @@ public class MyRosterController {
             
             System.out.println("🔍 Looking for shifts on date: " + targetDate);
             
-            // For now, get the test user (test@example.com)
-            // In a real app, this would come from authentication context
-            User currentUser = userRepository.findByDomainAndEmail("test", "test@example.com")
-                .orElseThrow(() -> new RuntimeException("Test user not found"));
+            // Get current user from JWT token
+            User currentUser = getCurrentUser(authHeader);
             
             System.out.println("👤 Current user: " + currentUser.getEmail());
             
@@ -89,7 +156,7 @@ public class MyRosterController {
                         System.out.println("🔄 Processing shift: " + shift.getId() + " at " + shift.getStartTs());
                         System.out.println("🔄 Shift department: " + (shift.getDepartment() != null ? shift.getDepartment().getName() : "NULL"));
                         System.out.println("🔄 Shift location: " + (shift.getLocation() != null ? shift.getLocation().getName() : "NULL"));
-                        System.out.println("🔄 Shift code: " + shift.getCode());
+                        System.out.println("🔄 Shift type: " + shift.getType());
                         
                         // Get all assignments for this shift to count coworkers and build teammates
                         List<ShiftAssignment> allAssignments = shiftAssignmentRepository.findByShiftId(shift.getId());
@@ -128,7 +195,7 @@ public class MyRosterController {
                                 shift.getEndTs().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
                                 shift.getDepartment() != null ? shift.getDepartment().getName() : "",
                                 shift.getLocation() != null ? shift.getLocation().getName() : "",
-                                shift.getCode(),
+                                shift.getType(),
                                 assignment.getIsLead(),
                                 allAssignments.size(),
                                 shift.getNote(),
@@ -137,6 +204,9 @@ public class MyRosterController {
                                 shift.getLocation() != null ? shift.getLocation().getName() : "",
                                 campusAddress
                         );
+                        
+                        // Set the shift name
+                        shiftItem.setShiftName(shift.getName());
                         
                         // Set the role (designation) for the current staff member
                         shiftItem.setRole(role);
@@ -188,7 +258,7 @@ public class MyRosterController {
                 shiftInfo.put("id", shift.getId());
                 shiftInfo.put("startTs", shift.getStartTs().toString());
                 shiftInfo.put("endTs", shift.getEndTs().toString());
-                shiftInfo.put("code", shift.getCode());
+                shiftInfo.put("type", shift.getType());
                 shiftInfo.put("department", shift.getDepartment() != null ? shift.getDepartment().getName() : "NULL");
                 shiftInfo.put("location", shift.getLocation() != null ? shift.getLocation().getName() : "NULL");
                 return shiftInfo;
@@ -277,6 +347,113 @@ public class MyRosterController {
         }
     }
 
+    /**
+     * Get shift details by ID
+     */
+    @GetMapping("/shift/{id}")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ShiftDetailsDto> getShiftDetails(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            System.out.println("🔍 MyRosterController - getShiftDetails called for shift ID: " + id);
+            System.out.println("🔍 MyRosterController - Authorization header present: " + (authHeader != null));
+            
+            // Get current user from JWT token
+            User currentUser = getCurrentUser(authHeader);
+            System.out.println("👤 Current user: " + currentUser.getEmail());
+            
+            Staff staff = findStaffByUser(currentUser);
+            System.out.println("🔍 MyRosterController - Found staff: " + staff.getId());
+            
+            // Find the shift
+            Shift shift = shiftRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Shift not found"));
+            
+            System.out.println("🔍 MyRosterController - Found shift: " + shift.getId());
+            
+            // Check if the staff member has access to this shift
+            // Access is granted if:
+            // 1. Staff is assigned to this shift, OR
+            // 2. Staff has a request related to this shift (leave, swap, or open shift)
+            List<ShiftAssignment> assignments = shiftAssignmentRepository.findByShiftId(id);
+            boolean isAssigned = assignments.stream()
+                .anyMatch(assignment -> assignment.getStaff().getId().equals(staff.getId()));
+            
+            boolean hasRelatedRequest = false;
+            if (!isAssigned) {
+                // Check if staff has any requests related to this shift
+                // Check leave requests
+                hasRelatedRequest = leaveRequestRepository.findByStaffId(staff.getId()).stream()
+                    .anyMatch(request -> request.getShift() != null && request.getShift().getId().equals(id));
+                
+                // Check swap requests (as requester or target)
+                if (!hasRelatedRequest) {
+                    hasRelatedRequest = shiftSwapRepository.findByStaffId(staff.getId()).stream()
+                        .anyMatch(swap -> swap.getShift() != null && swap.getShift().getId().equals(id));
+                }
+                
+                // Check open shift requests
+                if (!hasRelatedRequest) {
+                    hasRelatedRequest = openShiftRequestRepository.findByStaffIdOrderByCreatedAtDesc(staff.getId()).stream()
+                        .anyMatch(request -> request.getOpenShift() != null && 
+                                   request.getOpenShift().getShift() != null && 
+                                   request.getOpenShift().getShift().getId().equals(id));
+                }
+            }
+            
+            if (!isAssigned && !hasRelatedRequest) {
+                System.out.println("🔍 MyRosterController - Staff has no access to this shift (not assigned and no related requests)");
+                return ResponseEntity.status(403).body(null);
+            }
+            
+            System.out.println("🔍 MyRosterController - Access granted - Assigned: " + isAssigned + ", Related Request: " + hasRelatedRequest);
+            
+            // Get all coworkers for this shift
+            List<CoworkerDto> coworkers = assignments.stream()
+                .map(assignment -> {
+                    Staff coworkerStaff = assignment.getStaff();
+                    return CoworkerDto.builder()
+                        .id(coworkerStaff.getId().toString())
+                        .name(coworkerStaff.getFirstName() + " " + coworkerStaff.getLastName())
+                        .initials((coworkerStaff.getFirstName().charAt(0) + "" + coworkerStaff.getLastName().charAt(0)).toUpperCase())
+                        .designationName(coworkerStaff.getDesignation() != null ? coworkerStaff.getDesignation().getName() : "Any")
+                        .isLead(false) // TODO: Determine if this staff member is a lead
+                        .build();
+                })
+                .collect(Collectors.toList());
+            
+            // Build location info
+            LocationDto location = LocationDto.builder()
+                .name(shift.getLocation() != null ? shift.getLocation().getName() : "Unknown")
+                .code(shift.getLocation() != null ? shift.getLocation().getCode() : null)
+                .type(shift.getLocation() != null ? shift.getLocation().getType() : null)
+                .build();
+            
+            // Calculate duration
+            long durationMinutes = java.time.Duration.between(shift.getStartTs(), shift.getEndTs()).toMinutes();
+            
+            // Build response
+            ShiftDetailsDto response = ShiftDetailsDto.builder()
+                .date(shift.getStartTs().toInstant(java.time.ZoneOffset.UTC).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString())
+                .shiftId(shift.getId())
+                .startTime(shift.getStartTs().format(DateTimeFormatter.ofPattern("HH:mm")))
+                .endTime(shift.getEndTs().format(DateTimeFormatter.ofPattern("HH:mm")))
+                .durationMinutes((int) durationMinutes)
+                .location(location)
+                .designation("Any") // TODO: Get designation from shift or staff
+                .coworkers(coworkers)
+                .build();
+            
+            System.out.println("🔍 MyRosterController - Returning shift details for shift " + id);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.out.println("🔍 MyRosterController - Error getting shift details: " + e.getMessage());
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
     @GetMapping("/debug")
     public ResponseEntity<?> debugUserStaffRelationship() {
         try {
@@ -307,6 +484,40 @@ public class MyRosterController {
         } catch (Exception e) {
             System.err.println("❌ DEBUG Error: " + e.getMessage());
             e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/test-auth")
+    public ResponseEntity<?> testAuth(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            System.out.println("🔍 MyRosterController - testAuth endpoint called");
+            System.out.println("🔍 MyRosterController - Authorization header: " + (authHeader != null ? "present" : "missing"));
+            
+            if (authHeader == null) {
+                return ResponseEntity.ok(Map.of("message", "No authorization header", "status", "no_auth"));
+            }
+            
+            // Try to get current user
+            try {
+                User currentUser = getCurrentUser(authHeader);
+                return ResponseEntity.ok(Map.of(
+                    "message", "Authentication successful",
+                    "user", Map.of(
+                        "id", currentUser.getId(),
+                        "email", currentUser.getEmail(),
+                        "status", currentUser.getStatus()
+                    ),
+                    "status", "success"
+                ));
+            } catch (Exception e) {
+                return ResponseEntity.ok(Map.of(
+                    "message", "Authentication failed: " + e.getMessage(),
+                    "status", "auth_failed"
+                ));
+            }
+            
+        } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
@@ -350,30 +561,25 @@ public class MyRosterController {
             // Group assignments by date
             Map<String, List<ShiftAssignment>> assignmentsByDate = assignments.stream()
                 .collect(Collectors.groupingBy(
-                    sa -> sa.getShift().getStartTs().toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE)
+                    sa -> sa.getShift().getStartTs().toInstant(java.time.ZoneOffset.UTC).atZone(java.time.ZoneOffset.UTC).toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE)
                 ));
             
             // Process each date
             assignmentsByDate.forEach((dateStr, dateAssignments) -> {
-                // Determine shift type for dots - use actual shift types directly
-                Set<String> shiftCodes = dateAssignments.stream()
-                    .map(sa -> sa.getShift().getCode())
-                    .collect(Collectors.toSet());
+                // Collect all unique shift types for this day (support multiple shifts per day)
+                List<String> shiftTypes = dateAssignments.stream()
+                    .map(sa -> sa.getShift().getType())
+                    .distinct()
+                    .sorted((a, b) -> {
+                        // Sort by priority: ON_CALL > AH > PM > AM
+                        int priorityA = getPriority(a);
+                        int priorityB = getPriority(b);
+                        return Integer.compare(priorityB, priorityA); // Reverse order (higher priority first)
+                    })
+                    .collect(Collectors.toList());
                 
-                String shiftType;
-                if (shiftCodes.contains("ON_CALL")) {
-                    shiftType = "ON_CALL"; // ○●
-                } else if (shiftCodes.contains("AH")) {
-                    shiftType = "AH"; // ○●
-                } else if (shiftCodes.contains("PM")) {
-                    shiftType = "PM"; // ○●
-                } else if (shiftCodes.contains("AM")) {
-                    shiftType = "AM"; // ●○
-                } else {
-                    shiftType = "unallocated"; // ○○
-                }
-                
-                shiftMap.put(dateStr, shiftType);
+                // Store all shift types for this date (as array for frontend)
+                shiftMap.put(dateStr, shiftTypes);
                 
                 // Build events for this date
                 List<Map<String, Object>> dateEvents = dateAssignments.stream()
@@ -416,7 +622,7 @@ public class MyRosterController {
                         event.put("endTs", shift.getEndTs().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
                         event.put("dept", shift.getDepartment() != null ? shift.getDepartment().getName() : "");
                         event.put("location", shift.getLocation() != null ? shift.getLocation().getName() : "");
-                        event.put("code", shift.getCode());
+                        event.put("type", shift.getType());
                         event.put("isLead", assignment.getIsLead());
                         event.put("coworkers", allAssignments.size());
                         event.put("note", shift.getNote());
@@ -449,11 +655,16 @@ public class MyRosterController {
     }
 
     @GetMapping("/refresh")
-    public ResponseEntity<RefreshResponse> refreshRoster(@RequestParam(required = false) String date) {
+    public ResponseEntity<RefreshResponse> refreshRoster(
+            @RequestParam(required = false) String date,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
             LocalDateTime targetDate = date != null ? 
                 LocalDate.parse(date).atStartOfDay() : 
                 LocalDate.now().atStartOfDay();
+            
+            // Get current user from JWT token
+            User currentUser = getCurrentUser(authHeader);
             
             // Get shifts for the week
             List<Shift> shifts = shiftRepository.findByDate(targetDate);
@@ -505,13 +716,13 @@ public class MyRosterController {
                         String campusAddress = shift.getDepartment() != null && shift.getDepartment().getHospital() != null ? 
                                 shift.getDepartment().getHospital().getAddress() : "";
                         
-                        return new ShiftItem(
+                        ShiftItem shiftItem = new ShiftItem(
                                 shift.getId(),
                                 shift.getStartTs().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
                                 shift.getEndTs().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
                                 shift.getDepartment() != null ? shift.getDepartment().getName() : "",
                                 shift.getLocation() != null ? shift.getLocation().getName() : "",
-                                shift.getCode(),
+                                shift.getType(),
                                 assignments.stream().anyMatch(ShiftAssignment::getIsLead),
                                 assignments.size(),
                                 shift.getNote(),
@@ -520,6 +731,11 @@ public class MyRosterController {
                                 shift.getLocation() != null ? shift.getLocation().getName() : "",
                                 campusAddress
                         );
+                        
+                        // Set the shift name
+                        shiftItem.setShiftName(shift.getName());
+                        
+                        return shiftItem;
                     })
                     .collect(Collectors.toList());
             

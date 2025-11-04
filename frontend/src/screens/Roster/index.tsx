@@ -7,14 +7,10 @@ import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 
 // Sub-pages: MyRoster, TeamRoster, Openshifts
-// TODO: implement TeamRoster page
 import MyRoster from "./MyRoster";
+import TeamRoster from "./TeamRoster";
 import OpenShifts from "./OpenShifts";
 const Tab = createMaterialTopTabNavigator();
-
-function TeamRoster() {
-  return <View style={styles.body} />;
-}
 
 export default function RosterScreen() {
   const route = useRoute<any>();
@@ -46,7 +42,11 @@ export default function RosterScreen() {
           component={MyRoster}
           initialParams={{ selectedDate }}
         />
-        <Tab.Screen name="TEAM ROSTER" component={TeamRoster} />
+        <Tab.Screen 
+          name="TEAM ROSTER" 
+          component={TeamRoster}
+          initialParams={{ selectedDate }}
+        />
         <Tab.Screen name="OPEN SHIFTS" component={OpenShifts} />
       </Tab.Navigator>
     </SafeAreaView>

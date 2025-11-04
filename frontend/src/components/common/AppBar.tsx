@@ -1,14 +1,53 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
+import type { RootStackParamList } from "@/navigation/RootNavigator";
+import NotificationBell from "@/components/common/NotificationBell";
+import { useNotificationContext } from "@/contexts/NotificationContext";
 
-export default function AppBar() {
+type AppBarNav = NativeStackNavigationProp<RootStackParamList>;
+
+interface AppBarProps {
+  title?: string;
+}
+
+export default function AppBar({ title }: AppBarProps) {
+  const navigation = useNavigation<AppBarNav>();
+  const route = useRoute();
+  const { unreadCount } = useNotificationContext();
+
+  // Auto-detect title based on route if not provided
+  const getTitle = () => {
+    if (title) return title;
+    
+    const routeName = route.name;
+    switch (routeName) {
+      case "Dashboard":
+        return "Dashboard";
+      case "Roster":
+        return "Roster";
+      case "My Request":
+        return "My Request";
+      case "My Team":
+        return "My Team";
+      default:
+        return "Roster"; // Default fallback
+    }
+  };
+
   return (
     <View style={styles.appbar}>
-      <Text style={styles.title}>Roster</Text>
-      <Ionicons name="notifications-outline" size={sx(24)} color="#fff" />
+      <Text style={styles.title}>{getTitle()}</Text>
+      <NotificationBell
+        onPress={() => navigation.navigate("Notifications")}
+        unreadCount={unreadCount}
+        size={24}
+        color="#fff"
+      />
     </View>
   );
 }

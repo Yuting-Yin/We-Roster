@@ -38,3 +38,11 @@ export async function getMyLeaves(month?: string) {
 		headers: { "Content-Type": "application/json" },
 	});
 }
+
+export async function getStaffLeaves(staffId: number, month?: string) {
+	const params = month ? `?month=${month}` : '';
+	return await fetchJson<LeaveRequest[]>(`/api/v1/leaves/staff/${staffId}/leaves${params}`, {
+		method: "GET",
+		headers: { "Content-Type": "application/json" },
+	});
+}

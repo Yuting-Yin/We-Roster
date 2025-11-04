@@ -18,3 +18,17 @@ export async function createSwapRequest(input: CreateSwapRequestInput) {
 		headers: { "Content-Type": "application/json" },
 	});
 }
+
+export async function acceptSwapRequest(swapId: string) {
+	return await fetchJson<{ success: boolean; message: string; status: string }>(`/api/v1/swaps/${swapId}/accept`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+	});
+}
+
+export async function declineSwapRequest(swapId: string) {
+	return await fetchJson<{ success: boolean; message: string; status: string }>(`/api/v1/swaps/${swapId}/decline`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+	});
+}

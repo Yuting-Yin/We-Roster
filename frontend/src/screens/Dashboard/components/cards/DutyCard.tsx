@@ -11,22 +11,27 @@ import type { DutyItem } from "@/types/dashboard";
 export const DutyCard = memo(function DutyCard({ item, onPress }: { item: DutyItem; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={styles.card} accessibilityLabel={`duty-${item.name}`}>
-      <View style={styles.cardTopRow}>
-        <Pressable onPress={onPress} style={styles.initials} accessibilityLabel={`${item.name} avatar`}>
-          <Text style={styles.initialsText}>{item.initials}</Text>
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.cardName}>{item.name}</Text>
-          <Row text={item.role} icon={<MCI name="stethoscope" size={sx(16)} color={COLOR.brand} />} />
-          <Row text={item.theatre} icon={<MCI name="hospital-building" size={sx(16)} color={COLOR.brand} />} />
-          <Row text={item.site} icon={<Ionicons name="location-outline" size={sx(16)} color={COLOR.brand} />} />
+      {/* Title fixed at top */}
+      <Text style={styles.cardName}>{item.name}</Text>
+      
+      {/* Content area - vertically centered */}
+      <View style={styles.cardContent}>
+        <View style={styles.cardTopRow}>
+          <Pressable onPress={onPress} style={styles.initials} accessibilityLabel={`${item.name} avatar`}>
+            <Text style={styles.initialsText}>{item.initials}</Text>
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Row text={item.role} icon={<MCI name="stethoscope" size={sx(16)} color={COLOR.brand} />} />
+            <Row text={item.theatre} icon={<MCI name="hospital-building" size={sx(16)} color={COLOR.brand} />} />
+            <Row text={item.site} icon={<Ionicons name="location-outline" size={sx(16)} color={COLOR.brand} />} />
+          </View>
+          <Ionicons name="arrow-forward-circle" size={sx(32)} color={COLOR.brand} style={{ marginTop: sy(48) }} />
         </View>
-        <Ionicons name="arrow-forward-circle" size={sx(32)} color={COLOR.brand} style={{ marginTop: sy(48) }} />
-      </View>
-      <View style={styles.cardDivider} />
-      <View style={styles.cardBottomRow}>
-        <Row text={item.date} icon={<Ionicons name="calendar-outline" size={sx(16)} color={COLOR.brand} />} />
-        <Row text={item.time} icon={<Ionicons name="time-outline" size={sx(16)} color={COLOR.brand} />} />
+        <View style={styles.cardDivider} />
+        <View style={styles.cardBottomRow}>
+          <Row text={item.date} icon={<Ionicons name="calendar-outline" size={sx(16)} color={COLOR.brand} />} />
+          <Row text={item.time} icon={<Ionicons name="time-outline" size={sx(16)} color={COLOR.brand} />} />
+        </View>
       </View>
     </Pressable>
   );

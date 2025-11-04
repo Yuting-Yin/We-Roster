@@ -1,10 +1,16 @@
 // src/screens/Profile/index.tsx
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
+import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useApprovedLeaves } from "@/hooks/useApprovedLeaves";
+import { useMyRosterData } from "@/hooks/useMyRoster";
+import CollapsibleCalendar from "@/components/calendar/CollapsibleCalendar";
 import { COLOR } from "@/theme/colors";
+import { sx, sy } from "@/theme/metrics";
+import { fmt } from "@/lib/date";
 
 async function copy(text: string | undefined) {
   if (!text) return;
@@ -14,9 +20,36 @@ async function copy(text: string | undefined) {
   } catch {}
 }
 
+const Tab = createMaterialTopTabNavigator();
+
 export default function ProfileScreen() {
-  // To connect to backend, change mock: true to mock: false
-  // Or use .env variable EXPO_PUBLIC_MOCK_DASHBOARD=1
+  console.log('🔍 ProfileScreen - Component loaded');
+  
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        tabBarScrollEnabled: false,
+        tabBarIndicatorStyle: { backgroundColor: COLOR.brand, height: sy(3), borderRadius: sy(2) },
+        tabBarActiveTintColor: COLOR.brand,
+        tabBarInactiveTintColor: COLOR.label,
+        tabBarLabelStyle: { fontSize: sx(12), fontWeight: "600", textTransform: "none" },
+        tabBarStyle: {
+          backgroundColor: COLOR.bg, height: sy(48),
+          borderBottomColor: COLOR.divider, borderBottomWidth: StyleSheet.hairlineWidth,
+          shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+        },
+      }}
+    >
+      <Tab.Screen name="About" component={AboutTab} />
+      <Tab.Screen name="Schedule" component={ScheduleTab} />
+    </Tab.Navigator>
+  );
+}
+
+function AboutTab() {
+  console.log('🔍 AboutTab - Component loaded');
+  
+  // Connected to backend - using real user data from database
   const {
     displayName,
     initials,
@@ -28,7 +61,7 @@ export default function ProfileScreen() {
     loading,
     error,
     refresh,
-  } = useCurrentUser({ mock: true });
+  } = useCurrentUser({ mock: false });
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: COLOR.bg }} contentContainerStyle={{ padding: 16 }}>
@@ -104,6 +137,50 @@ export default function ProfileScreen() {
         />
       </View>
     </ScrollView>
+  );
+}
+
+function ScheduleTab() {
+  console.log('🔍 ScheduleTab - Component loaded');
+  
+  const [date, setDate] = useState(new Date());
+  const { leaveMap, loading: leavesLoading, error: leavesError } = useApprovedLeaves();
+  const { shiftMap, loading, error } = useMyRosterData(date);
+
+  // Debug logging for Profile Schedule
+  console.log('🔍 Profile Schedule - leaveMap:', leaveMap);
+  console.log('🔍 Profile Schedule - date:', date.toDateString());
+  console.log('🔍 Profile Schedule - leavesLoading:', leavesLoading);
+  console.log('🔍 Profile Schedule - leavesError:', leavesError);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: COLOR.bg }}>
+      <CollapsibleCalendar
+        value={date}
+        onChange={setDate}
+        shiftMap={shiftMap}
+        leaveMap={leaveMap}
+        title={fmt(date, { day: "2-digit", month: "long", year: "numeric" })}
+        leftAction={{ icon: "chevron-back", onPress: () => {
+          const prevMonth = new Date(date);
+          prevMonth.setMonth(date.getMonth() - 1);
+          setDate(prevMonth);
+        }}}
+        rightAction={{ icon: "chevron-forward", onPress: () => {
+          const nextMonth = new Date(date);
+          nextMonth.setMonth(date.getMonth() + 1);
+          setDate(nextMonth);
+        }}}
+      />
+      
+      {error && (
+        <View style={{ padding: 16, backgroundColor: '#ffebee', margin: 16, borderRadius: 8 }}>
+          <Text style={{ color: '#c62828', textAlign: 'center' }}>
+            Error loading schedule: {error}
+          </Text>
+        </View>
+      )}
+    </View>
   );
 }
 

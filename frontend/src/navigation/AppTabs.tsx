@@ -3,15 +3,13 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import Dashboard from "@/screens/Dashboard";
 import RosterScreen from "@/screens/Roster";
+import MyRequestScreen from "@/screens/MyRequest";
+import MyTeam from "@/screens/MyTeam";
 import { View, Text, Dimensions } from "react-native";
 
 const { width: W } = Dimensions.get("window");
 const HI_FI_WIDTH = 412;
 const sx = (x: number) => (x / HI_FI_WIDTH) * W;
-
-function Roster() { return <View style={{flex:1,alignItems:"center",justifyContent:"center"}}><Text>Roster</Text></View>; }
-function MyRequest() { return <View style={{flex:1,alignItems:"center",justifyContent:"center"}}><Text>My Request</Text></View>; }
-function MyTeam() { return <View style={{flex:1,alignItems:"center",justifyContent:"center"}}><Text>My Team</Text></View>; }
 
 export type AppTabParamList = {
   Dashboard: undefined;
@@ -69,7 +67,7 @@ export default function AppTabs() {
     >
     <Tab.Screen name="Dashboard" component={Dashboard} />
     <Tab.Screen name="Roster" component={RosterScreen} />
-    <Tab.Screen name="My Request" component={MyRequest} />
+    <Tab.Screen name="My Request" component={MyRequestScreen} />
     <Tab.Screen name="My Team" component={MyTeam} />
     </Tab.Navigator>
 

@@ -28,18 +28,28 @@ public class ShiftSwap {
     @Column(name = "date_made", nullable = false)
     private LocalDateTime dateMade;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "requester_id")
     private Staff requester;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "target_id")
     private Staff target;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shift_id", nullable = false)
+    private Shift shift;
     
     @Column(name = "message", columnDefinition = "TEXT")
     private String message;
     
     @Column(name = "status", length = 30)
     @Builder.Default
-    private String status = "PENDING";
+    private String status = "AWAITING";
+    
+    @Column(name = "target_response", length = 30)
+    private String targetResponse; // "ACCEPTED", "DECLINED", or null
+    
+    @Column(name = "target_response_at")
+    private LocalDateTime targetResponseAt;
 }

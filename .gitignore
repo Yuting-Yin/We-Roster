@@ -2,6 +2,17 @@ HEAD
 .DS_Store
 .DS_Store
 
-frontend\node_modules
-frontend\.expo
+frontend/node_modules
+frontend/.expo
 add-frontend
+
+# Backend build artifacts
+backend/.gradle/
+backend/build/
+backend/bin/
+backend/out/
+*.class
+*.jar
+*.war
+!gradle-wrapper.jar
+.config/

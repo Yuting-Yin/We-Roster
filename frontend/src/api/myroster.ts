@@ -1,6 +1,5 @@
 // frontend/src/api/myroster.ts
-import { API_BASE } from '../lib/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE, fetchJson } from '../lib/api';
 
 // Types matching backend DTOs
 export interface DayRosterDto {
@@ -17,6 +16,7 @@ export interface ShiftItemDto {
   code: string; // AM, PM, AH
   isLead: boolean;
   coworkers: number;
+  shiftName?: string; // e.g., "Emergency PFY"
 }
 
 export interface DayViewDto {
@@ -86,46 +86,19 @@ export interface CoworkerDto {
   staffInitials: string;
 }
 
-// Helper function to get auth token
-async function getAuthToken(): Promise<string | null> {
-  try {
-    return await AsyncStorage.getItem('auth_token');
-  } catch (error) {
-    console.error('Failed to get auth token:', error);
-    return null;
-  }
-}
-
-// Helper function to make authenticated requests
-async function fetchWithAuth<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const token = await getAuthToken();
-  
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    console.error(`API Error ${response.status}: ${errorText || response.statusText}`);
-    throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
-  }
-
-  return response.json();
+// Helper function to make authenticated requests using centralized auth
+async function fetchWithAuth<T>(path: string): Promise<T> {
+  return fetchJson<T>(path);
 }
 
 // API functions
 export async function getDayRoster(date?: string): Promise<DayRosterDto> {
   const params = date ? `?date=${date}` : '';
-  return fetchWithAuth<DayRosterDto>(`${API_BASE}/api/v1/myroster/day${params}`);
+  return fetchWithAuth<DayRosterDto>(`/api/v1/myroster/day${params}`);
 }
 
 export async function getDayView(date: string): Promise<DayViewDto> {
-  return fetchWithAuth<DayViewDto>(`${API_BASE}/api/v1/myroster/dayview?date=${date}`);
+  return fetchWithAuth<DayViewDto>(`/api/v1/myroster/dayview?date=${date}`);
 }
 
 export async function refreshRoster(weekStart?: string, currentDate?: string): Promise<RefreshResponse> {
@@ -134,15 +107,15 @@ export async function refreshRoster(weekStart?: string, currentDate?: string): P
   if (currentDate) params.append('currentDate', currentDate);
   
   const queryString = params.toString();
-  const url = `${API_BASE}/api/v1/myroster/refresh${queryString ? `?${queryString}` : ''}`;
+  const path = `/api/v1/myroster/refresh${queryString ? `?${queryString}` : ''}`;
   
-  return fetchWithAuth<RefreshResponse>(url);
+  return fetchWithAuth<RefreshResponse>(path);
 }
 
 export async function getShiftDetails(shiftId: number): Promise<ShiftDetailsDto> {
-  return fetchWithAuth<ShiftDetailsDto>(`${API_BASE}/api/v1/myroster/shift/${shiftId}`);
+  return fetchWithAuth<ShiftDetailsDto>(`/api/v1/myroster/shift/${shiftId}`);
 }
 
 export async function getCalendarRange(start: string, months: number = 1): Promise<CalendarDayDto[]> {
-  return fetchWithAuth<CalendarDayDto[]>(`${API_BASE}/api/v1/calendar/range?start=${start}&months=${months}`);
+  return fetchWithAuth<CalendarDayDto[]>(`/api/v1/calendar/range?start=${start}&months=${months}`);
 }

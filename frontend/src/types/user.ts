@@ -2,6 +2,7 @@
 export type User = {
   id: string;
   email: string;
+  staffId?: number;  // Staff ID for matching with team members
 
   // 常见姓名字段
   firstName?: string;

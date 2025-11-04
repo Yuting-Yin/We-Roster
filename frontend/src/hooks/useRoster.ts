@@ -18,7 +18,7 @@ type Options = {
 };
 
 type RosterPayload = {
-  shiftMap?: Record<string, ShiftType>;
+  shiftMap?: Record<string, ShiftType | ShiftType[]>;
   events?: Record<string, EventItem[] | undefined>;
 };
 
@@ -29,7 +29,7 @@ export function useRosterData(anchorDate: Date, opts: Options = {}) {
   const delayMs = opts.delayMs ?? 300;
   const months = Math.max(1, opts.months ?? 2);
 
-  const [shiftMap, setShiftMap] = useState<Record<string, ShiftType>>({});
+  const [shiftMap, setShiftMap] = useState<Record<string, ShiftType | ShiftType[]>>({});
   const [eventsByDate, setEventsByDate] = useState<Record<string, EventItem[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,9 +124,9 @@ export function useRosterData(anchorDate: Date, opts: Options = {}) {
   );
 }
 
-function normalizeShiftMap(map?: Record<string, ShiftType>): Record<string, ShiftType> {
+function normalizeShiftMap(map?: Record<string, ShiftType | ShiftType[]>): Record<string, ShiftType | ShiftType[]> {
   if (!map) return {};
-  const next: Record<string, ShiftType> = {};
+  const next: Record<string, ShiftType | ShiftType[]> = {};
   for (const [key, value] of Object.entries(map)) {
     if (value) next[key] = value;
   }

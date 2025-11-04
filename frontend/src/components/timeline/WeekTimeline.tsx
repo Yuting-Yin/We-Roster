@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { sx, sy } from "@/theme/metrics";
 import { COLOR } from "@/theme/colors";
 import { fmt } from "@/lib/date";
+import { isDateInPast } from "@/lib/dateValidation";
 import type { EventItem, ShiftSlot } from "@/types/roster";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
@@ -131,7 +132,12 @@ export default function WeekTimeline({
                   {fmt(day, { weekday: "short" })} {fmt(day, { day: "2-digit", month: "short" })}
                 </Text>
               </View>
-              {events.map((ev) => {
+              {events.length === 0 ? (
+                <View style={styles.noShiftsContainer}>
+                  <Text style={styles.noShiftsText}>No shifts scheduled</Text>
+                </View>
+              ) : (
+                events.map((ev) => {
                 const filled = ev.action === "arrow";
                 const slot = slotFromEvent(ev);
                 const badge = badgeMetaFor(ev);
@@ -142,17 +148,47 @@ export default function WeekTimeline({
                 if (role) infoLines.push({ icon: "briefcase-outline", text: role });
                 const teammates = teammatesOf(ev);
                 if (teammates) infoLines.push({ icon: "people-outline", text: teammates });
+                const isOpenShift = ev.action === 'plus';
+                const isPastEvent = isDateInPast(ev.date);
+                
+                const handlePress = () => {
+                  if (isPastEvent) return; // Disable for past events
+                  if (filled || isOpenShift) {
+                    onOpenDetails(ev);
+                  } else {
+                    onOpenRequest(day, slot);
+                  }
+                };
+                
                 return (
                   <Pressable
                     key={ev.id}
-                    onPress={() => (filled ? onOpenDetails(ev) : onOpenRequest(day, slot))}
-                    style={[styles.row, filled ? styles.rowOn : styles.rowOff]}
+                    onPress={handlePress}
+                    disabled={isPastEvent}
+                    style={[
+                      styles.row, 
+                      isOpenShift ? styles.rowOpenShift : filled ? styles.rowOn : styles.rowOff,
+                      isPastEvent && styles.pastEventRow
+                    ]}
                   >
-                    <View style={styles.badge}>
+                    <View style={[styles.badge, isOpenShift && styles.badgeOpenShift]}>
                       <Ionicons name={badge.icon} size={sx(18)} color={COLOR.brand} style={styles.badgeIcon} />
                       <Text style={styles.badgeLabel}>{badge.label}</Text>
                     </View>
                     <View style={styles.infoColumn}>
+                      {/* Show "taken" badge for assigned shifts that have matching open shift */}
+                      {ev.action === 'arrow' && (ev as any).isTaken && (
+                        <View style={styles.takenBadge}>
+                          <Text style={styles.takenBadgeText}>taken</Text>
+                        </View>
+                      )}
+                      {/* Show "OPEN SHIFT" badge for open shifts */}
+                      {isOpenShift && (
+                        <View style={styles.openShiftBadge}>
+                          <Ionicons name="megaphone-outline" size={sx(10)} color={COLOR.success} style={{ marginRight: sx(4) }} />
+                          <Text style={styles.openShiftBadgeText}>OPEN SHIFT</Text>
+                        </View>
+                      )}
                       <View style={styles.line}>
                         <Ionicons name="time-outline" size={sx(14)} color={COLOR.ink} style={styles.ic} />
                         <Text style={styles.mainText}>{`${ev.start} - ${ev.end}`}</Text>
@@ -166,13 +202,14 @@ export default function WeekTimeline({
                     </View>
 
                     <Ionicons
-                      name={filled ? "arrow-forward-circle" : "add-circle"}
+                      name={filled ? "arrow-forward-circle" : isOpenShift ? "add-circle" : "add-circle"}
                       size={sx(24)}
-                      color={COLOR.brand}
+                      color={isPastEvent ? COLOR.label : (isOpenShift ? COLOR.success : COLOR.brand)}
                     />
                   </Pressable>
                 );
-              })}
+                })
+              )}
             </View>
           );
         })}
@@ -219,10 +256,19 @@ const styles = StyleSheet.create({
     borderRadius: sx(12),
     borderWidth: 1,
     marginBottom: sy(10),
-    height: sy(100), // fixed height
+    minHeight: sy(120), // Increased height for better readability
+    paddingVertical: sy(10),
   },
   rowOn: { backgroundColor: "#F6FAFF", borderColor: "#DCE9F9" },
   rowOff: { backgroundColor: "#F8FBFF", borderColor: "#E6EEF8" },
+  rowOpenShift: { 
+    backgroundColor: "rgba(232, 245, 233, 0.5)", // Very light green
+    borderColor: "rgba(76, 175, 80, 0.3)", // Subtle green border
+    borderStyle: 'dashed', // Dashed border to indicate open shift
+  },
+  pastEventRow: {
+    opacity: 0.6, // Make past events appear dimmed
+  },
   badge: {
     width: sx(52),
     height: sy(58),
@@ -234,6 +280,37 @@ const styles = StyleSheet.create({
     paddingVertical: sy(6),
     gap: sy(4),
   },
+  badgeOpenShift: {
+    backgroundColor: "rgba(76, 175, 80, 0.15)", // Light green for open shifts
+  },
+  takenBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(0, 120, 212, 0.08)',
+    paddingHorizontal: sx(6),
+    paddingVertical: sy(2),
+    borderRadius: sx(4),
+    marginBottom: sy(4),
+  },
+  takenBadgeText: {
+    color: COLOR.brand,
+    fontSize: sx(9),
+    fontWeight: '400',
+  },
+  openShiftBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(76, 175, 80, 0.12)',
+    paddingHorizontal: sx(6),
+    paddingVertical: sy(2),
+    borderRadius: sx(4),
+    marginBottom: sy(4),
+  },
+  openShiftBadgeText: {
+    color: COLOR.success,
+    fontSize: sx(9),
+    fontWeight: '700',
+  },
   badgeIcon: { marginBottom: sy(2) },
   badgeLabel: { color: COLOR.ink, fontSize: sx(11), fontWeight: "700" },
   infoColumn: { flex: 1, gap: sy(4), justifyContent: "center" },
@@ -243,4 +320,22 @@ const styles = StyleSheet.create({
   subText: { color: COLOR.ink, fontSize: sx(12) },
   fabWrap: { position: "absolute", right: sx(16), bottom: sy(20) },
   todayBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: sx(22), paddingHorizontal: sx(14), paddingVertical: sy(10), shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 8 },
+  noShiftsContainer: {
+    backgroundColor: "#F8F9FA",
+    borderRadius: sx(12),
+    paddingHorizontal: sx(16),
+    paddingVertical: sy(20),
+    marginBottom: sy(10),
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
+    borderStyle: "dashed",
+  },
+  noShiftsText: {
+    color: COLOR.label,
+    fontSize: sx(14),
+    fontWeight: "500",
+    textAlign: "center",
+  },
 });

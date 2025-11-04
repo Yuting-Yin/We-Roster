@@ -145,7 +145,8 @@ public class AuthController {
         // Get staff information if available
         if (user.getStaff() != null) {
             var staff = user.getStaff();
-            builder.firstName(staff.getFirstName())
+            builder.staffId(staff.getId())
+                   .firstName(staff.getFirstName())
                    .lastName(staff.getLastName())
                    .name(staff.getFirstName() + " " + staff.getLastName())
                    .phone(staff.getPhone())
@@ -155,8 +156,8 @@ public class AuthController {
                 builder.designation(staff.getDesignation().getName());
             }
             
-            // Staff entity doesn't have accreditation field
-            builder.accreditation(null);
+            // Get accreditation from staff
+            builder.accreditation(staff.getAccreditation());
         }
         
         return builder.build();

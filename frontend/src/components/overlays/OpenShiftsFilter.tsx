@@ -9,7 +9,6 @@ import SuccessToast from "@/components/overlays/SuccessToast";
 
 export type Session = "AM" | "PM" | "AH" | "ON_CALL";
 export type FilterValue = {
-  preset?: "Preset" | "My Filter";
   sessions: Session[];
   locations: string[];
   designations: string[];
@@ -26,11 +25,9 @@ type Props = {
   designationOptions?: string[];
 };
 
-const defLocations = ["PMCC", "TSC Campus", "Clinical Support"];
-const defDesignations = [
-  "Surgeon", "Anaes Coordinator", "Off-campus Trainee",
-  "Nurse Consultant", "Med student", "Trainee"
-];
+// Default empty arrays - actual data comes from props
+const defLocations: string[] = [];
+const defDesignations: string[] = [];
 
 const Chip = ({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) => (
   <Pressable onPress={onPress} style={[styles.chip, selected && styles.chipSel]} android_ripple={{ color: "#eaeaea" }}>
@@ -57,9 +54,9 @@ export default memo(function OpenShiftsFilter({
   const toggle = <T extends string>(arr: T[], k: T) => (arr.includes(k) ? arr.filter(x => x !== k) : [...arr, k]);
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.mask}>
-        <View style={styles.panel}>
+    <Modal visible={visible} animationType="none" transparent onRequestClose={onClose}>
+      <Pressable style={styles.mask} onPress={onClose}>
+        <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
           {/* 顶部栏 */}
           <View style={styles.topbar}>
             <Pressable onPress={onClear} hitSlop={10}><Text style={styles.clear}>Clear all</Text></Pressable>
@@ -68,20 +65,6 @@ export default memo(function OpenShiftsFilter({
           </View>
 
           <ScrollView contentContainerStyle={styles.body}>
-            {/* Preset */}
-            <Section title="Preset" icon={<Ionicons name="pricetags-outline" size={sx(16)} color={COLOR.label} />}>
-              <View style={styles.row}>
-                {(["Preset", "My Filter"] as const).map(p => (
-                  <Chip key={p}
-                    label={p}
-                    selected={value.preset === p}
-                    onPress={() => onChange({ ...value, preset: p })}
-                  />
-                ))}
-                <Chip label="+ Add" selected={false} onPress={() => {}} />
-              </View>
-            </Section>
-
             {/* Session */}
             <Section title="Session" icon={<Ionicons name="time-outline" size={sx(16)} color={COLOR.label} />}>
               <View style={styles.row}>
@@ -121,8 +104,8 @@ export default memo(function OpenShiftsFilter({
               </View>
             </Section>
           </ScrollView>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 });

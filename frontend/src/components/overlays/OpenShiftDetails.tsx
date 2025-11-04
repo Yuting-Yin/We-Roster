@@ -3,6 +3,9 @@ import { View, Text, StyleSheet, Modal, Pressable, ScrollView, Platform } from "
 import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
+import { isDateStringInPast, getPastDateErrorMessage } from "@/lib/dateValidation";
+import WarningToast from "@/components/overlays/WarningToast";
+import { useApprovedLeaves } from "@/hooks/useApprovedLeaves";
 
 export type Coworker = { id: string; name: string; initials: string };
 
@@ -13,10 +16,17 @@ export type OpenShiftDetail = {
   end: string;               // "13:00"
   session: "AM" | "PM" | "AH" | "ON_CALL";
   location: string;          // e.g. PMCC
+  hospitalName?: string;     // hospital name
   address?: string;          // detial adress
   designation: string;       // role
   theatre?: string;          // e.g. "Theatre 1"
   pay?: number;              // optional
+  urgent?: boolean;          // urgent flag
+  status?: string;           // AVAILABLE, READY_TO_RUN, etc.
+  canApply?: boolean;        // whether user can apply
+  applicationStatus?: string; // PENDING, APPROVED, etc.
+  assignedStaff?: any[];     // assigned staff list
+  requirements?: any[];      // designation requirements
 };
 
 type Props = {
@@ -25,13 +35,48 @@ type Props = {
   coworkers?: Coworker[];
   onClose: () => void;
   onApply: (shift: OpenShiftDetail) => void;
+  onCoworkerPress?: (coworker: Coworker) => void;
 };
 
 const Pill = ({ children }: { children: React.ReactNode }) => (
   <View style={styles.pill}><Text style={styles.pillText}>{children}</Text></View>
 );
 
-export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], onClose, onApply }: Props) {
+export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], onClose, onApply, onCoworkerPress }: Props) {
+  const [warningToast, setWarningToast] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState("");
+  const { leaveMap } = useApprovedLeaves();
+  
+  const showWarningToast = (message: string) => { 
+    setToastMessage(message); 
+    setWarningToast(true); 
+    setTimeout(() => setWarningToast(false), 1800); 
+  };
+
+  const handleApply = () => {
+    if (!shift) return;
+    
+    // Check if the date has an approved leave
+    if (hasApprovedLeave) {
+      showWarningToast("Cannot submit requests for dates with approved leave. You already have an approved leave request for this date.");
+      return;
+    }
+    
+    // Check if the date is in the past
+    if (isPastDate) {
+      const errorMessage = getPastDateErrorMessage(shift.date);
+      console.log('🔍 OpenShiftDetails - Past date detected:', shift.date, 'Error message:', errorMessage);
+      showWarningToast(errorMessage);
+      return;
+    }
+    
+    onApply(shift);
+  };
+
+  // Check if the date has an approved leave or is in the past
+  const hasApprovedLeave = shift ? leaveMap[shift.date] === true : false;
+  const isPastDate = shift ? isDateStringInPast(shift.date) : false;
+  const isDisabled = hasApprovedLeave || isPastDate;
   const durationHrs = useMemo(() => {
     if (!shift) return 0;
     const [sh, sm] = shift.start.split(":").map(Number);
@@ -75,14 +120,27 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
             <View style={styles.block}>
               <View style={styles.line}>
                 <Ionicons name="business-outline" size={sx(16)} color={COLOR.label} />
-                <Text style={styles.mainText}>  {shift.location}</Text>
+                <Text style={styles.mainText}>  {shift.hospitalName || shift.location}</Text>
               </View>
               {!!shift.address && <Text style={styles.addrText}>{shift.address}</Text>}
 
               <View style={styles.line}>
                 <Ionicons name="medkit-outline" size={sx(16)} color={COLOR.label} />
-                <Text style={styles.subText}>  {shift.designation}</Text>
+                <Text style={styles.subText}>  Designation Requirements</Text>
               </View>
+              {shift.requirements && shift.requirements.length > 0 ? (
+                shift.requirements.map((req, idx) => (
+                  <View key={idx} style={[styles.line, { marginLeft: sx(22), marginTop: sy(4) }]}>
+                    <Text style={styles.requirementText}>
+                      • {req.designationName}
+                    </Text>
+                  </View>
+                ))
+              ) : (
+                <View style={[styles.line, { marginLeft: sx(22), marginTop: sy(4) }]}>
+                  <Text style={styles.requirementText}>• Any designation</Text>
+                </View>
+              )}
               {!!shift.theatre && (
                 <View style={styles.line}>
                   <Ionicons name="key-outline" size={sx(16)} color={COLOR.label} />
@@ -99,14 +157,26 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
                 <Ionicons name="people-outline" size={sx(16)} color={COLOR.label} />
                 <Text style={styles.mainText}>  Working with</Text>
               </View>
-              {coworkers.map(cw => (
-                <View key={cw.id} style={styles.cwRow}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{cw.initials}</Text>
-                  </View>
-                  <Text style={styles.cwName}>{cw.name}</Text>
-                </View>
-              ))}
+              {coworkers.length === 0 ? (
+                <Text style={styles.noStaffText}>Currently no staff allocated</Text>
+              ) : (
+                coworkers.map(cw => (
+                  <Pressable 
+                    key={cw.id} 
+                    style={styles.cwRow}
+                    onPress={() => onCoworkerPress?.(cw)}
+                    disabled={!onCoworkerPress}
+                  >
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{cw.initials}</Text>
+                    </View>
+                    <Text style={styles.cwName}>{cw.name}</Text>
+                    {onCoworkerPress && (
+                      <Ionicons name="chevron-forward" size={sx(16)} color={COLOR.label} style={{ marginLeft: "auto" }} />
+                    )}
+                  </Pressable>
+                ))
+              )}
             </View>
 
             <View style={styles.divider} />
@@ -123,14 +193,16 @@ export default memo(function OpenShiftDetails({ visible, shift, coworkers = [], 
 
           {/* Apply */}
           <Pressable
-            style={styles.applyBtn}
-            onPress={() => onApply(shift)}
-            android_ripple={{ color: "#e6f0fb", borderless: true }}
+            style={[styles.applyBtn, isDisabled && styles.applyBtnDisabled]}
+            onPress={handleApply}
+            android_ripple={isDisabled ? { color: "#e6f0fb40", borderless: true } : { color: "#e6f0fb", borderless: true }}
           >
-            <Text style={styles.applyText}>Apply</Text>
+            <Text style={[styles.applyText, isDisabled && styles.applyTextDisabled]}>Apply</Text>
           </Pressable>
         </View>
       </View>
+      
+      <WarningToast visible={warningToast} text={toastMessage} />
     </Modal>
   );
 });
@@ -179,6 +251,8 @@ const styles = StyleSheet.create({
   mainText: { color: COLOR.ink, fontWeight: "600" },
   subText: { color: COLOR.ink },
   addrText: { color: COLOR.brand, marginLeft: sx(22), marginBottom: sy(6) },
+  requirementText: { color: COLOR.ink, fontSize: sx(13) },
+  requirementCount: { color: COLOR.label, fontSize: sx(12), fontStyle: "italic" },
 
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: COLOR.divider, marginVertical: sy(8) },
 
@@ -190,6 +264,7 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: COLOR.brand, fontWeight: "700", fontSize: sx(10) },
   cwName: { color: COLOR.ink },
+  noStaffText: { color: COLOR.label, fontSize: sx(13), fontStyle: "italic" },
 
   payCard: {
     borderWidth: 1, borderColor: COLOR.divider, borderRadius: sx(12),
@@ -209,5 +284,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  applyBtnDisabled: {
+    backgroundColor: COLOR.brand + "40", // Reduced saturation (25% opacity)
+  },
   applyText: { color: "#fff", fontWeight: "700" },
+  applyTextDisabled: { color: "#fff" + "80", fontWeight: "700" }, // Reduced text opacity
 });

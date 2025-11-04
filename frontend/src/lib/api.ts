@@ -1,7 +1,8 @@
 // src/lib/api.ts
+import { API_CONFIG } from '../config/api';
 
 export const API_BASE: string =
-  process.env.EXPO_PUBLIC_API_BASE ?? "http://192.168.0.173:8080";
+  process.env.EXPO_PUBLIC_API_BASE ?? API_CONFIG.BASE_URL;
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -28,21 +29,28 @@ export async function fetchJson<T>(
     timeoutMs?: number;
   } = {}
 ): Promise<T> {
-  const { method = "GET", body, signal, headers = {}, timeoutMs = 15000 } =
+  const { method = "GET", body, signal, headers = {}, timeoutMs = 30000 } =
     options;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   const token = authTokenGetter?.();
+  console.log('🔍 fetchJson - Request URL:', `${API_BASE}${path}`);
+  console.log('🔍 fetchJson - AuthTokenGetter available:', !!authTokenGetter);
+  console.log('🔍 fetchJson - Token retrieved:', token ? `Token present (${token.substring(0, 20)}...)` : 'No token');
+  
+  const requestHeaders = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...headers,
+  };
+  console.log('🔍 fetchJson - Request headers:', requestHeaders);
+  
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       method,
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...headers,
-      },
+      headers: requestHeaders,
       body: body ? JSON.stringify(body) : undefined,
       signal: mergeSignals(signal, controller.signal),
     });
@@ -54,7 +62,14 @@ export async function fetchJson<T>(
 
     return (await res.json()) as T;
   } catch (e: any) {
-    if (e?.name === "AbortError") throw new ApiError(408, "Request timeout");
+    if (e?.name === "AbortError") {
+      console.log('🔍 fetchJson - Request timed out after', timeoutMs, 'ms');
+      throw new ApiError(408, "Request timeout");
+    }
+    if (e?.message?.includes('fetch')) {
+      console.log('🔍 fetchJson - Network error:', e.message);
+      throw new ApiError(0, "Network error - backend may be starting up");
+    }
     throw e;
   } finally {
     clearTimeout(timer);

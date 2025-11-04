@@ -2,6 +2,7 @@ package com.weroster.config;
 
 import com.weroster.entity.*;
 import com.weroster.repository.*;
+import com.weroster.entity.Notification;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -14,6 +15,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import jakarta.persistence.EntityManager;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @Component
 @Profile("!test")
@@ -49,6 +52,27 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired
     private LeaveRequestRepository leaveRequestRepository;
     
+    @Autowired
+    private OpenShiftRepository openShiftRepository;
+    
+    @Autowired
+    private ShiftDesignationRequirementsRepository shiftDesignationRequirementsRepository;
+    
+    @Autowired
+    private OpenShiftRequestRepository openShiftRequestRepository;
+    
+    @Autowired
+    private NotificationRepository notificationRepository;
+    
+    @Autowired
+    private EntityManager entityManager;
+    
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+    
+    @Autowired
+    private ShiftSwapRepository shiftSwapRepository;
+    
     // Removed UserStaffRepository - using direct User-Staff relationship
 
     @Override
@@ -58,18 +82,38 @@ public class DataInitializer implements CommandLineRunner {
             return;
         }
         
-        // Clear leave requests for testing (real version should not do this)
-        System.out.println("🔍 DataInitializer - Clearing existing leave requests for testing...");
-        leaveRequestRepository.deleteAll();
-        System.out.println("🔍 DataInitializer - Leave requests cleared");
+        System.out.println("🔍 DataInitializer - Force regenerating database with fresh data...");
         
-        // Only initialize if database is empty
-        if (userRepository.count() == 0) {
-            createMockData();
-        }
+        // Clear all existing data in reverse dependency order
+        System.out.println("🔍 DataInitializer - Clearing all existing data...");
+        notificationRepository.deleteAll();
+        shiftSwapRepository.deleteAll();
+        openShiftRequestRepository.deleteAll();
+        shiftDesignationRequirementsRepository.deleteAll();
+        shiftAssignmentRepository.deleteAll();
+        openShiftRepository.deleteAll();
+        leaveRequestRepository.deleteAll(); // Delete leave requests BEFORE shifts
+        shiftRepository.deleteAll();
+        staffRepository.deleteAll();
+        userRepository.deleteAll();
+        locationRepository.deleteAll();
+        designationRepository.deleteAll();
+        departmentRepository.deleteAll();
+        hospitalRepository.deleteAll();
         
-        // Always create test leave requests (for testing purposes)
+        // Reset AUTO_INCREMENT counters to start from 1
+        System.out.println("🔍 DataInitializer - Resetting AUTO_INCREMENT counters...");
+        resetAutoIncrementCounters();
+        
+        System.out.println("🔍 DataInitializer - All existing data cleared, creating fresh data...");
+        createMockData();
+        
+        // Create test data
+        System.out.println("🔍 DataInitializer - Creating test data...");
         createTestLeaveRequests();
+        createTestSwapRequests();
+        
+        System.out.println("🔍 DataInitializer - Database regeneration completed successfully!");
     }
     
     private void createMockData() {
@@ -230,6 +274,7 @@ public class DataInitializer implements CommandLineRunner {
                 .status("ACTIVE")
                 .isManager(false)
                 .type("FULL_TIME")
+                .accreditation("RN-2023-001")
                 .hireDate(LocalDate.of(2023, 1, 15))
                 .createdTime(LocalDateTime.now())
                 .statusTime(LocalDateTime.now())
@@ -246,6 +291,7 @@ public class DataInitializer implements CommandLineRunner {
                 .status("ACTIVE")
                 .isManager(false)
                 .type("FULL_TIME")
+                .accreditation("RN-2023-002")
                 .hireDate(LocalDate.of(2023, 3, 20))
                 .createdTime(LocalDateTime.now())
                 .statusTime(LocalDateTime.now())
@@ -262,6 +308,7 @@ public class DataInitializer implements CommandLineRunner {
                 .status("ACTIVE")
                 .isManager(true)
                 .type("FULL_TIME")
+                .accreditation("MD-2022-101")
                 .hireDate(LocalDate.of(2022, 6, 10))
                 .createdTime(LocalDateTime.now())
                 .statusTime(LocalDateTime.now())
@@ -278,6 +325,7 @@ public class DataInitializer implements CommandLineRunner {
                 .status("ACTIVE")
                 .isManager(false)
                 .type("PART_TIME")
+                .accreditation("RN-2023-003")
                 .hireDate(LocalDate.of(2023, 8, 5))
                 .createdTime(LocalDateTime.now())
                 .statusTime(LocalDateTime.now())
@@ -295,6 +343,7 @@ public class DataInitializer implements CommandLineRunner {
                 .status("ACTIVE")
                 .isManager(false)
                 .type("FULL_TIME")
+                .accreditation("SUR-2022-501")
                 .hireDate(LocalDate.of(2022, 6, 10))
                 .createdTime(LocalDateTime.now())
                 .statusTime(LocalDateTime.now())
@@ -311,6 +360,7 @@ public class DataInitializer implements CommandLineRunner {
                 .status("ACTIVE")
                 .isManager(true)
                 .type("FULL_TIME")
+                .accreditation("ANAES-2021-301")
                 .hireDate(LocalDate.of(2021, 9, 15))
                 .createdTime(LocalDateTime.now())
                 .statusTime(LocalDateTime.now())
@@ -327,6 +377,7 @@ public class DataInitializer implements CommandLineRunner {
                 .status("ACTIVE")
                 .isManager(false)
                 .type("FULL_TIME")
+                .accreditation("NC-2020-201")
                 .hireDate(LocalDate.of(2020, 4, 20))
                 .createdTime(LocalDateTime.now())
                 .statusTime(LocalDateTime.now())
@@ -343,6 +394,7 @@ public class DataInitializer implements CommandLineRunner {
                 .status("ACTIVE")
                 .isManager(false)
                 .type("FULL_TIME")
+                .accreditation("TRN-2024-401")
                 .hireDate(LocalDate.of(2024, 1, 8))
                 .createdTime(LocalDateTime.now())
                 .statusTime(LocalDateTime.now())
@@ -359,6 +411,7 @@ public class DataInitializer implements CommandLineRunner {
                 .status("ACTIVE")
                 .isManager(false)
                 .type("PART_TIME")
+                .accreditation("MS-2024-601")
                 .hireDate(LocalDate.of(2024, 2, 1))
                 .createdTime(LocalDateTime.now())
                 .statusTime(LocalDateTime.now())
@@ -375,6 +428,7 @@ public class DataInitializer implements CommandLineRunner {
                 .status("ACTIVE")
                 .isManager(false)
                 .type("PART_TIME")
+                .accreditation("OCT-2024-701")
                 .hireDate(LocalDate.of(2024, 3, 15))
                 .createdTime(LocalDateTime.now())
                 .statusTime(LocalDateTime.now())
@@ -382,6 +436,7 @@ public class DataInitializer implements CommandLineRunner {
         offCampusTrainee = staffRepository.save(offCampusTrainee);
         
         // Create Test User and link directly to nurse1
+        System.out.println("🔍 DataInitializer - Creating test user for nurse1...");
         User testUser = User.builder()
                 .domain("test")
                 .email("test@example.com")
@@ -394,10 +449,12 @@ public class DataInitializer implements CommandLineRunner {
                 .loginAttempts(0)
                 .build();
         testUser = userRepository.save(testUser);
+        System.out.println("🔍 DataInitializer - Created test user ID: " + testUser.getId());
         
         // Link test user directly to nurse1
         nurse1.setUser(testUser);
         nurse1 = staffRepository.save(nurse1);
+        System.out.println("🔍 DataInitializer - Linked test user to nurse1");
         
         System.out.println("🔗 Created direct User-Staff link:");
         System.out.println("   User ID: " + testUser.getId() + " (" + testUser.getEmail() + ")");
@@ -420,6 +477,7 @@ public class DataInitializer implements CommandLineRunner {
                 .status("ACTIVE")
                 .isManager(false)
                 .type("FULL_TIME")
+                .accreditation("RN-2023-004")
                 .hireDate(LocalDate.of(2023, 5, 10))
                 .createdTime(LocalDateTime.now())
                 .statusTime(LocalDateTime.now())
@@ -436,6 +494,7 @@ public class DataInitializer implements CommandLineRunner {
                 .status("ACTIVE")
                 .isManager(false)
                 .type("PART_TIME")
+                .accreditation("RN-2023-005")
                 .hireDate(LocalDate.of(2023, 7, 15))
                 .createdTime(LocalDateTime.now())
                 .statusTime(LocalDateTime.now())
@@ -452,6 +511,7 @@ public class DataInitializer implements CommandLineRunner {
                 .status("ACTIVE")
                 .isManager(false)
                 .type("FULL_TIME")
+                .accreditation("MD-2022-102")
                 .hireDate(LocalDate.of(2022, 9, 1))
                 .createdTime(LocalDateTime.now())
                 .statusTime(LocalDateTime.now())
@@ -468,6 +528,7 @@ public class DataInitializer implements CommandLineRunner {
                 .status("ACTIVE")
                 .isManager(false)
                 .type("FULL_TIME")
+                .accreditation("RN-2023-006")
                 .hireDate(LocalDate.of(2023, 2, 20))
                 .createdTime(LocalDateTime.now())
                 .statusTime(LocalDateTime.now())
@@ -482,9 +543,13 @@ public class DataInitializer implements CommandLineRunner {
         List<Staff> staffNeedingUsers = Arrays.asList(nurse2, doctor1, nurse3, surgeon, anaesCoordinator, 
                 nurseConsultant, trainee, medStudent, offCampusTrainee, nurse4, nurse5, doctor2, nurse6);
         
+        System.out.println("🔍 DataInitializer - Creating users for " + staffNeedingUsers.size() + " staff members...");
+        
         for (Staff staff : staffNeedingUsers) {
+            System.out.println("🔍 DataInitializer - Creating user for: " + staff.getFirstName() + " " + staff.getLastName());
+            
             User user = User.builder()
-                    .domain("staff")
+                    .domain("test") // Use "test" domain for all users to match login attempts
                     .email(staff.getEmail())
                     .passwordHash("5d41402abc4b2a76b9719d911017c592") // "hello" in MD5
                     .salt("")
@@ -495,87 +560,206 @@ public class DataInitializer implements CommandLineRunner {
                     .loginAttempts(0)
                     .build();
             user = userRepository.save(user);
+            System.out.println("🔍 DataInitializer - Created user ID: " + user.getId());
             
             // Link user directly to staff
             staff.setUser(user);
-            staffRepository.save(staff);
+            staff = staffRepository.save(staff);
+            System.out.println("🔍 DataInitializer - Linked user " + user.getId() + " to staff " + staff.getId());
         }
+        
+        System.out.println("🔍 DataInitializer - Completed User-Staff linking for all staff members");
         
         // Create comprehensive mock data for the last 2 months
         System.out.println("📅 Creating comprehensive mock data for the last 2 months...");
         
         // Always create test data for current month to ensure frontend can find shifts
         LocalDate currentDate = LocalDate.now();
-        LocalDate startDate = currentDate.withDayOfMonth(1); // Start of current month
+        
+        // Calculate the start of the current week (Monday) to ensure full week coverage
+        int dayOfWeek = currentDate.getDayOfWeek().getValue(); // Monday = 1, Sunday = 7
+        LocalDate currentWeekMonday = currentDate.minusDays(dayOfWeek - 1);
+        
+        // Start from either the Monday of current week or the 1st of the month, whichever is earlier
+        LocalDate monthStart = currentDate.withDayOfMonth(1);
+        LocalDate startDate = currentWeekMonday.isBefore(monthStart) ? currentWeekMonday : monthStart;
         LocalDate endDate = currentDate.plusDays(14); // Current date + 2 weeks
+        
+        System.out.println("📅 Data range: " + startDate + " to " + endDate + " (includes full current week)");
         
         int shiftCount = 0;
         int assignmentCount = 0;
         
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            // Create non-overlapping shifts using distinct time slots
+            // Create shifts using new shift type definitions:
+            // AM: starts 8:00-13:00 | PM: starts 13:00-18:00 | AH: starts outside 8:00-18:00 | ON_CALL: standby
             List<Shift> dayShifts = new ArrayList<>();
             
-            // AM shift: 8:00-16:00 (8 hours)
-            Shift amShift = Shift.builder()
+            // === AM SHIFTS (start 8:00-13:00) ===
+            
+            // AM shift: 8:00-16:00 - Emergency Department
+            Shift amShift1 = Shift.builder()
                     .startTs(date.atTime(8, 0))
                     .endTs(date.atTime(16, 0))
-                    .code("AM")
+                    .type(determineShiftCode(8, false))
                     .department(emergencyDept)
                     .location(edRoom1)
-                    .note("Morning shift - " + date.toString())
+                    .name(generateShiftName(emergencyDept, "AM", false))
+                    .note("Early morning shift ED - " + date.toString())
                     .build();
-            amShift = shiftRepository.save(amShift);
-            dayShifts.add(amShift);
+            amShift1 = shiftRepository.save(amShift1);
+            dayShifts.add(amShift1);
             shiftCount++;
             
-            // PM shift: 16:00-00:00 (8 hours, next day)
-            Shift pmShift = Shift.builder()
-                    .startTs(date.atTime(16, 0))
-                    .endTs(date.plusDays(1).atTime(0, 0))
-                    .code("PM")
+            // AM shift: 9:00-17:00 - ICU Department
+            Shift amShift2 = Shift.builder()
+                    .startTs(date.atTime(9, 0))
+                    .endTs(date.atTime(17, 0))
+                    .type(determineShiftCode(9, false))
                     .department(icuDept)
                     .location(icuBed1)
-                    .note("Evening shift - " + date.toString())
+                    .name(generateShiftName(icuDept, "AM", false))
+                    .note("Morning shift ICU - " + date.toString())
                     .build();
-            pmShift = shiftRepository.save(pmShift);
-            dayShifts.add(pmShift);
+            amShift2 = shiftRepository.save(amShift2);
+            dayShifts.add(amShift2);
             shiftCount++;
             
-            // AH shift: 00:00-08:00 (8 hours, overnight) - every other day
-            if (date.getDayOfMonth() % 2 == 0) {
-                Shift ahShift = Shift.builder()
-                        .startTs(date.atTime(0, 0))
-                        .endTs(date.atTime(8, 0))
-                        .code("AH")
-                        .department(medicalDept)
-                        .location(medWard)
-                        .note("After hours shift - " + date.toString())
-                        .build();
-                ahShift = shiftRepository.save(ahShift);
-                dayShifts.add(ahShift);
-                shiftCount++;
-            }
+            // AM shift: 10:00-18:00 - Medical Ward
+            Shift amShift3 = Shift.builder()
+                    .startTs(date.atTime(10, 0))
+                    .endTs(date.atTime(18, 0))
+                    .type(determineShiftCode(10, false))
+                    .department(medicalDept)
+                    .location(medWard)
+                    .name(generateShiftName(medicalDept, "AM", false))
+                    .note("Mid-morning shift Medical - " + date.toString())
+                    .build();
+            amShift3 = shiftRepository.save(amShift3);
+            dayShifts.add(amShift3);
+            shiftCount++;
             
-            // ON_CALL shift: 20:00-04:00 (8 hours, late night) - every 3rd day
-            if (date.getDayOfMonth() % 3 == 0) {
-                Shift onCallShift = Shift.builder()
-                        .startTs(date.atTime(20, 0))
-                        .endTs(date.plusDays(1).atTime(4, 0))
-                        .code("ON_CALL")
-                        .department(emergencyDept)
-                        .location(edRoom1)
-                        .note("On-call shift - " + date.toString())
-                        .build();
-                onCallShift = shiftRepository.save(onCallShift);
-                dayShifts.add(onCallShift);
-                shiftCount++;
-            }
+            // === PM SHIFTS (start 13:00-18:00) ===
+            
+            // PM shift: 14:00-22:00 - Emergency Department
+            Shift pmShift1 = Shift.builder()
+                    .startTs(date.atTime(14, 0))
+                    .endTs(date.atTime(22, 0))
+                    .type(determineShiftCode(14, false))
+                    .department(emergencyDept)
+                    .location(edRoom1)
+                    .name(generateShiftName(emergencyDept, "PM", false))
+                    .note("Afternoon shift ED - " + date.toString())
+                    .build();
+            pmShift1 = shiftRepository.save(pmShift1);
+            dayShifts.add(pmShift1);
+            shiftCount++;
+            
+            // PM shift: 16:00-00:00 - ICU Department
+            Shift pmShift2 = Shift.builder()
+                    .startTs(date.atTime(16, 0))
+                    .endTs(date.plusDays(1).atTime(0, 0))
+                    .type(determineShiftCode(16, false))
+                    .department(icuDept)
+                    .location(icuBed1)
+                    .name(generateShiftName(icuDept, "PM", false))
+                    .note("Evening shift ICU - " + date.toString())
+                    .build();
+            pmShift2 = shiftRepository.save(pmShift2);
+            dayShifts.add(pmShift2);
+            shiftCount++;
+            
+            // === AH SHIFTS (start outside 8:00-18:00) ===
+            
+            // AH shift: 22:00-06:00 - Emergency Department
+            Shift ahShift1 = Shift.builder()
+                    .startTs(date.atTime(22, 0))
+                    .endTs(date.plusDays(1).atTime(6, 0))
+                    .type(determineShiftCode(22, false))
+                    .department(emergencyDept)
+                    .location(edRoom1)
+                    .name(generateShiftName(emergencyDept, "AH", false))
+                    .note("Night shift ED - " + date.toString())
+                    .build();
+            ahShift1 = shiftRepository.save(ahShift1);
+            dayShifts.add(ahShift1);
+            shiftCount++;
+            
+            // AH shift: 00:00-08:00 - Medical Ward
+            Shift ahShift2 = Shift.builder()
+                    .startTs(date.atTime(0, 0))
+                    .endTs(date.atTime(8, 0))
+                    .type(determineShiftCode(0, false))
+                    .department(medicalDept)
+                    .location(medWard)
+                    .name(generateShiftName(medicalDept, "AH", false))
+                    .note("Overnight shift Medical - " + date.toString())
+                    .build();
+            ahShift2 = shiftRepository.save(ahShift2);
+            dayShifts.add(ahShift2);
+            shiftCount++;
+            
+            // AH shift: 18:30-02:30 - ICU Department
+            Shift ahShift3 = Shift.builder()
+                    .startTs(date.atTime(18, 30))
+                    .endTs(date.plusDays(1).atTime(2, 30))
+                    .type(determineShiftCode(18, false))
+                    .department(icuDept)
+                    .location(icuBed1)
+                    .name(generateShiftName(icuDept, "AH", false))
+                    .note("Late evening shift ICU - " + date.toString())
+                    .build();
+            ahShift3 = shiftRepository.save(ahShift3);
+            dayShifts.add(ahShift3);
+            shiftCount++;
+            
+            // === ON_CALL SHIFTS (standby, can start anytime) ===
+            
+            // ON_CALL shift: 20:00-08:00 - Emergency (standby)
+            Shift onCallShift = Shift.builder()
+                    .startTs(date.atTime(20, 0))
+                    .endTs(date.plusDays(1).atTime(8, 0))
+                    .type(determineShiftCode(20, true))
+                    .department(emergencyDept)
+                    .location(edRoom1)
+                    .name(generateShiftName(emergencyDept, "ON_CALL", true))
+                    .note("On-call standby shift - " + date.toString())
+                    .build();
+            onCallShift = shiftRepository.save(onCallShift);
+            dayShifts.add(onCallShift);
+            shiftCount++;
             
             // Assign staff to shifts with variety for swap testing
             assignStaffToShifts(dayShifts, allStaff, date, shiftAssignmentRepository);
             assignmentCount += dayShifts.size() * 2; // Average 2 staff per shift
         }
+        
+        // === CREATE OPEN SHIFTS ===
+        System.out.println("\n🔓 Creating open shifts...");
+        List<OpenShift> createdOpenShifts = new ArrayList<>();
+        try {
+            createdOpenShifts = createOpenShifts(startDate, endDate, emergencyDept, icuDept, medicalDept, 
+                                               edRoom1, icuBed1, medWard, nurse1, 
+                                               nurseDesignation, doctorDesignation, surgeonDesignation);
+            System.out.println("✅ Created " + createdOpenShifts.size() + " open shifts successfully!");
+        } catch (Exception e) {
+            System.err.println("❌ ERROR creating open shifts: " + e.getMessage());
+            e.printStackTrace();
+            // Continue without open shifts - don't fail the entire initialization
+        }
+        
+        // === CREATE APPROVED REQUESTS FOR TESTING "WORKING WITH" ===
+        System.out.println("\n📝 Creating approved open shift requests for testing...");
+        try {
+            int approvedCount = createApprovedOpenShiftRequests(createdOpenShifts, allStaff);
+            System.out.println("✅ Created " + approvedCount + " approved requests for testing!");
+        } catch (Exception e) {
+            System.err.println("❌ ERROR creating approved requests: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        // === CREATE TEST NOTIFICATIONS ===
+        createTestNotifications();
         
         System.out.println("✅ Mock data created successfully!");
         System.out.println("📋 Created:");
@@ -599,17 +783,32 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("     • Rachel Green (nurse6@weroster.com)");
         System.out.println("   - " + shiftCount + " Shifts: All non-overlapping comprehensive shifts");
         System.out.println("   - " + assignmentCount + " Shift assignments: All comprehensive assignments");
+        System.out.println("   - " + createdOpenShifts.size() + " Open Shifts: Available for pickup with varying incentives");
+        System.out.println("   - ~50% of open shifts have pre-approved requests (for testing 'working with' section)");
         System.out.println("   - All staff have user accounts with password: hello");
-        System.out.println("   - Data spans: " + startDate + " to " + endDate + " (2+ months)");
+        System.out.println("   - Data spans: " + startDate + " to " + endDate + " (includes full current week + 2 weeks)");
         System.out.println("🔐 Login credentials for testing:");
         System.out.println("   - test@example.com / hello (original test user)");
         System.out.println("   - Any staff email / hello (e.g., sarah.johnson@weroster.com)");
-        System.out.println("📅 Non-Overlapping Shift System:");
-        System.out.println("   - AM: 8:00-16:00 (3 staff per shift)");
-        System.out.println("   - PM: 16:00-00:00 (2 staff per shift)");
-        System.out.println("   - AH: 00:00-08:00 (2 staff per shift, every other day)");
-        System.out.println("   - ON_CALL: 20:00-04:00 (1 staff per shift, every 3rd day)");
+        System.out.println("📅 Comprehensive Shift System (New Definitions):");
+        System.out.println("   Shift Type Definitions:");
+        System.out.println("     • AM: Shifts that START between 8:00-13:00");
+        System.out.println("     • PM: Shifts that START between 13:00-18:00");
+        System.out.println("     • AH: Shifts that START outside 8:00-18:00 range");
+        System.out.println("     • ON_CALL: Standby shifts (can start anytime)");
+        System.out.println("   Daily Shifts Created:");
+        System.out.println("     • 3 AM shifts: 8:00-16:00 (ED), 9:00-17:00 (ICU), 10:00-18:00 (Medical)");
+        System.out.println("     • 2 PM shifts: 14:00-22:00 (ED), 16:00-00:00 (ICU)");
+        System.out.println("     • 3 AH shifts: 22:00-06:00 (ED), 00:00-08:00 (Medical), 18:30-02:30 (ICU)");
+        System.out.println("     • 1 ON_CALL shift: 20:00-08:00 (ED standby)");
+        System.out.println("   - Total: 9 shifts per day across all departments");
         System.out.println("🔄 Perfect for swap testing with diverse staff assignments!");
+        System.out.println("👤 Test User (test@example.com / Sarah Johnson) Shift Pattern:");
+        System.out.println("   • AM shifts: Every 3 days (day 3, 6, 9, 12, ...)");
+        System.out.println("   • PM shifts: Every 3 days (day 1, 4, 7, 10, ...)");
+        System.out.println("   • AH shifts: Every 4 days (day 4, 8, 12, 16, ...)");
+        System.out.println("   • ON_CALL shifts: Every 3 days (day 2, 5, 8, 11, 14, ...) + every 8th day");
+        System.out.println("   • Multiple shifts per day: Days 8, 16, 24 (AH + ON_CALL)");
         
         // Verify the user-staff link exists using direct relationship
         if (nurse1.getUser() != null) {
@@ -631,18 +830,43 @@ public class DataInitializer implements CommandLineRunner {
         
         for (Shift shift : shifts) {
             // Determine how many staff to assign based on shift type
-            int staffCount = getStaffCountForShift(shift.getCode());
+            int staffCount = getStaffCountForShift(shift.getType());
             
             // Get available staff for this shift (avoid overlaps)
             List<Staff> availableStaff = getAvailableStaffForShift(shift, allStaff, date);
             
-            // Shuffle and select staff
+            // Prioritize test user for ON_CALL shifts (move to front if available)
             List<Staff> shuffledStaff = new ArrayList<>(availableStaff);
-            for (int i = shuffledStaff.size() - 1; i > 0; i--) {
-                int j = random.nextInt(i + 1);
-                Staff temp = shuffledStaff.get(i);
-                shuffledStaff.set(i, shuffledStaff.get(j));
-                shuffledStaff.set(j, temp);
+            if (shift.getType().equals("ON_CALL")) {
+                Staff testUser = shuffledStaff.stream()
+                    .filter(s -> s.getEmail().equals("sarah.johnson@weroster.com"))
+                    .findFirst()
+                    .orElse(null);
+                if (testUser != null) {
+                    shuffledStaff.remove(testUser);
+                    shuffledStaff.add(0, testUser); // Put test user first
+                    System.out.println("📌 Prioritized test user for ON_CALL on " + date);
+                }
+            } else {
+                // Shuffle other shift types normally
+                for (int i = shuffledStaff.size() - 1; i > 0; i--) {
+                    int j = random.nextInt(i + 1);
+                    Staff temp = shuffledStaff.get(i);
+                    shuffledStaff.set(i, shuffledStaff.get(j));
+                    shuffledStaff.set(j, temp);
+                }
+            }
+            
+            // Debug logging for ON_CALL shifts
+            if (shift.getType().equals("ON_CALL")) {
+                System.out.println("🔍 DEBUG ON_CALL: Date=" + date + ", DayOfYear=" + date.getDayOfYear() + 
+                                   ", Available staff count=" + shuffledStaff.size() + 
+                                   ", Needed=" + staffCount);
+                if (shuffledStaff.size() > 0) {
+                    for (Staff s : shuffledStaff) {
+                        System.out.println("   → Available: " + s.getFirstName() + " " + s.getLastName() + " (" + s.getEmail() + ")");
+                    }
+                }
             }
             
             // Assign staff to shift
@@ -655,10 +879,34 @@ public class DataInitializer implements CommandLineRunner {
                         .staff(staff)
                         .isLead(isLead)
                         .assignedAt(LocalDateTime.now())
-                        .note(shift.getCode() + " shift assignment - " + staff.getFirstName() + " " + staff.getLastName())
+                        .note(shift.getType() + " shift assignment - " + staff.getFirstName() + " " + staff.getLastName())
                         .build();
                 shiftAssignmentRepository.save(assignment);
+                
+                // Extra logging for ON_CALL assignments
+                if (shift.getType().equals("ON_CALL")) {
+                    System.out.println("✅ Assigned ON_CALL to: " + staff.getFirstName() + " " + staff.getLastName() + " on " + date);
+                }
             }
+        }
+    }
+    
+    /**
+     * Determine shift code based on start time according to new shift type definitions:
+     * - AM: shifts that start between 8:00-13:00
+     * - PM: shifts that start between 13:00-18:00
+     * - AH: shifts that start outside 8:00-18:00 range
+     * - ON_CALL: standby shifts (can start anytime, but marked explicitly)
+     */
+    private String determineShiftCode(int startHour, boolean isOnCall) {
+        if (isOnCall) {
+            return "ON_CALL";
+        } else if (startHour >= 8 && startHour < 13) {
+            return "AM";
+        } else if (startHour >= 13 && startHour < 18) {
+            return "PM";
+        } else {
+            return "AH";
         }
     }
     
@@ -688,7 +936,7 @@ public class DataInitializer implements CommandLineRunner {
         
         // Use a deterministic pattern based on date and shift type to ensure consistency
         int dayOfYear = date.getDayOfYear();
-        int shiftTypeHash = shift.getCode().hashCode();
+        int shiftTypeHash = shift.getType().hashCode();
         
         for (int i = 0; i < allStaff.size(); i++) {
             Staff staff = allStaff.get(i);
@@ -704,29 +952,43 @@ public class DataInitializer implements CommandLineRunner {
             boolean isAvailable = true;
             
             if (isTestUser) {
-                // Test user gets assignments on specific days for testing
-                if (shift.getCode().equals("AM") && dayOfYear % 7 == 0) {
-                    isAvailable = true; // Test user gets AM shifts every 7 days
-                } else if (shift.getCode().equals("PM") && dayOfYear % 7 == 3) {
-                    isAvailable = true; // Test user gets PM shifts every 7 days
-                } else if (shift.getCode().equals("AH") && dayOfYear % 14 == 6) {
-                    isAvailable = true; // Test user gets AH shifts every 14 days
-                } else if (shift.getCode().equals("ON_CALL") && dayOfYear % 21 == 9) {
-                    isAvailable = true; // Test user gets ON_CALL shifts every 21 days
+                // Test user gets regular assignments for testing
+                // Give test user shifts more frequently for better testing experience
+                if (shift.getType().equals("AM") && dayOfYear % 3 == 0) {
+                    isAvailable = true; // Test user gets AM shifts every 3 days
+                } else if (shift.getType().equals("PM") && dayOfYear % 3 == 1) {
+                    isAvailable = true; // Test user gets PM shifts every 3 days
+                } else if (shift.getType().equals("AH") && dayOfYear % 4 == 0) {
+                    isAvailable = true; // Test user gets AH shifts every 4 days
+                } else if (shift.getType().equals("ON_CALL") && dayOfYear % 3 == 2) {
+                    isAvailable = true; // Test user gets ON_CALL shifts every 3 days (day 2, 5, 8, 11, 14, ...)
                 } else {
                     isAvailable = false; // Test user doesn't get other shifts
+                }
+                
+                // Special case: Also assign ON_CALL on days when test user has AH (for testing multiple shifts per day)
+                // This creates days with both AH and ON_CALL shifts
+                if (shift.getType().equals("ON_CALL") && dayOfYear % 8 == 0) {
+                    isAvailable = true; // ON_CALL on every 8th day (some overlap with AH on day 8, 16, 24, ...)
+                }
+                
+                // Debug logging for test user ON_CALL availability
+                if (shift.getType().equals("ON_CALL")) {
+                    System.out.println("🧪 Test user ON_CALL check: Date=" + date + ", DayOfYear=" + dayOfYear + 
+                                       ", dayOfYear%3=" + (dayOfYear % 3) + ", dayOfYear%8=" + (dayOfYear % 8) + 
+                                       ", isAvailable=" + isAvailable);
                 }
             } else {
                 // Other staff get distributed assignments
                 int staffHash = (staff.getId().intValue() + dayOfYear + shiftTypeHash) % 7;
                 
-                if (shift.getCode().equals("AM") && staffHash < 4) {
+                if (shift.getType().equals("AM") && staffHash < 4) {
                     isAvailable = true; // 4 out of 7 staff available for AM
-                } else if (shift.getCode().equals("PM") && staffHash < 3) {
+                } else if (shift.getType().equals("PM") && staffHash < 3) {
                     isAvailable = true; // 3 out of 7 staff available for PM
-                } else if (shift.getCode().equals("AH") && staffHash < 2) {
+                } else if (shift.getType().equals("AH") && staffHash < 2) {
                     isAvailable = true; // 2 out of 7 staff available for AH
-                } else if (shift.getCode().equals("ON_CALL") && staffHash < 1) {
+                } else if (shift.getType().equals("ON_CALL") && staffHash < 1) {
                     isAvailable = true; // 1 out of 7 staff available for ON_CALL
                 } else {
                     isAvailable = false;
@@ -771,33 +1033,78 @@ public class DataInitializer implements CommandLineRunner {
         // Create test leave requests
         List<LeaveRequest> testLeaves = new ArrayList<>();
         
-        // 1. Month Leave request with status "REJECTED" (Declined) - Fixed dates to avoid conflicts
+        // 1. Month Leave request with status "REJECTED" (Declined) - Current month for visibility
+        LocalDate today = LocalDate.now();
         LeaveRequest monthLeave = LeaveRequest.builder()
             .staff(testStaff)
             .shift(null) // Month leave is not tied to a specific shift
-            .startTime(LocalDateTime.of(2025, 10, 1, 0, 0)) // Fixed date: Oct 1, 2025
-            .endTime(LocalDateTime.of(2025, 10, 31, 23, 59)) // Fixed date: Oct 31, 2025
+            .startTime(today.withDayOfMonth(1).atStartOfDay()) // First day of current month
+            .endTime(today.withDayOfMonth(today.lengthOfMonth()).atTime(23, 59)) // Last day of current month
             .requestType("Month Leave")
             .reason("Family vacation")
-            .status("REJECTED")
+            .status("DECLINED")
             .createdAt(LocalDateTime.now().minusDays(5))
             .build();
         testLeaves.add(monthLeave);
-        System.out.println("🔍 DataInitializer - Created Month Leave request (REJECTED)");
+        System.out.println("🔍 DataInitializer - Created Month Leave request (DECLINED) for " + today.getMonth());
         
-        // 2. Week Leave request with status "APPROVED" - Fixed dates to avoid conflicts
+        // 2. Week Leave request with status "APPROVED" - Next week for visibility
+        LocalDate nextWeekStart = today.plusWeeks(1);
         LeaveRequest weekLeave = LeaveRequest.builder()
             .staff(testStaff)
             .shift(null) // Week leave is not tied to a specific shift
-            .startTime(LocalDateTime.of(2025, 11, 1, 0, 0)) // Fixed date: Nov 1, 2025
-            .endTime(LocalDateTime.of(2025, 11, 7, 23, 59)) // Fixed date: Nov 7, 2025
+            .startTime(nextWeekStart.atStartOfDay()) // Next week start
+            .endTime(nextWeekStart.plusDays(6).atTime(23, 59)) // Next week end (7 days)
             .requestType("Week Leave")
             .reason("Medical treatment")
             .status("APPROVED")
             .createdAt(LocalDateTime.now().minusDays(3))
             .build();
         testLeaves.add(weekLeave);
-        System.out.println("🔍 DataInitializer - Created Week Leave request (APPROVED)");
+        System.out.println("🔍 DataInitializer - Created Week Leave request (APPROVED) for " + nextWeekStart + " to " + nextWeekStart.plusDays(6));
+        
+        // 3. Day Leave request with status "PENDING" - For awaiting requests
+        LocalDate nextDay = today.plusDays(1);
+        LeaveRequest dayLeave = LeaveRequest.builder()
+            .staff(testStaff)
+            .shift(null) // Day leave is not tied to a specific shift
+            .startTime(nextDay.atStartOfDay())
+            .endTime(nextDay.atTime(23, 59))
+            .requestType("Day Leave")
+            .reason("Personal appointment")
+            .status("AWAITING")
+            .createdAt(LocalDateTime.now().minusDays(1))
+            .build();
+        testLeaves.add(dayLeave);
+        System.out.println("🔍 DataInitializer - Created Day Leave request (AWAITING) for " + nextDay);
+        
+        // 4. Create leave requests for other staff members for testing
+        // Get a few other staff members to create diverse leave data
+        List<Staff> allStaff = staffRepository.findAll();
+        List<Staff> otherStaff = allStaff.stream()
+            .filter(s -> !s.getId().equals(testStaff.getId()))
+            .limit(3)
+            .collect(java.util.stream.Collectors.toList());
+        
+        for (int i = 0; i < otherStaff.size(); i++) {
+            Staff staff = otherStaff.get(i);
+            LocalDate leaveStart = today.plusDays(10 + (i * 3)); // Different dates for each staff
+            LocalDate leaveEnd = leaveStart.plusDays(2); // 3-day leave
+            
+            LeaveRequest staffLeave = LeaveRequest.builder()
+                .staff(staff)
+                .shift(null)
+                .startTime(leaveStart.atStartOfDay())
+                .endTime(leaveEnd.atTime(23, 59))
+                .requestType("Annual Leave")
+                .reason("Personal time off")
+                .status("APPROVED")
+                .createdAt(LocalDateTime.now().minusDays(7 + i))
+                .build();
+            testLeaves.add(staffLeave);
+            System.out.println("🔍 DataInitializer - Created Annual Leave request (APPROVED) for " + 
+                staff.getFirstName() + " " + staff.getLastName() + " from " + leaveStart + " to " + leaveEnd);
+        }
         
         // Save all test leave requests
         leaveRequestRepository.saveAll(testLeaves);
@@ -811,6 +1118,925 @@ public class DataInitializer implements CommandLineRunner {
                 ", Start: " + leave.getStartTime() + 
                 ", End: " + leave.getEndTime() +
                 ", Shift ID: " + (leave.getShift() != null ? leave.getShift().getId() : "null"));
+        }
+    }
+    
+    private void createTestSwapRequests() {
+        System.out.println("🔍 DataInitializer - Creating test swap requests...");
+        
+        // Find the test user (Sarah Johnson)
+        User testUser = userRepository.findAll().stream()
+            .filter(user -> "test@example.com".equals(user.getEmail()))
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException("Test user not found"));
+        Staff testStaff = testUser.getStaff();
+        if (testStaff == null) {
+            System.out.println("🔍 DataInitializer - Test user has no staff record, skipping swap requests");
+            return;
+        }
+        
+        // Find other staff members for swap targets
+        List<Staff> otherStaff = staffRepository.findAll().stream()
+            .filter(staff -> !staff.getId().equals(testStaff.getId()))
+            .limit(5) // Get 5 other staff members
+            .toList();
+        
+        if (otherStaff.isEmpty()) {
+            System.out.println("🔍 DataInitializer - No other staff found, skipping swap requests");
+            return;
+        }
+        
+        // Get some shifts for the test user to create swap requests
+        List<Shift> testUserShifts = shiftAssignmentRepository.findAll().stream()
+            .filter(assignment -> assignment.getStaff().getId().equals(testStaff.getId()))
+            .map(assignment -> assignment.getShift())
+            .distinct()
+            .limit(4)
+            .toList();
+        
+        if (testUserShifts.isEmpty()) {
+            System.out.println("🔍 DataInitializer - No shifts found for test user, skipping swap requests");
+            return;
+        }
+        
+        // Create test swap requests
+        List<ShiftSwap> testSwaps = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        
+        // 1. Swap request submitted BY test user (AWAITING status)
+        Shift testShift1 = testUserShifts.get(0);
+        Staff targetStaff1 = otherStaff.get(0);
+        ShiftSwap swapRequest1 = ShiftSwap.builder()
+            .requester(testStaff)
+            .target(targetStaff1)
+            .shift(testShift1)
+            .fromTime(testShift1.getStartTs())
+            .toTime(testShift1.getEndTs())
+            .message("I need to swap this shift due to personal commitments")
+            .status("AWAITING")
+            .dateMade(now.minusDays(2))
+            .build();
+        testSwaps.add(swapRequest1);
+        System.out.println("🔍 DataInitializer - Created swap request BY test user (AWAITING)");
+        
+        // 2. Swap request submitted BY test user (APPROVED status)
+        if (testUserShifts.size() > 1) {
+            Shift testShift2 = testUserShifts.get(1);
+            Staff targetStaff2 = otherStaff.get(1);
+            ShiftSwap swapRequest2 = ShiftSwap.builder()
+                .requester(testStaff)
+                .target(targetStaff2)
+                .shift(testShift2)
+                .fromTime(testShift2.getStartTs())
+                .toTime(testShift2.getEndTs())
+                .message("Need to swap for family event")
+                .status("APPROVED")
+                .dateMade(now.minusDays(5))
+                .build();
+            testSwaps.add(swapRequest2);
+            System.out.println("🔍 DataInitializer - Created swap request BY test user (APPROVED)");
+        }
+        
+        // 3. Swap request submitted BY test user (DECLINED status)
+        if (testUserShifts.size() > 2) {
+            Shift testShift3 = testUserShifts.get(2);
+            Staff targetStaff3 = otherStaff.get(2);
+            ShiftSwap swapRequest3 = ShiftSwap.builder()
+                .requester(testStaff)
+                .target(targetStaff3)
+                .shift(testShift3)
+                .fromTime(testShift3.getStartTs())
+                .toTime(testShift3.getEndTs())
+                .message("Would like to swap this shift")
+                .status("DECLINED")
+                .dateMade(now.minusDays(3))
+                .build();
+            testSwaps.add(swapRequest3);
+            System.out.println("🔍 DataInitializer - Created swap request BY test user (DECLINED)");
+        }
+        
+        // 4. Swap request TARGETING test user (AWAITING status)
+        // Get a shift from another staff member
+        List<Shift> otherStaffShifts = shiftAssignmentRepository.findAll().stream()
+            .filter(assignment -> otherStaff.stream().anyMatch(staff -> staff.getId().equals(assignment.getStaff().getId())))
+            .map(assignment -> assignment.getShift())
+            .distinct()
+            .limit(2)
+            .toList();
+        
+        if (!otherStaffShifts.isEmpty()) {
+            Shift otherShift = otherStaffShifts.get(0);
+            Staff requesterStaff = otherStaff.get(3 % otherStaff.size());
+            ShiftSwap swapRequest4 = ShiftSwap.builder()
+                .requester(requesterStaff)
+                .target(testStaff)
+                .shift(otherShift)
+                .fromTime(otherShift.getStartTs())
+                .toTime(otherShift.getEndTs())
+                .message("Can you please swap this shift with me?")
+                .status("AWAITING")
+                .dateMade(now.minusDays(1))
+                .build();
+            testSwaps.add(swapRequest4);
+            System.out.println("🔍 DataInitializer - Created swap request TARGETING test user (AWAITING)");
+        }
+        
+        // 5. Swap request TARGETING test user (APPROVED status)
+        if (otherStaffShifts.size() > 1) {
+            Shift otherShift2 = otherStaffShifts.get(1);
+            Staff requesterStaff2 = otherStaff.get(4 % otherStaff.size());
+            ShiftSwap swapRequest5 = ShiftSwap.builder()
+                .requester(requesterStaff2)
+                .target(testStaff)
+                .shift(otherShift2)
+                .fromTime(otherShift2.getStartTs())
+                .toTime(otherShift2.getEndTs())
+                .message("I'd like to swap shifts with you")
+                .status("APPROVED")
+                .dateMade(now.minusDays(4))
+                .build();
+            testSwaps.add(swapRequest5);
+            System.out.println("🔍 DataInitializer - Created swap request TARGETING test user (APPROVED)");
+        }
+        
+        // Save all test swap requests
+        shiftSwapRepository.saveAll(testSwaps);
+        System.out.println("🔍 DataInitializer - Saved " + testSwaps.size() + " test swap requests");
+        
+        // Log details
+        for (ShiftSwap swap : testSwaps) {
+            System.out.println("🔍 DataInitializer - Swap Request ID: " + swap.getId() + 
+                ", Requester: " + swap.getRequester().getFirstName() + " " + swap.getRequester().getLastName() +
+                ", Target: " + swap.getTarget().getFirstName() + " " + swap.getTarget().getLastName() +
+                ", Status: " + swap.getStatus() + 
+                ", From: " + swap.getFromTime() + 
+                ", To: " + swap.getToTime() +
+                ", Date Made: " + swap.getDateMade());
+        }
+    }
+    
+    /**
+     * Create open shifts with variety for testing
+     * Mix of urgent/non-urgent shifts with varying pay incentives
+     * Returns list of created open shifts for further processing
+     */
+    private List<OpenShift> createOpenShifts(LocalDate startDate, LocalDate endDate,
+                                  Department emergencyDept, Department icuDept, Department medicalDept,
+                                  Location edRoom1, Location icuBed1, Location medWard,
+                                  Staff createdByStaff,
+                                  Designation nurseDesignation, Designation doctorDesignation, Designation surgeonDesignation) {
+        List<OpenShift> createdShifts = new ArrayList<>();
+        Random random = new Random(42); // Fixed seed for consistent results
+        
+        // Create open shifts every 3-4 days across the period
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(3 + random.nextInt(2))) {
+            int shiftsToday = 1 + random.nextInt(2); // 1-2 open shifts per day
+            
+            for (int i = 0; i < shiftsToday; i++) {
+                try {
+                    // Randomly select shift type
+                    String shiftType = getRandomOpenShiftType(random);
+                    Department dept = getRandomDepartment(random, emergencyDept, icuDept, medicalDept);
+                    Location location = getLocationForDepartment(dept, edRoom1, icuBed1, medWard);
+                    
+                    // Determine if urgent (30% chance)
+                    boolean isUrgent = random.nextInt(100) < 30;
+                    
+                    // Calculate payment based on shift type and urgency
+                    int paymentCents = calculatePayment(shiftType, isUrgent, random);
+                    
+                    // Determine total staff needed and requirements
+                    int totalStaffNeeded = 1 + random.nextInt(3); // 1-3 staff needed
+                    
+                    // First create a shift for the open shift
+                    Shift shift = createShiftByType(shiftType, date, dept, location, random);
+                    shift = shiftRepository.save(shift);
+                    
+                    // Create open shift linked to the shift
+                    OpenShift openShift = OpenShift.builder()
+                            .shift(shift)
+                            .urgentFlag(isUrgent)
+                            .extraPayCents(paymentCents)
+                            .status("AVAILABLE")
+                            .totalStaffNeeded(totalStaffNeeded)
+                            .createdBy(createdByStaff)
+                            .createdAt(LocalDateTime.now())
+                            .build();
+                    
+                    openShift = openShiftRepository.save(openShift);
+                    createdShifts.add(openShift); // Add to list for later use
+                    
+                    // Add designation requirements for some shifts (60% chance)
+                    boolean hasRequirements = random.nextInt(100) < 60;
+                    String requirementDesc = "ANY";
+                    if (hasRequirements) {
+                        requirementDesc = addDesignationRequirements(shift, totalStaffNeeded, random, 
+                                                                      nurseDesignation, doctorDesignation, surgeonDesignation);
+                    }
+                    
+                    System.out.println("🔓 Created " + (isUrgent ? "URGENT " : "") + 
+                                       "open shift: " + date + " " + shiftType + 
+                                       " at " + dept.getName() + 
+                                       " - Payment: $" + (paymentCents / 100.0) +
+                                       " - Need: " + totalStaffNeeded + " staff" +
+                                       " - Requirements: " + requirementDesc +
+                                       " - Status: " + openShift.getStatus());
+                } catch (Exception e) {
+                    System.err.println("❌ ERROR creating individual open shift for " + date + ": " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }
+        
+        return createdShifts;
+    }
+    
+    /**
+     * Create a shift for open shift
+     */
+    private Shift createShiftByType(String shiftType, LocalDate date, Department dept, Location location, Random random) {
+        LocalDateTime startTime;
+        LocalDateTime endTime;
+        
+        switch (shiftType) {
+            case "AM":
+                startTime = date.atTime(8 + random.nextInt(5), random.nextInt(60)); // 8:00-12:59
+                endTime = startTime.plusHours(8); // 8-hour shift
+                break;
+            case "PM":
+                startTime = date.atTime(13 + random.nextInt(5), random.nextInt(60)); // 13:00-17:59
+                endTime = startTime.plusHours(8); // 8-hour shift
+                break;
+            case "AH":
+                startTime = date.atTime(18 + random.nextInt(6), random.nextInt(60)); // 18:00-23:59
+                endTime = startTime.plusHours(8); // 8-hour shift
+                if (endTime.toLocalDate().isAfter(date)) {
+                    endTime = date.plusDays(1).atTime(endTime.getHour(), endTime.getMinute());
+                }
+                break;
+            case "ON_CALL":
+                startTime = date.atTime(20, 0); // 20:00
+                endTime = date.plusDays(1).atTime(8, 0); // 08:00 next day
+                break;
+            default:
+                startTime = date.atTime(8, 0);
+                endTime = startTime.plusHours(8);
+        }
+        
+        return Shift.builder()
+                .startTs(startTime)
+                .endTs(endTime)
+                .department(dept)
+                .location(location)
+                .type(shiftType)
+                .name("Open " + shiftType + " Shift - " + dept.getName())
+                .note("Open shift created for additional staffing needs")
+                .status("INCOMPLETE") // Open shifts start as incomplete
+                .createdAt(LocalDateTime.now())
+                .build();
+    }
+    
+    /**
+     * Add designation requirements to a shift
+     * Returns description of requirements for logging
+     */
+    private String addDesignationRequirements(Shift shift, int totalStaffNeeded, Random random,
+                                               Designation nurseDesignation, Designation doctorDesignation, 
+                                               Designation surgeonDesignation) {
+        // Randomly determine which designations are required - now with more multiple-designation scenarios
+        int requirementType = random.nextInt(12);
+        String description;
+        
+        switch (requirementType) {
+            case 0:
+                // Single: 2 Nurses
+                ShiftDesignationRequirements nursesReq = ShiftDesignationRequirements.builder()
+                        .shift(shift)
+                        .designation(nurseDesignation)
+                        .requiredCount(Math.min(2, totalStaffNeeded))
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                shiftDesignationRequirementsRepository.save(nursesReq);
+                description = Math.min(2, totalStaffNeeded) + " Nurses";
+                break;
+                
+            case 1:
+                // Single: 1 Doctor
+                ShiftDesignationRequirements doctorReq = ShiftDesignationRequirements.builder()
+                        .shift(shift)
+                        .designation(doctorDesignation)
+                        .requiredCount(1)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                shiftDesignationRequirementsRepository.save(doctorReq);
+                description = "1 Doctor";
+                break;
+                
+            case 2:
+                // Single: 1 Surgeon
+                ShiftDesignationRequirements surgeonReq = ShiftDesignationRequirements.builder()
+                        .shift(shift)
+                        .designation(surgeonDesignation)
+                        .requiredCount(1)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                shiftDesignationRequirementsRepository.save(surgeonReq);
+                description = "1 Surgeon";
+                break;
+                
+            case 3:
+                // Multiple: 2 Nurses + 1 Surgeon
+                if (totalStaffNeeded >= 3) {
+                    ShiftDesignationRequirements nurseReq2 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(nurseDesignation)
+                        .requiredCount(2)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                    ShiftDesignationRequirements surgeonReq2 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(surgeonDesignation)
+                            .requiredCount(1)
+                            .build();
+                    shiftDesignationRequirementsRepository.save(nurseReq2);
+                    shiftDesignationRequirementsRepository.save(surgeonReq2);
+                    description = "2 Nurses + 1 Surgeon";
+                } else {
+                    description = "1 Nurse";
+                    ShiftDesignationRequirements nurseReq2 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(nurseDesignation)
+                            .requiredCount(1)
+                            .build();
+                    shiftDesignationRequirementsRepository.save(nurseReq2);
+                }
+                break;
+                
+            case 4:
+                // Multiple: 1 Doctor + 1 Nurse
+                if (totalStaffNeeded >= 2) {
+                    ShiftDesignationRequirements doctorReq4 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(doctorDesignation)
+                            .requiredCount(1)
+                            .build();
+                    ShiftDesignationRequirements nurseReq4 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(nurseDesignation)
+                            .requiredCount(1)
+                            .build();
+                    shiftDesignationRequirementsRepository.save(doctorReq4);
+                    shiftDesignationRequirementsRepository.save(nurseReq4);
+                    description = "1 Doctor + 1 Nurse";
+                } else {
+                    ShiftDesignationRequirements nurseReq4 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(nurseDesignation)
+                            .requiredCount(1)
+                            .build();
+                    shiftDesignationRequirementsRepository.save(nurseReq4);
+                    description = "1 Nurse";
+                }
+                break;
+                
+            case 5:
+                // Multiple: 1 Surgeon + 2 Nurses
+                if (totalStaffNeeded >= 3) {
+                    ShiftDesignationRequirements surgeonReq5 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(surgeonDesignation)
+                            .requiredCount(1)
+                            .build();
+                    ShiftDesignationRequirements nurseReq5 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(nurseDesignation)
+                        .requiredCount(2)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                    shiftDesignationRequirementsRepository.save(surgeonReq5);
+                    shiftDesignationRequirementsRepository.save(nurseReq5);
+                    description = "1 Surgeon + 2 Nurses";
+                } else {
+                    ShiftDesignationRequirements surgeonReq5 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(surgeonDesignation)
+                            .requiredCount(1)
+                            .build();
+                    shiftDesignationRequirementsRepository.save(surgeonReq5);
+                    description = "1 Surgeon";
+                }
+                break;
+                
+            case 6:
+                // Multiple: 1 Doctor + 1 Surgeon
+                if (totalStaffNeeded >= 2) {
+                    ShiftDesignationRequirements doctorReq6 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(doctorDesignation)
+                            .requiredCount(1)
+                            .build();
+                    ShiftDesignationRequirements surgeonReq6 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(surgeonDesignation)
+                            .requiredCount(1)
+                            .build();
+                    shiftDesignationRequirementsRepository.save(doctorReq6);
+                    shiftDesignationRequirementsRepository.save(surgeonReq6);
+                    description = "1 Doctor + 1 Surgeon";
+                } else {
+                    ShiftDesignationRequirements doctorReq6 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(doctorDesignation)
+                            .requiredCount(1)
+                            .build();
+                    shiftDesignationRequirementsRepository.save(doctorReq6);
+                    description = "1 Doctor";
+                }
+                break;
+                
+            case 7:
+                // Multiple: 1 Doctor + 1 Surgeon + 1 Nurse (complex team)
+                if (totalStaffNeeded >= 3) {
+                    ShiftDesignationRequirements doctorReq7 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(doctorDesignation)
+                            .requiredCount(1)
+                            .build();
+                    ShiftDesignationRequirements surgeonReq7 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(surgeonDesignation)
+                            .requiredCount(1)
+                            .build();
+                    ShiftDesignationRequirements nurseReq7 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(nurseDesignation)
+                            .requiredCount(1)
+                            .build();
+                    shiftDesignationRequirementsRepository.save(doctorReq7);
+                    shiftDesignationRequirementsRepository.save(surgeonReq7);
+                    shiftDesignationRequirementsRepository.save(nurseReq7);
+                    description = "1 Doctor + 1 Surgeon + 1 Nurse";
+                } else if (totalStaffNeeded >= 2) {
+                    ShiftDesignationRequirements doctorReq7 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(doctorDesignation)
+                            .requiredCount(1)
+                            .build();
+                    ShiftDesignationRequirements nurseReq7 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(nurseDesignation)
+                            .requiredCount(1)
+                            .build();
+                    shiftDesignationRequirementsRepository.save(doctorReq7);
+                    shiftDesignationRequirementsRepository.save(nurseReq7);
+                    description = "1 Doctor + 1 Nurse";
+                } else {
+                    ShiftDesignationRequirements nurseReq7 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(nurseDesignation)
+                            .requiredCount(1)
+                            .build();
+                    shiftDesignationRequirementsRepository.save(nurseReq7);
+                    description = "1 Nurse";
+                }
+                break;
+                
+            case 8:
+                // Multiple: 2 Doctors + 1 Nurse
+                if (totalStaffNeeded >= 3) {
+                    ShiftDesignationRequirements doctorReq8 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(doctorDesignation)
+                        .requiredCount(2)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                    ShiftDesignationRequirements nurseReq8 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(nurseDesignation)
+                            .requiredCount(1)
+                            .build();
+                    shiftDesignationRequirementsRepository.save(doctorReq8);
+                    shiftDesignationRequirementsRepository.save(nurseReq8);
+                    description = "2 Doctors + 1 Nurse";
+                } else {
+                    ShiftDesignationRequirements doctorReq8 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(doctorDesignation)
+                            .requiredCount(1)
+                            .build();
+                    shiftDesignationRequirementsRepository.save(doctorReq8);
+                    description = "1 Doctor";
+                }
+                break;
+                
+            case 9:
+                // Flexible: Need total staff, but 1 MUST be Surgeon (others can be anyone)
+                ShiftDesignationRequirements surgeonReq9 = ShiftDesignationRequirements.builder()
+                        .shift(shift)
+                        .designation(surgeonDesignation)
+                        .requiredCount(1)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                shiftDesignationRequirementsRepository.save(surgeonReq9);
+                description = "1 Surgeon + " + (totalStaffNeeded - 1) + " others";
+                break;
+                
+            case 10:
+                // Flexible: Need total staff, but 1 MUST be Doctor (others can be anyone)
+                ShiftDesignationRequirements doctorReq10 = ShiftDesignationRequirements.builder()
+                        .shift(shift)
+                        .designation(doctorDesignation)
+                        .requiredCount(1)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                shiftDesignationRequirementsRepository.save(doctorReq10);
+                description = "1 Doctor + " + (totalStaffNeeded - 1) + " others";
+                break;
+                
+            case 11:
+                // Multiple: 1 Doctor + 2 Nurses
+                if (totalStaffNeeded >= 3) {
+                    ShiftDesignationRequirements doctorReq11 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(doctorDesignation)
+                            .requiredCount(1)
+                            .build();
+                    ShiftDesignationRequirements nurseReq11 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(nurseDesignation)
+                        .requiredCount(2)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                    shiftDesignationRequirementsRepository.save(doctorReq11);
+                    shiftDesignationRequirementsRepository.save(nurseReq11);
+                    description = "1 Doctor + 2 Nurses";
+                } else {
+                    ShiftDesignationRequirements doctorReq11 = ShiftDesignationRequirements.builder()
+                            .shift(shift)
+                            .designation(doctorDesignation)
+                            .requiredCount(1)
+                            .build();
+                    shiftDesignationRequirementsRepository.save(doctorReq11);
+                    description = "1 Doctor";
+                }
+                break;
+                
+            default:
+                description = "ANY";
+        }
+        
+        return description;
+    }
+    
+    /**
+     * Create approved open shift requests for testing "working with" section
+     * Creates APPROVED requests (simulating admin approval) to populate the assignedStaff list
+     */
+    private int createApprovedOpenShiftRequests(List<OpenShift> openShifts, List<Staff> allStaff) {
+        int count = 0;
+        Random random = new Random(100); // Different seed for variety
+        
+        // Create approved requests for about 50% of open shifts (to test "working with" section)
+        for (OpenShift openShift : openShifts) {
+            if (random.nextInt(100) < 50) {
+                // Get designation requirements for this shift
+                List<ShiftDesignationRequirements> requirements = shiftDesignationRequirementsRepository
+                        .findByShiftId(openShift.getShift().getId());
+                
+                // Determine how many approved requests to create (1 to totalStaffNeeded-1)
+                // Don't fill completely so shift stays AVAILABLE for user to apply
+                int numApprovals = Math.max(1, random.nextInt(openShift.getTotalStaffNeeded()));
+                
+                List<Staff> selectedStaff = new ArrayList<>();
+                
+                if (requirements.isEmpty()) {
+                    // No specific designation requirements - select random staff
+                    List<Staff> shuffled = new ArrayList<>(allStaff);
+                    java.util.Collections.shuffle(shuffled, random);
+                    for (int i = 0; i < Math.min(numApprovals, shuffled.size()); i++) {
+                        selectedStaff.add(shuffled.get(i));
+                    }
+                } else {
+                    // Has designation requirements - try to match them
+                    for (ShiftDesignationRequirements req : requirements) {
+                        int neededForThisDesignation = Math.min(req.getRequiredCount(), numApprovals - selectedStaff.size());
+                        List<Staff> matchingStaff = allStaff.stream()
+                                .filter(s -> s.getDesignation() != null && 
+                                            s.getDesignation().getId().equals(req.getDesignation().getId()))
+                                .filter(s -> !selectedStaff.contains(s)) // Avoid duplicates
+                                .limit(neededForThisDesignation)
+                                .collect(java.util.stream.Collectors.toList());
+                        selectedStaff.addAll(matchingStaff);
+                    }
+                    
+                    // Fill remaining slots with any staff if needed
+                    while (selectedStaff.size() < numApprovals) {
+                        Staff randomStaff = allStaff.get(random.nextInt(allStaff.size()));
+                        if (!selectedStaff.contains(randomStaff)) {
+                            selectedStaff.add(randomStaff);
+                        }
+                    }
+                }
+                
+                // Create approved requests
+                for (Staff staff : selectedStaff) {
+                    OpenShiftRequest request = OpenShiftRequest.builder()
+                            .openShift(openShift)
+                            .staff(staff)
+                            .status("APPROVED") // Simulate admin approval for testing
+                            .message("I'm available for this shift")
+                            .createdAt(LocalDateTime.now().minusDays(random.nextInt(5) + 1))
+                            .reviewedAt(LocalDateTime.now().minusDays(random.nextInt(2)))
+                            .build();
+                    
+                    openShiftRequestRepository.save(request);
+                    count++;
+                }
+                
+                System.out.println("   📝 Added " + selectedStaff.size() + " APPROVED requests for open shift " + 
+                                   openShift.getId() + " (" + selectedStaff.size() + "/" + openShift.getTotalStaffNeeded() + " staff)");
+            }
+        }
+        
+        return count;
+    }
+    
+    private String getRandomOpenShiftType(Random random) {
+        String[] types = {"AM", "PM", "AH", "ON_CALL"};
+        return types[random.nextInt(types.length)];
+    }
+    
+    private Department getRandomDepartment(Random random, Department ed, Department icu, Department med) {
+        Department[] depts = {ed, icu, med};
+        return depts[random.nextInt(depts.length)];
+    }
+    
+    private Location getLocationForDepartment(Department dept, Location edRoom1, Location icuBed1, Location medWard) {
+        if (dept.getCode().equals("ED")) return edRoom1;
+        if (dept.getCode().equals("ICU")) return icuBed1;
+        return medWard;
+    }
+    
+    
+    /**
+     * Generate appropriate shift name based on department and shift type
+     */
+    private String generateShiftName(Department department, String shiftType, boolean isOnCall) {
+        String deptCode = department.getCode();
+        
+        if (isOnCall) {
+            // On-call shifts
+            switch (deptCode) {
+                case "ED":
+                    return "[OC]Emergency Call";
+                case "ICU":
+                    return "[OC]ICU Call";
+                case "MED":
+                    return "[OC]Medical Call";
+                default:
+                    return "[OC]Duty Call";
+            }
+        } else {
+            // Regular shifts
+            switch (shiftType) {
+                case "AM":
+                    switch (deptCode) {
+                        case "ED":
+                            return "Emergency AM";
+                        case "ICU":
+                            return "ICU Morning";
+                        case "MED":
+                            return "Medical AM";
+                        default:
+                            return "AM Shift";
+                    }
+                case "PM":
+                    switch (deptCode) {
+                        case "ED":
+                            return "Emergency PM";
+                        case "ICU":
+                            return "ICU Evening";
+                        case "MED":
+                            return "Medical PM";
+                        default:
+                            return "PM Shift";
+                    }
+                case "AH":
+                    switch (deptCode) {
+                        case "ED":
+                            return "Emergency Night";
+                        case "ICU":
+                            return "ICU Night";
+                        case "MED":
+                            return "Medical Night";
+                        default:
+                            return "Night Shift";
+                    }
+                default:
+                    return "Regular Shift";
+            }
+        }
+    }
+
+    private int calculatePayment(String shiftType, boolean isUrgent, Random random) {
+        // Base payment by shift type (in cents)
+        int basePayment;
+        
+        switch (shiftType) {
+            case "AM":
+                basePayment = 20000 + random.nextInt(15000); // $200-$350
+                break;
+            case "PM":
+                basePayment = 25000 + random.nextInt(15000); // $250-$400
+                break;
+            case "AH":
+                basePayment = 40000 + random.nextInt(20000); // $400-$600
+                break;
+            case "ON_CALL":
+                basePayment = 50000 + random.nextInt(25000); // $500-$750
+                break;
+            default:
+                basePayment = 20000;
+        }
+        
+        // Add urgency bonus (50-100% more if urgent)
+        if (isUrgent) {
+            int urgencyBonus = basePayment / 2 + random.nextInt(basePayment / 2);
+            basePayment += urgencyBonus;
+        }
+        
+        // Round to nearest $50 for cleaner display
+        return (basePayment / 5000) * 5000;
+    }
+    
+    // === CREATE TEST NOTIFICATIONS ===
+    private void createTestNotifications() {
+        System.out.println("\n🔔 Creating test notifications...");
+        
+        try {
+            // Get test users
+            User testUser = userRepository.findByDomainAndEmail("test", "test@example.com")
+                .orElseThrow(() -> new RuntimeException("Test user not found"));
+            
+            // Use an existing staff user as the "admin" for notifications
+            // Find Dr. Emily Rodriguez (manager) to use as the notification sender
+            User managerUser = userRepository.findByDomainAndEmail("test", "emily.rodriguez@weroster.com")
+                .orElseThrow(() -> new RuntimeException("Manager user not found"));
+            
+            // Get staff members (for validation)
+            staffRepository.findByUserId(testUser.getId())
+                .orElseThrow(() -> new RuntimeException("Test staff not found"));
+            
+            staffRepository.findByUserId(managerUser.getId())
+                .orElseThrow(() -> new RuntimeException("Manager staff not found"));
+            
+            // Create test notifications
+            List<Notification> testNotifications = List.of(
+                // Event assignment notification
+                Notification.builder()
+                    .recipient(testUser)
+                    .type("EVENT_ASSIGNMENT")
+                    .title("Event Assignment")
+                    .message("Event Urology on Tue, 20 May 2025 - PM has been assigned to you by Floor Coordinators NURSE")
+                    .isRead(false)
+                    .createdAt(LocalDateTime.now().minusMinutes(15))
+                    .relatedEntityType("shift_assignment")
+                    .relatedEntityId(1L)
+                    .triggeredBy(managerUser)
+                    .build(),
+                
+                // Leave approval notification
+                Notification.builder()
+                    .recipient(testUser)
+                    .type("LEAVE_APPROVAL")
+                    .title("Leave Approved")
+                    .message("Your leave on Fri, 16 May 2025 - PM has been approved by RM")
+                    .isRead(false)
+                    .createdAt(LocalDateTime.parse("2025-05-13T17:00:00"))
+                    .relatedEntityType("leave_request")
+                    .relatedEntityId(1L)
+                    .triggeredBy(managerUser)
+                    .build(),
+                
+                // Swap request declined notification
+                Notification.builder()
+                    .recipient(testUser)
+                    .type("SWAP_DECLINED")
+                    .title("Swap Request Declined")
+                    .message("Your swap request on Wed, 14 May 2025 - PM has been declined by MJ")
+                    .isRead(true)
+                    .createdAt(LocalDateTime.parse("2025-05-10T08:00:00"))
+                    .readAt(LocalDateTime.parse("2025-05-10T08:30:00"))
+                    .relatedEntityType("shift_swap")
+                    .relatedEntityId(1L)
+                    .triggeredBy(managerUser)
+                    .build(),
+                
+                // Leave swap request notification
+                Notification.builder()
+                    .recipient(testUser)
+                    .type("LEAVE_SWAP_REQUEST")
+                    .title("Leave Swap Request")
+                    .message("Leave swap request for your shift on Mon, 19 May 2025 - AM from Sarah Johnson")
+                    .isRead(false)
+                    .createdAt(LocalDateTime.now().minusHours(2))
+                    .relatedEntityType("leave_request")
+                    .relatedEntityId(2L)
+                    .triggeredBy(managerUser)
+                    .build(),
+                
+                // Open shift approved notification
+                Notification.builder()
+                    .recipient(testUser)
+                    .type("OPEN_SHIFT_APPROVED")
+                    .title("Open Shift Approved")
+                    .message("Your application for open shift on Thu, 15 May 2025 - PM has been approved by Manager")
+                    .isRead(false)
+                    .createdAt(LocalDateTime.now().minusDays(1))
+                    .relatedEntityType("open_shift_request")
+                    .relatedEntityId(1L)
+                    .triggeredBy(managerUser)
+                    .build(),
+                
+                // Event assignment notification (read)
+                Notification.builder()
+                    .recipient(testUser)
+                    .type("EVENT_ASSIGNMENT")
+                    .title("Event Assignment")
+                    .message("Event Emergency on Mon, 12 May 2025 - AM has been assigned to you by Coordinator")
+                    .isRead(true)
+                    .createdAt(LocalDateTime.now().minusDays(3))
+                    .readAt(LocalDateTime.now().minusDays(2))
+                    .relatedEntityType("shift_assignment")
+                    .relatedEntityId(2L)
+                    .triggeredBy(managerUser)
+                    .build(),
+                
+                // Swap request notification
+                Notification.builder()
+                    .recipient(testUser)
+                    .type("SWAP_REQUEST")
+                    .title("Swap Request")
+                    .message("Swap request on Tue, 13 May 2025 - PM from Mike Wilson")
+                    .isRead(true)
+                    .createdAt(LocalDateTime.now().minusDays(4))
+                    .readAt(LocalDateTime.now().minusDays(3))
+                    .relatedEntityType("shift_swap")
+                    .relatedEntityId(2L)
+                    .triggeredBy(managerUser)
+                    .build()
+            );
+            
+            // Save notifications
+            notificationRepository.saveAll(testNotifications);
+            
+            System.out.println("✅ Created " + testNotifications.size() + " test notifications successfully!");
+            
+        } catch (Exception e) {
+            System.err.println("❌ ERROR creating test notifications: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    private void resetAutoIncrementCounters() {
+        try {
+            // Use JdbcTemplate to execute DDL statements for resetting AUTO_INCREMENT
+            System.out.println("🔍 DataInitializer - Resetting AUTO_INCREMENT for all tables...");
+            
+            // Reset AUTO_INCREMENT for all tables in dependency order
+            String[] resetQueries = {
+                "ALTER TABLE notification AUTO_INCREMENT = 1",
+                "ALTER TABLE shift_swap AUTO_INCREMENT = 1", 
+                "ALTER TABLE open_shift_request AUTO_INCREMENT = 1",
+                "ALTER TABLE shift_designation_requirements AUTO_INCREMENT = 1",
+                "ALTER TABLE shift_assignment AUTO_INCREMENT = 1",
+                "ALTER TABLE open_shift AUTO_INCREMENT = 1",
+                "ALTER TABLE shift AUTO_INCREMENT = 1",
+                "ALTER TABLE leave_request AUTO_INCREMENT = 1",
+                "ALTER TABLE staff AUTO_INCREMENT = 1",
+                "ALTER TABLE users AUTO_INCREMENT = 1",
+                "ALTER TABLE location AUTO_INCREMENT = 1",
+                "ALTER TABLE designation AUTO_INCREMENT = 1",
+                "ALTER TABLE dept AUTO_INCREMENT = 1",
+                "ALTER TABLE hospital AUTO_INCREMENT = 1"
+            };
+            
+            for (String query : resetQueries) {
+                try {
+                    // Use JdbcTemplate to execute DDL statements
+                    jdbcTemplate.execute(query);
+                    System.out.println("✅ Reset AUTO_INCREMENT: " + query);
+                } catch (Exception e) {
+                    System.out.println("⚠️ Could not reset AUTO_INCREMENT for query: " + query + " - " + e.getMessage());
+                    // Continue with other tables even if one fails
+                }
+            }
+            
+            System.out.println("🔍 DataInitializer - AUTO_INCREMENT reset completed!");
+            
+        } catch (Exception e) {
+            System.err.println("❌ ERROR resetting AUTO_INCREMENT counters: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

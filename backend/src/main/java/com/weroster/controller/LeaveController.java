@@ -3,11 +3,15 @@ package com.weroster.controller;
 import com.weroster.dto.CreateLeaveRequestInput;
 import com.weroster.entity.LeaveRequest;
 import com.weroster.entity.Shift;
+import com.weroster.entity.ShiftAssignment;
 import com.weroster.entity.Staff;
 import com.weroster.entity.User;
 import com.weroster.repository.LeaveRequestRepository;
+import com.weroster.repository.ShiftAssignmentRepository;
 import com.weroster.repository.ShiftRepository;
+import com.weroster.repository.StaffRepository;
 import com.weroster.repository.UserRepository;
+import com.weroster.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,7 +35,16 @@ public class LeaveController {
     private UserRepository userRepository;
     
     @Autowired
+    private StaffRepository staffRepository;
+    
+    @Autowired
     private ShiftRepository shiftRepository;
+    
+    @Autowired
+    private ShiftAssignmentRepository shiftAssignmentRepository;
+    
+    @Autowired
+    private NotificationService notificationService;
     
     @PostMapping
     public ResponseEntity<Map<String, Object>> createLeaveRequest(@RequestBody CreateLeaveRequestInput input) {
@@ -61,9 +74,9 @@ public class LeaveController {
                 Long shiftId = Long.parseLong(input.getShiftId());
                 System.out.println("🔍 Leave Request - Checking duplicates for staff ID: " + staff.getId() + ", shift ID: " + shiftId);
                 
-                // First check for exact shift duplicates
-                List<LeaveRequest> existingRequests = leaveRequestRepository.findByStaffAndShift(staff.getId(), shiftId);
-                System.out.println("🔍 Leave Request - Found " + existingRequests.size() + " existing requests for this staff/shift combination");
+                // First check for exact shift duplicates (excluding declined requests)
+                List<LeaveRequest> existingRequests = leaveRequestRepository.findByStaffAndShiftExcludingDeclined(staff.getId(), shiftId);
+                System.out.println("🔍 Leave Request - Found " + existingRequests.size() + " existing APPROVED/AWAITING/PENDING requests for this staff/shift combination");
                 
                 if (!existingRequests.isEmpty()) {
                     System.out.println("🔍 Leave Request - DUPLICATE DETECTED! " + existingRequests.size() + " existing requests for shift " + shiftId);
@@ -78,17 +91,17 @@ public class LeaveController {
                     return ResponseEntity.ok(response); // 200 OK with duplicate flag
                 }
                 
-                // Then check for same-day conflicts (all-day leave on the same day)
+                // Then check for same-day conflicts (all-day leave on the same day, excluding declined requests)
                 LocalDate requestDate = LocalDate.parse(input.getDate());
                 System.out.println("🔍 Leave Request - Checking for same-day conflicts on: " + requestDate);
                 
-                List<LeaveRequest> sameDayRequests = leaveRequestRepository.findByStaffAndDateRange(
+                List<LeaveRequest> sameDayRequests = leaveRequestRepository.findByStaffAndDateRangeExcludingDeclined(
                     staff.getId(), 
                     requestDate.atStartOfDay(), 
                     requestDate.atTime(23, 59, 59)
                 );
                 
-                System.out.println("🔍 Leave Request - Found " + sameDayRequests.size() + " existing requests for the same day");
+                System.out.println("🔍 Leave Request - Found " + sameDayRequests.size() + " existing APPROVED/AWAITING/PENDING requests for the same day");
                 
                 if (!sameDayRequests.isEmpty()) {
                     System.out.println("🔍 Leave Request - SAME-DAY CONFLICT DETECTED!");
@@ -111,17 +124,17 @@ public class LeaveController {
             } else {
                 System.out.println("🔍 Leave Request - No shift ID provided, checking for same-day conflicts...");
                 
-                // Check for same-day conflicts between All Day Leave and Shift Leave
+                // Check for same-day conflicts between All Day Leave and Shift Leave (excluding declined requests)
                 LocalDate requestDate = LocalDate.parse(input.getDate());
                 System.out.println("🔍 Leave Request - Checking for same-day conflicts on: " + requestDate);
                 
-                List<LeaveRequest> sameDayRequests = leaveRequestRepository.findByStaffAndDateRange(
+                List<LeaveRequest> sameDayRequests = leaveRequestRepository.findByStaffAndDateRangeExcludingDeclined(
                     staff.getId(), 
                     requestDate.atStartOfDay(), 
                     requestDate.atTime(23, 59, 59)
                 );
                 
-                System.out.println("🔍 Leave Request - Found " + sameDayRequests.size() + " existing requests for the same day");
+                System.out.println("🔍 Leave Request - Found " + sameDayRequests.size() + " existing APPROVED/AWAITING/PENDING requests for the same day");
                 
                 if (!sameDayRequests.isEmpty()) {
                     System.out.println("🔍 Leave Request - SAME-DAY CONFLICT DETECTED!");
@@ -177,7 +190,7 @@ public class LeaveController {
                     .endTime(endTime)
                     .requestType(input.getRequestType() != null ? input.getRequestType() : (input.getAllDay() ? "All Day Leave" : "Shift Leave"))
                     .reason(input.getReason())
-                    .status("PENDING")
+                    .status("AWAITING")
                     .createdAt(LocalDateTime.now())
                     .build();
             
@@ -191,6 +204,20 @@ public class LeaveController {
             System.out.println("🔍 Leave Request - Start Time: " + saved.getStartTime());
             System.out.println("🔍 Leave Request - End Time: " + saved.getEndTime());
             System.out.println("🔍 Leave Request - Created At: " + saved.getCreatedAt());
+            
+            // Create notification for leave swap request if this is for a specific shift
+            if (saved.getShift() != null) {
+                // Find who is currently assigned to this shift
+                List<ShiftAssignment> currentAssignments = shiftAssignmentRepository.findAll().stream()
+                    .filter(sa -> sa.getShift().getId().equals(saved.getShift().getId()))
+                    .filter(sa -> !sa.getStaff().getId().equals(saved.getStaff().getId())) // Exclude the requester
+                    .toList();
+                
+                // Notify all current shift holders about the leave swap request
+                for (ShiftAssignment assignment : currentAssignments) {
+                    notificationService.createLeaveSwapRequestNotification(saved, assignment.getStaff());
+                }
+            }
             
             Map<String, Object> response = new HashMap<>();
             response.put("id", saved.getId().toString());
@@ -250,9 +277,10 @@ public class LeaveController {
             System.out.println("🔍 My Leaves - Month: " + targetMonth);
             System.out.println("🔍 My Leaves - Date range: " + monthStart + " to " + monthEnd);
             
-            // Find leave requests for the staff created in the specified month
+            // Find leave requests for the staff where the leave occurs in the specified month
+            // Use startTime/endTime instead of createdAt to show leaves that actually happen this month
             System.out.println("🔍 My Leaves - Querying database for leave requests...");
-            List<LeaveRequest> leaveRequests = leaveRequestRepository.findByStaffAndCreatedDateRange(
+            List<LeaveRequest> leaveRequests = leaveRequestRepository.findByStaffAndDateRange(
                 staff.getId(), monthStart, monthEnd);
             
             System.out.println("🔍 My Leaves - Found " + leaveRequests.size() + " leave requests");
@@ -286,6 +314,88 @@ public class LeaveController {
             System.out.println("🔍 My Leaves - Error: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body("Failed to get leave requests: " + e.getMessage());
+        }
+    }
+    
+    @GetMapping("/staff/{staffId}/leaves")
+    public ResponseEntity<?> getStaffLeaves(
+            @PathVariable Long staffId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(value = "month", required = false) String month) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body("Missing or invalid authorization header");
+            }
+            
+            String token = authHeader.substring(7); // Remove "Bearer " prefix
+            User currentUser = getUserFromToken(token);
+            if (currentUser == null) {
+                return ResponseEntity.status(401).body("Invalid token");
+            }
+            
+            // Verify the staff member exists
+            Staff targetStaff = staffRepository.findById(staffId)
+                    .orElse(null);
+            if (targetStaff == null) {
+                return ResponseEntity.status(404).body("Staff member not found");
+            }
+            
+            // Parse month parameter or use current month
+            YearMonth targetMonth;
+            if (month != null && !month.isEmpty()) {
+                targetMonth = YearMonth.parse(month); // Expected format: YYYY-MM
+            } else {
+                targetMonth = YearMonth.now();
+            }
+            
+            // Get start and end of the month
+            LocalDateTime monthStart = targetMonth.atDay(1).atStartOfDay();
+            LocalDateTime monthEnd = targetMonth.atEndOfMonth().atTime(23, 59, 59);
+            
+            System.out.println("🔍 Staff Leaves - Staff ID: " + staffId);
+            System.out.println("🔍 Staff Leaves - Month: " + targetMonth);
+            System.out.println("🔍 Staff Leaves - Date range: " + monthStart + " to " + monthEnd);
+            
+            // Find approved leave requests for the staff member in the specified month
+            List<LeaveRequest> leaveRequests = leaveRequestRepository.findByStaffAndDateRange(
+                staffId, monthStart, monthEnd);
+            
+            // Filter only approved leaves
+            List<LeaveRequest> approvedLeaves = leaveRequests.stream()
+                .filter(leave -> "APPROVED".equals(leave.getStatus()))
+                .collect(java.util.stream.Collectors.toList());
+            
+            System.out.println("🔍 Staff Leaves - Found " + approvedLeaves.size() + " approved leave requests");
+            for (LeaveRequest leave : approvedLeaves) {
+                System.out.println("🔍 Staff Leaves - Request ID: " + leave.getId() + 
+                    ", Type: " + leave.getRequestType() + 
+                    ", Status: " + leave.getStatus() + 
+                    ", Start: " + leave.getStartTime() + 
+                    ", End: " + leave.getEndTime());
+            }
+            
+            // Convert to response format
+            List<Map<String, Object>> response = approvedLeaves.stream()
+                .map(leave -> {
+                    Map<String, Object> leaveMap = new HashMap<>();
+                    leaveMap.put("id", leave.getId());
+                    leaveMap.put("requestDate", leave.getCreatedAt());
+                    leaveMap.put("startTime", leave.getStartTime());
+                    leaveMap.put("endTime", leave.getEndTime());
+                    leaveMap.put("leaveType", leave.getRequestType());
+                    leaveMap.put("status", leave.getStatus());
+                    leaveMap.put("reason", leave.getReason());
+                    leaveMap.put("shiftId", leave.getShift() != null ? leave.getShift().getId() : null);
+                    return leaveMap;
+                })
+                .toList();
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.out.println("🔍 Staff Leaves - Error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Failed to get staff leave requests: " + e.getMessage());
         }
     }
     

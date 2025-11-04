@@ -26,7 +26,7 @@ export function useMyRosterData(anchorDate: Date, opts: Options = {}) {
   const useMock = opts.mock ?? envMock;
   const delayMs = opts.delayMs ?? 300;
 
-  const [shiftMap, setShiftMap] = useState<Record<string, ShiftType>>({});
+  const [shiftMap, setShiftMap] = useState<Record<string, ShiftType | ShiftType[]>>({});
   const [eventsByDate, setEventsByDate] = useState<Record<string, EventItem[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,17 +57,15 @@ export function useMyRosterData(anchorDate: Date, opts: Options = {}) {
       initials: t.staffInitials
     })) : undefined;
 
-    // Location should be campus + room
-    const locationString = shift.campus && shift.room 
-      ? `${shift.campus} - ${shift.room}`
-      : shift.location || 'Location';
+    // Location should be just the room name (not campus + room)
+    const locationString = shift.room || shift.location || 'Location';
 
     return {
       id: shift.id.toString(),
       start: startTime,
       end: endTime,
       title: `${shift.dept || 'Shift'} - ${locationString}`,
-      type: shift.code as ShiftType,
+      type: shift.type as ShiftType,
       location: locationString,
       role: shift.role,
       teammates: teammatesString,
@@ -76,6 +74,7 @@ export function useMyRosterData(anchorDate: Date, opts: Options = {}) {
       campus: shift.campus,
       room: shift.room,
       campusAddress: shift.campusAddress,
+      shiftName: shift.shiftName,
     };
   }, []);
 
@@ -89,7 +88,7 @@ export function useMyRosterData(anchorDate: Date, opts: Options = {}) {
         // Mock data for Sarah Johnson's shifts this week
         const today = new Date();
         const mockEventsByDate: Record<string, EventItem[]> = {};
-        const mockShiftMap: Record<string, ShiftType> = {};
+        const mockShiftMap: Record<string, ShiftType | ShiftType[]> = {};
         
         // Generate mock shifts for the current week
         for (let i = 0; i < 7; i++) {
@@ -142,7 +141,7 @@ export function useMyRosterData(anchorDate: Date, opts: Options = {}) {
       
       const res = await fetchJson<{
         events?: Record<string, EventItem[] | undefined>;
-        shiftMap?: Record<string, ShiftType>;
+        shiftMap?: Record<string, ShiftType | ShiftType[]>;
       }>(`/api/v1/myroster/roster?${params.toString()}`);
 
       // Normalize and set the data

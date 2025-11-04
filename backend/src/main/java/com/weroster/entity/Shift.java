@@ -34,15 +34,29 @@ public class Shift {
     @JoinColumn(name = "location_id")
     private Location location;
     
-    @Column(name = "code", length = 50)
-    private String code;
+    @Column(name = "type", length = 50)
+    private String type;
+    
+    @Column(name = "name", length = 200)
+    private String name;
     
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
     
+    @Column(name = "status", length = 30, nullable = false)
+    @Builder.Default
+    private String status = "COMPLETE";
+    
+    @Column(name = "created_at", nullable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
+    
     @OneToMany(mappedBy = "shift", cascade = CascadeType.ALL)
     private List<ShiftAssignment> shiftAssignments;
     
-    @OneToOne(mappedBy = "shift", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "shift", cascade = CascadeType.ALL)
+    private List<ShiftDesignationRequirements> designationRequirements;
+    
+    @OneToOne(mappedBy = "shift", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private OpenShift openShift;
 }

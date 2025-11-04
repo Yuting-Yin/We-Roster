@@ -4,7 +4,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { fmt, hoursBetween } from "@/lib/date";
+import { isDateInPast, getPastDateErrorMessage } from "@/lib/dateValidation";
 import Chip from "@/components/common/Chip";
+import WarningToast from "@/components/overlays/WarningToast";
 
 export default function RequestShift({
   visible, onCancel, onSubmitted, date, slot,
@@ -18,6 +20,26 @@ export default function RequestShift({
   const [location] = React.useState("PMCC");
   const [role] = React.useState("Neurosurgery");
   const [note, setNote] = React.useState("");
+  
+  // Toast state
+  const [warningToast, setWarningToast] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState("");
+  
+  const showWarningToast = (message: string) => { 
+    setToastMessage(message); 
+    setWarningToast(true); 
+    setTimeout(() => setWarningToast(false), 1800); 
+  };
+
+  const handleSubmit = () => {
+    // Check if the date is in the past
+    if (isDateInPast(date)) {
+      showWarningToast(getPastDateErrorMessage(date));
+      return;
+    }
+    
+    onSubmitted();
+  };
 
   const anim = React.useRef(new Animated.Value(0)).current;
   React.useEffect(() => {
@@ -38,7 +60,7 @@ export default function RequestShift({
         <View style={styles.header}>
           <Pressable onPress={onCancel}><Text style={styles.hLeft}>Cancel</Text></Pressable>
           <Text style={styles.hTitle}>REQUEST SHIFT</Text>
-          <Pressable onPress={onSubmitted}><Text style={styles.hRight}>Apply</Text></Pressable>
+          <Pressable onPress={handleSubmit}><Text style={styles.hRight}>Apply</Text></Pressable>
         </View>
         <View style={styles.divider} />
 
@@ -60,6 +82,8 @@ export default function RequestShift({
           </View>
         </ScrollView>
       </Animated.View>
+      
+      <WarningToast visible={warningToast} text={toastMessage} />
     </View>
   );
 }

@@ -3,22 +3,35 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Animated, Easing } from 
 import { Ionicons } from "@expo/vector-icons";
 import { sx, sy } from "@/theme/metrics";
 import { COLOR } from "@/theme/colors";
-import { hoursBetween, fmt } from "@/lib/date";
+import { hoursBetween, fmt, dayKey } from "@/lib/date";
+import { isDateInPast } from "@/lib/dateValidation";
 import Chip from "@/components/common/Chip";
 import Avatar from "@/components/common/Avatar";
 import { EventItem } from "@/types/roster";
+import { useApprovedLeaves } from "@/hooks/useApprovedLeaves";
+import WarningToast from "@/components/overlays/WarningToast";
 
 export default function ShiftDetails({
-  visible, onClose, onPressPlus, date, event,
+  visible, onClose, onPressPlus, onCoworkerPress, date, event,
 }: {
   visible: boolean;
   onClose: () => void;
   onPressPlus: (anchor: { x: number; y: number }) => void;
+  onCoworkerPress?: (coworker: { id: string; name: string; initials: string }) => void;
   date: Date;
   event?: EventItem;
 }) {
   const plusRef = React.useRef<View>(null);
   const anim = React.useRef(new Animated.Value(0)).current; // 0 -> hidden, 1 -> visible
+  const { leaveMap } = useApprovedLeaves();
+  const [warningToast, setWarningToast] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState("");
+  
+  const showWarningToast = (message: string) => { 
+    setToastMessage(message); 
+    setWarningToast(true); 
+    setTimeout(() => setWarningToast(false), 1800); 
+  };
 
   React.useEffect(() => {
     if (visible && event) {
@@ -35,7 +48,29 @@ export default function ShiftDetails({
   if (!visible || !event) return null;
 
   const duration = `${hoursBetween(event.start, event.end)} hours`;
+  
+  // Check if the date has an approved leave or is in the past
+  const dateKey = dayKey(date);
+  const hasApprovedLeave = leaveMap[dateKey] === true;
+  const isPastDate = isDateInPast(date);
+  const isDisabled = hasApprovedLeave || isPastDate;
+  
   const measurePlus = () => {
+    // Check if the date has an approved leave
+    if (hasApprovedLeave) {
+      showWarningToast("Cannot submit requests for dates with approved leave. You already have an approved leave request for this date.");
+      return;
+    }
+    
+    // Check if the date is in the past
+    if (isPastDate) {
+      const today = new Date();
+      const todayStr = today.toLocaleDateString();
+      const dateStr = date.toLocaleDateString();
+      showWarningToast(`Cannot submit requests for past dates. Selected date: ${dateStr}, Today: ${todayStr}`);
+      return;
+    }
+    
     console.log("[ShiftDetails] + pressed"); // TODO: Remove debug logging after hooking up real action.
     plusRef.current?.measureInWindow((px, py, w, h) => {
       console.log("[ShiftDetails] measured", px, py);
@@ -61,7 +96,11 @@ export default function ShiftDetails({
     <Animated.View style={[styles.wrap, animatedStyle]}>
       <View style={styles.header}>
         <Pressable ref={plusRef} onPress={measurePlus} hitSlop={10}>
-          <Ionicons name="add-outline" size={sx(24)} color={COLOR.ink} />
+          <Ionicons 
+            name="add-outline" 
+            size={sx(24)} 
+            color={isDisabled ? COLOR.ink + "40" : COLOR.ink} 
+          />
         </Pressable>
         <Text style={styles.title}>Shift Details</Text>
         <Pressable onPress={onClose} hitSlop={10}><Ionicons name="close-outline" size={sx(28)} color={COLOR.ink} /></Pressable>
@@ -132,10 +171,22 @@ export default function ShiftDetails({
             </View>
 
             {event.coworkers.map((c, i) => (
-              <View key={c.id ?? i} style={{ flexDirection: "row", alignItems: "center", marginBottom: sy(10) }}>
+              <Pressable 
+                key={c.id ?? i} 
+                style={{ flexDirection: "row", alignItems: "center", marginBottom: sy(10) }}
+                onPress={() => onCoworkerPress?.({ 
+                  id: c.id, 
+                  name: c.name, 
+                  initials: c.initials ?? coworkerInitials(c.name) 
+                })}
+                disabled={!onCoworkerPress}
+              >
                 <Avatar initials={c.initials ?? coworkerInitials(c.name)} />
                 <Text style={{ marginLeft: sx(10), color: COLOR.ink, fontSize: sx(14) }}>{c.name}</Text>
-              </View>
+                {onCoworkerPress && (
+                  <Ionicons name="chevron-forward" size={sx(16)} color={COLOR.label} style={{ marginLeft: "auto" }} />
+                )}
+              </Pressable>
             ))}
           </View>
         ) : null}
@@ -152,6 +203,8 @@ export default function ShiftDetails({
           </View>
         </View>
       </ScrollView>
+      
+      <WarningToast visible={warningToast} text={toastMessage} />
     </Animated.View>
   );
 }
