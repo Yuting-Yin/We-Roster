@@ -238,7 +238,7 @@ export default function MyRoster() {
     return () => { mounted = false; };
   }, []);
 
-  // —— Week related —— //
+  // Week related
   const weekStart = React.useMemo(() => startOfWeekMon(date), [date]);
 
   // overlays
@@ -489,7 +489,7 @@ export default function MyRoster() {
     }
   };
 
-  // —— API User → UI User —— //
+  // API User → UI User
   const initialsOf = (fullName: string) => {
     const parts = (fullName || "").trim().split(/\s+/);
     if (parts.length <= 1) return (parts[0] || "NA").slice(0, 2).toUpperCase();
