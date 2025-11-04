@@ -7,7 +7,7 @@ import { COLOR } from "@/theme/colors";
 
 export default function TinyMenu({
   visible,
-  anchor, // { x, y } — container coordinates
+  anchor, // { x, y } - container coordinates
   onClose,
   onRequestLeave,
   onSwapShift,

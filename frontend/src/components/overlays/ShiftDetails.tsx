@@ -195,7 +195,7 @@ export default function ShiftDetails({
           <View style={styles.sectionDivider} />
         ) : null}
 
-        {/* Notes placeholder — no notes field on EventItem yet */}
+        {/* Notes placeholder - no notes field on EventItem yet */}
         <View style={{ marginHorizontal: sx(16), marginTop: sy(6) }}>
           <Text style={{ color: COLOR.ink, fontSize: sx(16), fontWeight: "600", marginBottom: sy(8) }}>Notes</Text>
           <View style={styles.notesBox}>
