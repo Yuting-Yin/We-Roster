@@ -17,7 +17,7 @@ const { width: W, height: H } = Dimensions.get("window");
 const PANEL_W = Math.min(Math.round(W * 0.82), 320);
 const AVATAR = sx(81);
 
-// 统一时长/缓动，确保无弹性
+// Unified duration/easing, ensuring no bounce effect
 const D_OPEN = 240;
 const D_CLOSE = 200;
 const easeOut = Easing.out(Easing.cubic);
@@ -40,14 +40,14 @@ function ProfileSideMenu({
   onPressLogout,
   user,
 }: Props) {
-  // 为了播放关闭动画，visible=false 时不立即卸载
+  // Keep component mounted when visible=false to play closing animation
   const [rendered, setRendered] = useState(visible);
 
-  // 面板位移：-PANEL_W(关) → 0(开)
+  // Panel translation: -PANEL_W (closed) → 0 (open)
   const tx = useRef(new Animated.Value(visible ? 0 : -PANEL_W)).current;
   const offsetRef = useRef(visible ? 0 : -PANEL_W);
 
-  // 内部元素：头像缩放、两行菜单逐个淡入/位移
+  // Internal elements: avatar scale, menu rows fade in/translate one by one
   const avatarScale = useRef(new Animated.Value(visible ? 1 : 0.96)).current;
   const row1 = useRef(new Animated.Value(visible ? 1 : 0)).current; // Settings
   const row2 = useRef(new Animated.Value(visible ? 1 : 0)).current; // Logout
@@ -66,7 +66,7 @@ function ProfileSideMenu({
         offsetRef.current = 0;
       });
     } else if (rendered) {
-      // 关闭：面板滑出；子元素状态复位，下一次打开能再次播放
+      // Close: panel slides out; child elements reset state so animation can play again on next open
       row1.setValue(0);
       row2.setValue(0);
       avatarScale.setValue(0.96);
@@ -78,7 +78,7 @@ function ProfileSideMenu({
     }
   }, [visible]);
 
-  // 手势：左滑关闭；没有弹性
+  // Gesture: swipe left to close; no bounce effect
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
@@ -127,12 +127,12 @@ function ProfileSideMenu({
 
   return (
     <View style={styles.backdrop} pointerEvents="box-none" accessibilityViewIsModal importantForAccessibility="yes">
-      {/* 遮罩：固定不动，不参与动画 */}
+      {/* Backdrop: fixed position, does not participate in animation */}
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
         <View style={styles.dim} />
       </Pressable>
 
-      {/* 面板：无弹性，仅 timing 平滑滑入/滑出 */}
+      {/* Panel: no bounce, only smooth timing animation for slide in/out */}
       <Animated.View
         style={[styles.panel, { transform: [{ translateX: tx }] }]}
         accessibilityRole="menu"
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     zIndex: 999,
   },
-  dim: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }, // 不动画
+  dim: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }, // No animation
   panel: {
     width: PANEL_W,
     height: H,

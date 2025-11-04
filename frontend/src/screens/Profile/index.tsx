@@ -66,7 +66,7 @@ function AboutTab() {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: COLOR.bg }} contentContainerStyle={{ padding: 16 }}>
       <View style={styles.card}>
-        {/* 头像 + 名字 */}
+        {/* Avatar + name */}
         {loading ? (
           <View style={{ alignItems: "center", marginBottom: 8 }}>
             <View style={[styles.avatar, { backgroundColor: COLOR.skeleton }]} />
@@ -83,7 +83,7 @@ function AboutTab() {
           </>
         )}
 
-        {/* 错误提示 */}
+        {/* Error message */}
         {!!error && (
           <View style={styles.errorBanner}>
             <Text style={styles.errorText} numberOfLines={2}>
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   name: { alignSelf: "center", fontSize: 18, fontWeight: "700", color: COLOR.text },
   title: { alignSelf: "center", color: COLOR.label, marginBottom: 8 },
 
-  // 骨架
+  // Skeleton
   skelName: {
     height: 16,
     width: 120,
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
-  // 错误提示
+  // Error banner
   errorBanner: {
     backgroundColor: COLOR.warnBg,
     borderColor: COLOR.warn,

@@ -6,20 +6,20 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 // screens
 import Splash from "@/screens/Splash";
 import Login from "@/screens/Login";
-import AppTabs from "@/navigation/AppTabs";   // 里面包含 Dashboard 等 Tab 页
+import AppTabs from "@/navigation/AppTabs";   // Contains Dashboard and other Tab pages
 import Profile from "@/screens/Profile/index";
 import Settings from "@/screens/Settings";
 import EditDashboard from "@/screens/Settings/EditDashboard";
 import Notifications from "@/screens/Notifications";
 
-// 主题色（给 Profile / EditProfile 的头部用）
+// Theme colors (for Profile / EditProfile headers)
 import { COLOR } from "@/theme/colors";
 import { sx, sy } from "@/theme/metrics";
 import { OverlayProvider } from "@/contexts/OverlayContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 
-/** ====== 顶层 Stack 的参数类型 ====== */
+/** ====== Root Stack parameter types ====== */
 export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
@@ -52,7 +52,7 @@ export default function RootNavigator() {
             )}
           </Stack.Screen>
 
-          {/* 个人信息页：需要展示标题栏（蓝色） */}
+          {/* Profile page: needs to display header bar (blue) */}
           <Stack.Screen
             name="Profile"
             component={Profile}

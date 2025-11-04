@@ -5,11 +5,11 @@ import type { DashboardPayload, DutyItem, ShiftItem, LeaveItem } from "@/types/d
 import { dashboardFixtures, amplifyFixtures } from "@/fixtures/dashboard";
 
 type Options = {
-  /** 显式启用本地 Mock；不传则读取环境变量 EXPO_PUBLIC_MOCK_DASHBOARD */
+  /** Explicitly enable local Mock; if not provided, reads from environment variable EXPO_PUBLIC_MOCK_DASHBOARD */
   mock?: boolean;
-  /** 模拟加载延迟（毫秒），便于观察骨架屏 */
+  /** Simulated loading delay (milliseconds), useful for observing skeleton screens */
   delayMs?: number;
-  /** 放大量级，便于检查横向滚动与断点（默认 1） */
+  /** Amplification factor, useful for checking horizontal scrolling and breakpoints (default 1) */
   amplifyTimes?: number;
 };
 
@@ -30,7 +30,7 @@ export function useDashboardData(opts: Options = {}) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = async () => {
-    // Mock 模式：直接用本地数据 + 人造延迟
+    // Mock mode: use local data directly + artificial delay
     if (useMock) {
       setLoading(true);
       setError(null);
@@ -46,7 +46,7 @@ export function useDashboardData(opts: Options = {}) {
       return;
     }
 
-    // 实网模式
+    // Production mode
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -55,7 +55,7 @@ export function useDashboardData(opts: Options = {}) {
     setError(null);
 
     try {
-      // 优先聚合接口
+      // Try aggregated endpoint first
       const data = await fetchJson<DashboardPayload>("/api/v1/dashboard", {
         signal: controller.signal,
       });
